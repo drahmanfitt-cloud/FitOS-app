@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 
 // ─── Supabase Config ──────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://mxbzpunefucxknodoqrc.supabase.co";
@@ -1939,6 +1939,28 @@ function Dashboard({clients,sessions,classes,programs,formats,setView,setActiveC
 
 const NAV=[{id:"dashboard",label:"Dashboard",icon:"▦"},{id:"clients",label:"Clients",icon:"👥"},{id:"sessions",label:"Log Session",icon:"⚡"},{id:"classes",label:"Classes",icon:"📅"},{id:"programs",label:"Programs",icon:"📋"}];
 
+// ── Error Boundary ───────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props){super(props);this.state={error:null};}
+  static getDerivedStateFromError(e){return{error:e};}
+  componentDidCatch(e,info){console.error("FitOS Error:",e,info);}
+  render(){
+    if(this.state.error){
+      return(
+        <div style={{background:"#1A0A0A",border:"1px solid #F5445A44",borderRadius:14,padding:32,textAlign:"center"}}>
+          <div style={{fontSize:28,marginBottom:12}}>⚠️</div>
+          <div style={{color:"#F5445A",fontWeight:800,fontSize:18,marginBottom:8}}>Something went wrong</div>
+          <div style={{color:"#8A92B2",fontSize:13,marginBottom:16,fontFamily:"monospace",background:"#0B0D11",padding:12,borderRadius:8,textAlign:"left",wordBreak:"break-all"}}>
+            {this.state.error?.message||"Unknown error"}
+          </div>
+          <button onClick={()=>this.setState({error:null})} style={{background:"#22D98A",border:"none",borderRadius:8,padding:"10px 24px",color:"#000",fontWeight:700,fontSize:13,cursor:"pointer"}}>Try again</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function Sidebar({active,setActive,counts}){
   return(
     <aside style={{width:200,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0}}>
@@ -2125,7 +2147,7 @@ export default function App(){
           {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} setView={setView} setActiveClient={setActiveClient}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} setView={setView} setActiveClient={setActiveClient}/>}
           {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient}/>}
-          {view==="sessions"&&<SessionLogger clients={clients} sessions={sessions} onSave={addSession} activeClient={activeClient} programs={programs}/>}
+          {view==="sessions"&&<ErrorBoundary><SessionLogger clients={clients} sessions={sessions} onSave={addSession} activeClient={activeClient} programs={programs}/></ErrorBoundary>}}
           {view==="classes"&&<ClassesScreen clients={clients} classes={classes} onAdd={addClass} onEdit={editClass} onDelete={deleteClass} formats={formats}/>}
           {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass}/>}
         </main>
