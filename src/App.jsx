@@ -2262,6 +2262,81 @@ function ExerciseCard({ex,onEdit,onDelete,sessions,clients}){
   );
 }
 
+
+// ── Filter option manager ─────────────────────────────────────────────────────
+function FilterEditor({label,color,options,onUpdate,onClose}){
+  const [items,setItems]=useState([...options]);
+  const [newVal,setNewVal]=useState("");
+  const [editIdx,setEditIdx]=useState(null);
+  const [editVal,setEditVal]=useState("");
+
+  const add=()=>{
+    const v=newVal.trim();
+    if(!v||items.includes(v))return;
+    setItems(p=>[...p,v]);
+    setNewVal("");
+  };
+  const remove=idx=>setItems(p=>p.filter((_,i)=>i!==idx));
+  const startEdit=(idx)=>{setEditIdx(idx);setEditVal(items[idx]);};
+  const saveEdit=()=>{
+    if(!editVal.trim())return;
+    setItems(p=>p.map((v,i)=>i===editIdx?editVal.trim():v));
+    setEditIdx(null);setEditVal("");
+  };
+  const move=(idx,dir)=>{
+    const arr=[...items];
+    const ni=idx+dir;
+    if(ni<0||ni>=arr.length)return;
+    [arr[idx],arr[ni]]=[arr[ni],arr[idx]];
+    setItems(arr);
+  };
+
+  return(
+    <div style={{position:"absolute",top:"calc(100% + 6px)",left:0,zIndex:300,background:C.surface,border:`1px solid ${color}55`,borderRadius:12,padding:16,width:280,boxShadow:"0 8px 32px rgba(0,0,0,0.6)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <span style={{color,fontWeight:800,fontSize:13}}>⚙ Edit {label}</span>
+        <button onClick={()=>{onUpdate(items);onClose();}} style={{background:C.green,border:"none",borderRadius:6,padding:"4px 12px",color:"#000",fontWeight:700,fontSize:11,cursor:"pointer"}}>Save</button>
+      </div>
+
+      {/* Option list */}
+      <div style={{display:"flex",flexDirection:"column",gap:4,marginBottom:12,maxHeight:200,overflowY:"auto"}}>
+        {items.map((item,i)=>(
+          <div key={i} style={{display:"flex",alignItems:"center",gap:6,background:C.s2,borderRadius:7,padding:"5px 8px",border:`1px solid ${C.border}`}}>
+            {editIdx===i?(
+              <input autoFocus value={editVal} onChange={e=>setEditVal(e.target.value)}
+                onKeyDown={e=>{if(e.key==="Enter")saveEdit();if(e.key==="Escape"){setEditIdx(null);}}}
+                style={{flex:1,background:"none",border:"none",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/>
+            ):(
+              <span style={{flex:1,color:C.text,fontSize:12}}>{item}</span>
+            )}
+            <div style={{display:"flex",gap:2}}>
+              <button onClick={()=>move(i,-1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:11,padding:"0 2px"}}>▲</button>
+              <button onClick={()=>move(i,1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:11,padding:"0 2px"}}>▼</button>
+              {editIdx===i?(
+                <button onClick={saveEdit} style={{background:C.green+"20",border:`1px solid ${C.green}44`,borderRadius:4,padding:"1px 6px",color:C.green,fontSize:10,cursor:"pointer",fontWeight:700}}>✓</button>
+              ):(
+                <button onClick={()=>startEdit(i)} style={{background:C.blue+"15",border:`1px solid ${C.blue}33`,borderRadius:4,padding:"1px 6px",color:C.blue,fontSize:10,cursor:"pointer"}}>Edit</button>
+              )}
+              <button onClick={()=>remove(i)} style={{background:C.red+"15",border:`1px solid ${C.red}33`,borderRadius:4,padding:"1px 6px",color:C.red,fontSize:10,cursor:"pointer"}}>✕</button>
+            </div>
+          </div>
+        ))}
+        {items.length===0&&<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"8px 0"}}>No options yet</div>}
+      </div>
+
+      {/* Add new */}
+      <div style={{display:"flex",gap:6}}>
+        <input value={newVal} onChange={e=>setNewVal(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter")add();}}
+          placeholder={`Add ${label.toLowerCase()} option…`}
+          style={{flex:1,background:C.s2,border:`1px solid ${color}44`,borderRadius:7,padding:"7px 10px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/>
+        <button onClick={add} style={{background:color+"20",border:`1px solid ${color}44`,borderRadius:7,padding:"7px 12px",color,fontSize:13,fontWeight:900,cursor:"pointer"}}>+</button>
+      </div>
+      <div style={{color:C.muted,fontSize:10,marginTop:6}}>Press Enter to add · Click Edit to rename · Drag ▲▼ to reorder</div>
+    </div>
+  );
+}
+
 function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,sessions,clients}){
   const [search,setSearch]=useState("");
   const [filterCat,setFilterCat]=useState("");
@@ -2270,6 +2345,20 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,sessions,
   const [filterPurpose,setFilterPurpose]=useState("");
   const [modal,setModal]=useState(null);
   const [confirm,setConfirm]=useState(null);
+  const [editingFilter,setEditingFilter]=useState(null); // "cat"|"muscle"|"equip"|"purpose"
+
+  // Custom filter options — start from defaults, saved to localStorage
+  const loadOpts=(key,def)=>{try{const s=localStorage.getItem("fitos_filter_"+key);return s?JSON.parse(s):def;}catch{return def;}};
+  const saveOpts=(key,arr)=>{try{localStorage.setItem("fitos_filter_"+key,JSON.stringify(arr));}catch{}};
+  const [catOpts,setCatOpts]=useState(()=>loadOpts("cat",CATEGORIES));
+  const [muscleOpts,setMuscleOpts]=useState(()=>loadOpts("muscle",MUSCLE_GROUPS));
+  const [equipOpts,setEquipOpts]=useState(()=>loadOpts("equip",EQUIPMENT_LIST));
+  const [purposeOpts,setPurposeOpts]=useState(()=>loadOpts("purpose",PURPOSE_TYPES));
+
+  const updateCat=arr=>{setCatOpts(arr);saveOpts("cat",arr);};
+  const updateMuscle=arr=>{setMuscleOpts(arr);saveOpts("muscle",arr);};
+  const updateEquip=arr=>{setEquipOpts(arr);saveOpts("equip",arr);};
+  const updatePurpose=arr=>{setPurposeOpts(arr);saveOpts("purpose",arr);};
 
   const filtered=(catalogExercises||[]).filter(ex=>{
     const matchSearch=!search||ex.name.toLowerCase().includes(search.toLowerCase());
@@ -2298,28 +2387,55 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,sessions,
           </div>
           <Btn onClick={()=>setModal("add")}>+ Add Exercise</Btn>
         </div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          {/* Category filter */}
-          <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}
-            style={{background:filterCat?C.blue+"18":C.s2,border:`1px solid ${filterCat?C.blue:C.border}`,borderRadius:8,padding:"6px 12px",color:filterCat?C.blue:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",cursor:"pointer"}}>
-            <option value="">All categories</option>
-            {CATEGORIES.map(c=><option key={c}>{c}</option>)}
-          </select>
-          <select value={filterMuscle} onChange={e=>setFilterMuscle(e.target.value)}
-            style={{background:filterMuscle?C.purple+"18":C.s2,border:`1px solid ${filterMuscle?C.purple:C.border}`,borderRadius:8,padding:"6px 12px",color:filterMuscle?C.purple:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",cursor:"pointer"}}>
-            <option value="">All muscles</option>
-            {MUSCLE_GROUPS.map(m=><option key={m}>{m}</option>)}
-          </select>
-          <select value={filterEquip} onChange={e=>setFilterEquip(e.target.value)}
-            style={{background:filterEquip?C.amber+"18":C.s2,border:`1px solid ${filterEquip?C.amber:C.border}`,borderRadius:8,padding:"6px 12px",color:filterEquip?C.amber:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",cursor:"pointer"}}>
-            <option value="">All equipment</option>
-            {EQUIPMENT_LIST.map(e=><option key={e}>{e}</option>)}
-          </select>
-          <select value={filterPurpose} onChange={e=>setFilterPurpose(e.target.value)}
-            style={{background:filterPurpose?(PURPOSE_COLORS[filterPurpose]||C.green)+"18":C.s2,border:`1px solid ${filterPurpose?(PURPOSE_COLORS[filterPurpose]||C.green):C.border}`,borderRadius:8,padding:"6px 12px",color:filterPurpose?(PURPOSE_COLORS[filterPurpose]||C.green):C.sub,fontSize:12,outline:"none",fontFamily:"inherit",cursor:"pointer"}}>
-            <option value="">All purposes</option>
-            {PURPOSE_TYPES.map(p=><option key={p}>{p}</option>)}
-          </select>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+          {/* Category filter + gear */}
+          <div style={{position:"relative",display:"flex",alignItems:"center",gap:4}}>
+            <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}
+              style={{background:filterCat?C.blue+"18":C.s2,border:`1px solid ${filterCat?C.blue:C.border}`,borderRadius:8,padding:"6px 12px",color:filterCat?C.blue:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",cursor:"pointer"}}>
+              <option value="">All categories</option>
+              {catOpts.map(c=><option key={c}>{c}</option>)}
+            </select>
+            <button onClick={()=>setEditingFilter(editingFilter==="cat"?null:"cat")} title="Edit categories"
+              style={{background:editingFilter==="cat"?C.blue+"22":C.s2,border:`1px solid ${editingFilter==="cat"?C.blue:C.border}`,borderRadius:6,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:editingFilter==="cat"?C.blue:C.muted,fontSize:13}}>⚙</button>
+            {editingFilter==="cat"&&<FilterEditor label="Categories" color={C.blue} options={catOpts} onUpdate={arr=>{updateCat(arr);if(!arr.includes(filterCat))setFilterCat("");}} onClose={()=>setEditingFilter(null)}/>}
+          </div>
+
+          {/* Muscle filter + gear */}
+          <div style={{position:"relative",display:"flex",alignItems:"center",gap:4}}>
+            <select value={filterMuscle} onChange={e=>setFilterMuscle(e.target.value)}
+              style={{background:filterMuscle?C.purple+"18":C.s2,border:`1px solid ${filterMuscle?C.purple:C.border}`,borderRadius:8,padding:"6px 12px",color:filterMuscle?C.purple:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",cursor:"pointer"}}>
+              <option value="">All muscles</option>
+              {muscleOpts.map(m=><option key={m}>{m}</option>)}
+            </select>
+            <button onClick={()=>setEditingFilter(editingFilter==="muscle"?null:"muscle")} title="Edit muscle groups"
+              style={{background:editingFilter==="muscle"?C.purple+"22":C.s2,border:`1px solid ${editingFilter==="muscle"?C.purple:C.border}`,borderRadius:6,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:editingFilter==="muscle"?C.purple:C.muted,fontSize:13}}>⚙</button>
+            {editingFilter==="muscle"&&<FilterEditor label="Muscle Groups" color={C.purple} options={muscleOpts} onUpdate={arr=>{updateMuscle(arr);if(!arr.includes(filterMuscle))setFilterMuscle("");}} onClose={()=>setEditingFilter(null)}/>}
+          </div>
+
+          {/* Equipment filter + gear */}
+          <div style={{position:"relative",display:"flex",alignItems:"center",gap:4}}>
+            <select value={filterEquip} onChange={e=>setFilterEquip(e.target.value)}
+              style={{background:filterEquip?C.amber+"18":C.s2,border:`1px solid ${filterEquip?C.amber:C.border}`,borderRadius:8,padding:"6px 12px",color:filterEquip?C.amber:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",cursor:"pointer"}}>
+              <option value="">All equipment</option>
+              {equipOpts.map(e=><option key={e}>{e}</option>)}
+            </select>
+            <button onClick={()=>setEditingFilter(editingFilter==="equip"?null:"equip")} title="Edit equipment"
+              style={{background:editingFilter==="equip"?C.amber+"22":C.s2,border:`1px solid ${editingFilter==="equip"?C.amber:C.border}`,borderRadius:6,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:editingFilter==="equip"?C.amber:C.muted,fontSize:13}}>⚙</button>
+            {editingFilter==="equip"&&<FilterEditor label="Equipment" color={C.amber} options={equipOpts} onUpdate={arr=>{updateEquip(arr);if(!arr.includes(filterEquip))setFilterEquip("");}} onClose={()=>setEditingFilter(null)}/>}
+          </div>
+
+          {/* Purpose filter + gear */}
+          <div style={{position:"relative",display:"flex",alignItems:"center",gap:4}}>
+            <select value={filterPurpose} onChange={e=>setFilterPurpose(e.target.value)}
+              style={{background:filterPurpose?(PURPOSE_COLORS[filterPurpose]||C.green)+"18":C.s2,border:`1px solid ${filterPurpose?(PURPOSE_COLORS[filterPurpose]||C.green):C.border}`,borderRadius:8,padding:"6px 12px",color:filterPurpose?(PURPOSE_COLORS[filterPurpose]||C.green):C.sub,fontSize:12,outline:"none",fontFamily:"inherit",cursor:"pointer"}}>
+              <option value="">All purposes</option>
+              {purposeOpts.map(p=><option key={p}>{p}</option>)}
+            </select>
+            <button onClick={()=>setEditingFilter(editingFilter==="purpose"?null:"purpose")} title="Edit purposes"
+              style={{background:editingFilter==="purpose"?C.green+"22":C.s2,border:`1px solid ${editingFilter==="purpose"?C.green:C.border}`,borderRadius:6,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:editingFilter==="purpose"?C.green:C.muted,fontSize:13}}>⚙</button>
+            {editingFilter==="purpose"&&<FilterEditor label="Purposes" color={C.green} options={purposeOpts} onUpdate={arr=>{updatePurpose(arr);if(!arr.includes(filterPurpose))setFilterPurpose("");}} onClose={()=>setEditingFilter(null)}/>}
+          </div>
+
           {(filterCat||filterMuscle||filterEquip||filterPurpose)&&(
             <button onClick={()=>{setFilterCat("");setFilterMuscle("");setFilterEquip("");setFilterPurpose("");}} style={{background:"none",border:"none",color:C.red,fontSize:12,cursor:"pointer",fontWeight:600}}>Clear filters ×</button>
           )}
