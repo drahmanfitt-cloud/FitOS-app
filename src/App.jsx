@@ -154,6 +154,7 @@ const uid = () => Math.random().toString(36).slice(2,10);
 const now = () => new Date().toISOString();
 const fmtDate = d => d ? new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "—";
 const fmtTime = d => d ? new Date(d).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}) : "—";
+const fmt = s => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
 const clamp = (v,lo,hi) => Math.min(hi,Math.max(lo,v));
 
 // Map DB row (snake_case) → app object (camelCase)
