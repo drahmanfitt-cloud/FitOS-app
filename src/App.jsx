@@ -2379,15 +2379,15 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,sessions,
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
       {/* Search + filters */}
       <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:16}}>
-        <div style={{display:"flex",gap:10,marginBottom:12}}>
-          <div style={{flex:1,background:C.s2,border:`1px solid ${C.border}`,borderRadius:9,padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
+        <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:200,background:C.s2,border:`1px solid ${C.border}`,borderRadius:9,padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
             <span style={{color:C.muted}}>🔍</span>
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search exercises…"
               style={{background:"none",border:"none",color:C.text,fontSize:14,flex:1,outline:"none",fontFamily:"inherit"}}/>
           </div>
           <Btn onClick={()=>setModal("add")}>+ Add Exercise</Btn>
         </div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",rowGap:10}}>
           {/* Category filter + gear */}
           <div style={{position:"relative",display:"flex",alignItems:"center",gap:4}}>
             <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}
@@ -2499,6 +2499,59 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// ── Bottom nav for mobile ─────────────────────────────────────────────────────
+function BottomNav({active,setActive,counts}){
+  const visible=NAV.slice(0,5); // show first 5, "more" handles rest
+  const [showMore,setShowMore]=useState(false);
+  return(
+    <>
+      {/* More menu overlay */}
+      {showMore&&(
+        <div style={{position:"fixed",inset:0,zIndex:800}} onClick={()=>setShowMore(false)}>
+          <div style={{position:"absolute",bottom:66,left:0,right:0,background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 0"}} onClick={e=>e.stopPropagation()}>
+            {NAV.slice(5).map(item=>{
+              const isActive=active===item.id;
+              const col=item.id==="programs"?C.purple:C.green;
+              return(
+                <button key={item.id} onClick={()=>{setActive(item.id);setShowMore(false);}}
+                  style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"14px 20px",background:isActive?col+"18":"transparent",border:"none",cursor:"pointer",textAlign:"left"}}>
+                  <span style={{fontSize:20}}>{item.icon}</span>
+                  <span style={{color:isActive?col:C.text,fontWeight:isActive?700:500,fontSize:15}}>{item.label}</span>
+                  {counts[item.id]>0&&<span style={{marginLeft:"auto",background:col+"22",color:col,fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:10}}>{counts[item.id]}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {/* Bottom bar */}
+      <nav style={{position:"fixed",bottom:0,left:0,right:0,height:62,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"stretch",zIndex:700,paddingBottom:"env(safe-area-inset-bottom)"}}>
+        {visible.map(item=>{
+          const isActive=active===item.id||(active==="client"&&item.id==="clients");
+          const col=item.id==="programs"?C.purple:item.id==="catalog"?C.teal:C.green;
+          return(
+            <button key={item.id} onClick={()=>setActive(item.id)}
+              style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",position:"relative"}}>
+              <span style={{fontSize:20,lineHeight:1}}>{item.icon}</span>
+              <span style={{fontSize:9,fontWeight:isActive?700:500,color:isActive?col:C.muted,letterSpacing:"0.02em"}}>{item.label.split(" ")[0]}</span>
+              {isActive&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,background:col,borderRadius:"0 0 2px 2px"}}/>}
+              {counts[item.id]>0&&<div style={{position:"absolute",top:6,right:"20%",width:8,height:8,borderRadius:"50%",background:col}}/>}
+            </button>
+          );
+        })}
+        {/* More button if >5 items */}
+        {NAV.length>5&&(
+          <button onClick={()=>setShowMore(m=>!m)}
+            style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:showMore?C.s2:"transparent",cursor:"pointer"}}>
+            <span style={{fontSize:20,lineHeight:1}}>⋯</span>
+            <span style={{fontSize:9,fontWeight:500,color:C.muted}}>More</span>
+          </button>
+        )}
+      </nav>
+    </>
+  );
+}
+
 function Sidebar({active,setActive,counts,collapsed,setCollapsed}){
   const w=collapsed?56:200;
   return(
@@ -2517,8 +2570,6 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed}){
           {collapsed?"→":"←"}
         </button>
       </div>
-
-      {/* Nav */}
       <nav style={{padding:"10px 6px",flex:1,display:"flex",flexDirection:"column",gap:2}}>
         {NAV.map(item=>{
           const isActive=active===item.id||(active==="client"&&item.id==="clients");
@@ -2535,8 +2586,6 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed}){
           );
         })}
       </nav>
-
-      {/* Trainer profile */}
       <div style={{padding:collapsed?"10px 0":"12px 14px",borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:9}}>
         <Avatar name="J" size={30} color={C.purple}/>
         {!collapsed&&<div style={{minWidth:0}}><div style={{color:C.text,fontSize:12,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Jordan Reeves</div><div style={{color:C.muted,fontSize:10}}>Head Coach</div></div>}
@@ -2709,28 +2758,61 @@ export default function App(){
   if(appState==="loading")return(<div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',system-ui,sans-serif"}}><Spinner msg="Connecting to database…"/></div>);
   if(appState==="setup")return <SetupScreen onSetupDone={()=>{ setAppState("loading"); reload().then(()=>setAppState("ready")); }}/>;
 
+  // Detect mobile — screens narrower than 768px get bottom nav
+  const isMobile=typeof window!=="undefined"&&window.innerWidth<768;
+  const [mobile,setMobile]=useState(isMobile);
+  useEffect(()=>{
+    const fn=()=>setMobile(window.innerWidth<768);
+    window.addEventListener("resize",fn);
+    return()=>window.removeEventListener("resize",fn);
+  },[]);
+
   return(
     <div style={{display:"flex",height:"100vh",background:C.bg,overflow:"hidden",fontFamily:"'Inter',system-ui,sans-serif"}}>
-      <style>{`input[type=number]::-webkit-inner-spin-button{opacity:0.3} *{box-sizing:border-box;} input,select,button{font-family:inherit;}`}</style>
-      <Sidebar active={view} setActive={navigate} counts={counts} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed}/>
+      <style>{`
+        input[type=number]::-webkit-inner-spin-button{opacity:0.3}
+        *{box-sizing:border-box;}
+        input,select,button{font-family:inherit;}
+        @media(max-width:767px){
+          .fitos-grid-2{grid-template-columns:1fr!important;}
+          .fitos-grid-3{grid-template-columns:1fr!important;}
+          .fitos-grid-4{grid-template-columns:1fr 1fr!important;}
+          .fitos-hide-mobile{display:none!important;}
+          .fitos-table-scroll{overflow-x:auto;}
+        }
+      `}</style>
+
+      {/* Sidebar — desktop only */}
+      {!mobile&&<Sidebar active={view} setActive={navigate} counts={counts} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed}/>}
+
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
-        <div style={{height:54,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 22px",background:C.bg,flexShrink:0}}>
-          <div><div style={{color:C.text,fontWeight:700,fontSize:16}}>{TITLES[view]}</div><div style={{color:C.muted,fontSize:11}}>{SUBS[view]}</div></div>
-          <div style={{display:"flex",gap:8}}>
-            {view==="client"&&<Btn variant="outline" style={{padding:"6px 12px",fontSize:11}} onClick={()=>navigate("clients")}>← All Clients</Btn>}
-            {view==="dashboard"&&<Btn style={{padding:"6px 14px"}} onClick={()=>setView("sessions")}>⚡ Log Session</Btn>}
+        {/* Top bar */}
+        <div style={{height:54,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:mobile?"0 14px":"0 22px",background:C.bg,flexShrink:0}}>
+          <div style={{minWidth:0,flex:1}}>
+            <div style={{color:C.text,fontWeight:700,fontSize:mobile?15:16,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{TITLES[view]}</div>
+            {!mobile&&<div style={{color:C.muted,fontSize:11}}>{SUBS[view]}</div>}
+          </div>
+          <div style={{display:"flex",gap:8,flexShrink:0}}>
+            {view==="client"&&<Btn variant="outline" style={{padding:"6px 10px",fontSize:11}} onClick={()=>navigate("clients")}>← Back</Btn>}
+            {view==="dashboard"&&<Btn style={{padding:"6px 12px",fontSize:mobile?11:12}} onClick={()=>setView("sessions")}>⚡ Log</Btn>}
           </div>
         </div>
-        <main style={{flex:1,overflowY:"auto",padding:20}}>
+
+        {/* Main content */}
+        <main style={{flex:1,overflowY:"auto",padding:mobile?12:20,paddingBottom:mobile?80:20}}>
           {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} setView={setView} setActiveClient={setActiveClient}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} setView={setView} setActiveClient={setActiveClient}/>}
           {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient}/>}
-          {view==="sessions"&&<ErrorBoundary><SessionLogger clients={clients} sessions={sessions} onSave={addSession} activeClient={activeClient} programs={programs}/></ErrorBoundary>}}
+          {view==="sessions"&&<ErrorBoundary><SessionLogger clients={clients} sessions={sessions} onSave={addSession} activeClient={activeClient} programs={programs}/></ErrorBoundary>}
           {view==="classes"&&<ClassesScreen clients={clients} classes={classes} onAdd={addClass} onEdit={editClass} onDelete={deleteClass} formats={formats}/>}
           {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass}/>}
           {view==="catalog"&&<ExerciseCatalogScreen catalogExercises={catalogExercises} onAdd={addCatalogExercise} onEdit={editCatalogExercise} onDelete={deleteCatalogExercise} sessions={sessions} clients={clients}/>}
         </main>
       </div>
+
+      {/* Bottom nav — mobile only */}
+      {mobile&&<BottomNav active={view} setActive={navigate} counts={counts}/>}
+
       <Toast toasts={toasts}/>
     </div>
   );
