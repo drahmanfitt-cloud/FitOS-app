@@ -1,3 +1,4 @@
+import './index.css'
 import { useState, useCallback, useEffect } from "react";
 
 // ─── Supabase Config ──────────────────────────────────────────────────────────
