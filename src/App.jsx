@@ -564,17 +564,6 @@ const DEFAULT_SETTINGS = {
   warmupRestSec: 30,
 };
 
-// ── Micro UI ──────────────────────────────────────────────────────────────────
-const Pill = ({children,color=C.green}) => (
-  <span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:"0.04em",padding:"2px 7px",borderRadius:20,background:color+"1A",color,border:`1px solid ${color}30`}}>{children}</span>
-);
-const Btn = ({children,onClick,variant="primary",color=C.green,disabled,style:sx={}}) => {
-  const s={primary:{background:disabled?C.muted:color,color:"#000",border:"none"},ghost:{background:color+"15",color,border:`1px solid ${color}30`},outline:{background:"transparent",color:C.sub,border:`1px solid ${C.border}`},danger:{background:C.red+"18",color:C.red,border:`1px solid ${C.red}40`}};
-  return <button disabled={disabled} onClick={onClick} style={{...s[variant],borderRadius:8,cursor:disabled?"not-allowed":"pointer",fontWeight:700,fontSize:12,padding:"8px 14px",display:"inline-flex",alignItems:"center",gap:5,opacity:disabled?0.5:1,...sx}}>{children}</button>;
-};
-const Card = ({children,style:sx={}}) => <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:18,...sx}}>{children}</div>;
-const SL = ({children,style:sx={}}) => <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:C.muted,marginBottom:8,...sx}}>{children}</div>;
-
 function Toggle({value,onChange,color=C.green}){
   return(
     <div onClick={()=>onChange(!value)} style={{width:40,height:22,borderRadius:11,background:value?color:C.s3,border:`1px solid ${value?color:C.border}`,cursor:"pointer",position:"relative",transition:"all 0.2s",flexShrink:0}}>
@@ -1136,25 +1125,6 @@ function ExerciseCard({ex,onUpdate,onAddSet,onUpdateSet,onRemoveSet,onRemove,onR
         </>
       )}
     </Card>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// EXERCISE PICKER
-// ═══════════════════════════════════════════════════════════════════════════════
-const EXERCISES=["Back Squat","Front Squat","Deadlift","Romanian Deadlift","Bench Press","Incline DB Press","Overhead Press","Pull-up","Chin-up","Barbell Row","Cable Row","Leg Press","Leg Curl","Hip Thrust","Goblet Squat","Dumbbell Curl","Tricep Pushdown","Lateral Raise","Face Pull","Box Jump","KB Swing","Plank","Dead Bug","Burpee","Battle Ropes","Sled Push","Assisted Pull-up","Band Resisted Squat"];
-function ExPicker({onPick,onClose}){
-  const [q,setQ]=useState("");
-  const hits=EXERCISES.filter(e=>e.toLowerCase().includes(q.toLowerCase()));
-  return(
-    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:14,position:"absolute",top:"calc(100% + 8px)",left:0,zIndex:200,width:290,boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}}>
-      <input autoFocus value={q} onChange={e=>setQ(e.target.value)} placeholder="Search or type custom…"
-        style={{width:"100%",background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,padding:"8px 12px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit",marginBottom:8}}/>
-      <div style={{maxHeight:200,overflowY:"auto",display:"flex",flexDirection:"column",gap:2}}>
-        {q&&!EXERCISES.includes(q)&&<div onClick={()=>{onPick(q);onClose();}} style={{padding:"7px 10px",borderRadius:6,cursor:"pointer",color:C.green,fontSize:13}}>＋ Add "{q}"</div>}
-        {hits.map(e=><div key={e} onClick={()=>{onPick(e);onClose();}} style={{padding:"7px 10px",borderRadius:6,cursor:"pointer",color:C.text,fontSize:13}} onMouseEnter={el=>el.currentTarget.style.background=C.s2} onMouseLeave={el=>el.currentTarget.style.background="transparent"}>{e}</div>)}
-      </div>
-    </div>
   );
 }
 
