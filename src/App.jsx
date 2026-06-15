@@ -181,7 +181,8 @@ const mapProgram = r => r ? ({
 const mapCatalog = r => r ? ({
   id:r.id, name:r.name, category:r.category||"Strength",
   muscles:r.muscles||[], equipment:r.equipment||"Barbell",
-  difficulty:r.difficulty||"Intermediate", instructions:r.instructions||"",
+  difficulty:r.difficulty||"Intermediate", purpose:r.purpose||"",
+  instructions:r.instructions||"",
   videoUrl:r.video_url||"", trainerNotes:r.trainer_notes||"",
   tags:r.tags||[], photoBase64:r.photo_base64||"", createdAt:r.created_at,
 }) : null;
@@ -974,9 +975,109 @@ function WarmupItem({item,onUpdate,onRemove,settings,onRestStart}){
   );
 }
 
+
+// ── Warmup purpose filter ─────────────────────────────────────────────────────
+const WARMUP_PURPOSES=[
+  {value:"all",       label:"All",           color:C.sub},
+  {value:"stretching",label:"Stretch",       color:C.purple},
+  {value:"mobility",  label:"Mobility",      color:C.teal},
+  {value:"sport-specific",label:"Sport Specific",color:C.amber},
+];
+function WarmupPurposeFilter({warmup,updateItem}){
+  const [active,setActive]=useState("all");
+  const counts={};
+  WARMUP_PURPOSES.forEach(p=>{counts[p.value]=(p.value==="all"?warmup.length:warmup.filter(i=>i.category===p.value||i.purpose===p.value).length);});
+  return(
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>
+      <span style={{color:C.muted,fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",alignSelf:"center",marginRight:4}}>Filter:</span>
+      {WARMUP_PURPOSES.map(p=>(
+        <button key={p.value} onClick={()=>setActive(p.value)} style={{padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",border:`1px solid ${active===p.value?p.color:C.border}`,background:active===p.value?p.color+"18":"transparent",color:active===p.value?p.color:C.muted,display:"flex",alignItems:"center",gap:5}}>
+          {p.label}
+          {counts[p.value]>0&&<span style={{background:active===p.value?p.color+"30":C.s3,borderRadius:10,padding:"0 5px",fontSize:10}}>{counts[p.value]}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+
+// ── Reusable warmup subsection with inline +/− controls ──────────────────────
+function WarmupSubsection({label,color,icon,items,onAdd,onRemoveAll,renderItem}){
+  const [collapsed,setCollapsed]=useState(false);
+  const [confirmClear,setConfirmClear]=useState(false);
+  const totalSec=items.reduce((a,i)=>a+(i.sides?(i.holdSec||0)*2:(i.holdSec||0)),0);
+
+  return(
+    <div style={{marginBottom:14,background:C.s2,borderRadius:10,border:`1px solid ${color}33`,overflow:"hidden"}}>
+      {/* Subsection header */}
+      <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:color+"0A"}}>
+        <div style={{width:3,height:18,borderRadius:2,background:color,flexShrink:0}}/>
+        <span style={{fontSize:14}}>{icon}</span>
+        <span style={{color,fontWeight:700,fontSize:12,textTransform:"uppercase",letterSpacing:"0.08em",flex:1}}>{label}</span>
+        {items.length>0&&<span style={{color:C.muted,fontSize:11}}>{items.length} item{items.length!==1?"s":""}{totalSec>0?` · ${totalSec}s`:""}</span>}
+
+        {/* Controls */}
+        <div style={{display:"flex",gap:4,alignItems:"center"}}>
+          {/* Add button */}
+          <button onClick={onAdd} title={`Add ${label} exercise`}
+            style={{width:26,height:26,borderRadius:6,background:color+"20",border:`1px solid ${color}44`,color,fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,lineHeight:1}}>
+            +
+          </button>
+          {/* Remove last item */}
+          {items.length>0&&(
+            <button onClick={()=>{
+              // Remove just the last item in this section
+              const lastId=items[items.length-1]?.id;
+              if(lastId)onRemoveAll(lastId,"last");
+            }} title="Remove last item"
+              style={{width:26,height:26,borderRadius:6,background:C.red+"15",border:`1px solid ${C.red}33`,color:C.red,fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,lineHeight:1}}>
+              −
+            </button>
+          )}
+          {/* Clear all */}
+          {items.length>0&&(
+            confirmClear?(
+              <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                <span style={{color:C.red,fontSize:11,fontWeight:700}}>Clear all?</span>
+                <button onClick={()=>{onRemoveAll(null,"all");setConfirmClear(false);}} style={{background:C.red,border:"none",borderRadius:5,padding:"3px 8px",color:"#000",fontSize:11,fontWeight:700,cursor:"pointer"}}>Yes</button>
+                <button onClick={()=>setConfirmClear(false)} style={{background:C.s3,border:`1px solid ${C.border}`,borderRadius:5,padding:"3px 8px",color:C.sub,fontSize:11,cursor:"pointer"}}>No</button>
+              </div>
+            ):(
+              <button onClick={()=>setConfirmClear(true)} title="Clear all items in this section"
+                style={{width:26,height:26,borderRadius:6,background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                ✕
+              </button>
+            )
+          )}
+          {/* Collapse toggle */}
+          {items.length>0&&(
+            <button onClick={()=>setCollapsed(c=>!c)}
+              style={{width:26,height:26,borderRadius:6,background:"transparent",border:`1px solid ${C.border}`,color:C.muted,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {collapsed?"▼":"▲"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Items */}
+      {!collapsed&&(
+        <div style={{padding:items.length>0?"8px 10px 4px":0}}>
+          {items.length===0?(
+            <div style={{textAlign:"center",padding:"14px 0",color:C.muted,fontSize:12}}>
+              No {label.toLowerCase()} exercises — <span onClick={onAdd} style={{color,cursor:"pointer",fontWeight:600}}>add one</span>
+            </div>
+          ):(
+            items.map(item=>renderItem(item))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WarmupSection({warmup,setWarmup,settings,onRestStart}){
   const [open,setOpen]=useState(false);
-  const addItem=cat=>setWarmup(w=>[...w,{id:uid(),name:`New ${cat}`,category:cat,holdSec:settings.defaultWarmupHoldSec,reps:settings.defaultWarmupReps,resistanceMode:settings.defaultWarmupResistance,resistanceVal:"",sides:false,description:"",expanded:true}]);
+  const addItem=cat=>setWarmup(w=>[...w,{id:uid(),name:`New ${cat==='sport-specific'?'Sport Specific':cat}`,category:cat==='sport-specific'?'mobility':cat,purpose:cat==='sport-specific'?'sport-specific':'',holdSec:settings.defaultWarmupHoldSec,reps:settings.defaultWarmupReps,resistanceMode:settings.defaultWarmupResistance,resistanceVal:"",sides:false,description:"",expanded:true}]);
   const updateItem=(id,patch)=>setWarmup(w=>w.map(i=>i.id===id?{...i,...patch}:i));
   const removeItem=id=>setWarmup(w=>w.filter(i=>i.id!==id));
   const stretches=warmup.filter(i=>i.category==="stretching");
@@ -988,7 +1089,7 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
         <div style={{width:32,height:32,borderRadius:8,background:C.purple+"18",border:`1px solid ${C.purple}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🧘</div>
         <div style={{flex:1}}>
           <div style={{color:C.text,fontWeight:700,fontSize:14}}>Warmup</div>
-          <div style={{color:C.muted,fontSize:11,marginTop:1}}>{warmup.length===0?"No exercises added yet":`${stretches.length} stretches · ${mobility.length} mobility · ~${Math.round(totalSec/60)} min`}</div>
+          <div style={{color:C.muted,fontSize:11,marginTop:1}}>{warmup.length===0?"No exercises added yet":`${stretches.length} stretches · ${mobility.length} mobility · ${warmup.filter(i=>i.purpose==="sport-specific").length} sport · ~${Math.round(totalSec/60)} min`}</div>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
           {warmup.length>0&&<Pill color={C.purple}>{warmup.length} exercises</Pill>}
@@ -997,20 +1098,45 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
       </button>
       {open&&(
         <div style={{borderTop:`1px solid ${C.border}`,padding:"16px 18px"}}>
-          {stretches.length>0&&(
-            <><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><div style={{width:3,height:16,borderRadius:2,background:C.purple}}/><span style={{color:C.purple,fontWeight:700,fontSize:11,textTransform:"uppercase",letterSpacing:"0.08em"}}>Stretching</span><span style={{color:C.muted,fontSize:11}}>{stretches.reduce((a,i)=>a+(i.sides?(i.holdSec||0)*2:(i.holdSec||0)),0)}s</span></div>
-            {stretches.map(item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>)}</>
+          {/* Purpose filter tabs */}
+          {warmup.length>0&&(
+            <WarmupPurposeFilter warmup={warmup} updateItem={updateItem}/>
           )}
-          {mobility.length>0&&(
-            <div style={{marginTop:stretches.length>0?16:0}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}><div style={{width:3,height:16,borderRadius:2,background:C.teal}}/><span style={{color:C.teal,fontWeight:700,fontSize:11,textTransform:"uppercase",letterSpacing:"0.08em"}}>Mobility</span><span style={{color:C.muted,fontSize:11}}>{mobility.reduce((a,i)=>a+(i.sides?(i.holdSec||0)*2:(i.holdSec||0)),0)}s</span></div>
-              {mobility.map(item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>)}
-            </div>
-          )}
-          {warmup.length===0&&<div style={{textAlign:"center",padding:"20px 0",color:C.muted,fontSize:13}}>Add stretches or mobility work to build your warmup.</div>}
-          <div style={{display:"flex",gap:8,marginTop:14}}>
+
+          {/* ── Stretching subsection ── */}
+          <WarmupSubsection
+            label="Stretching" color={C.purple} icon="🧘"
+            items={stretches}
+            onAdd={()=>addItem("stretching")}
+            onRemoveAll={(id,mode)=>{if(mode==="last")removeItem(id);else setWarmup(w=>w.filter(i=>i.category!=="stretching"));}}
+            renderItem={item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>}
+          />
+
+          {/* ── Mobility subsection ── */}
+          <WarmupSubsection
+            label="Mobility" color={C.teal} icon="🔄"
+            items={mobility.filter(i=>i.purpose!=="sport-specific")}
+            onAdd={()=>addItem("mobility")}
+            onRemoveAll={(id,mode)=>{if(mode==="last")removeItem(id);else setWarmup(w=>w.filter(i=>!(i.category==="mobility"&&i.purpose!=="sport-specific")));}}
+            renderItem={item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>}
+          />
+
+          {/* ── Sport Specific subsection ── */}
+          <WarmupSubsection
+            label="Sport Specific" color={C.amber} icon="⚡"
+            items={warmup.filter(i=>i.purpose==="sport-specific")}
+            onAdd={()=>addItem("sport-specific")}
+            onRemoveAll={(id,mode)=>{if(mode==="last")removeItem(id);else setWarmup(w=>w.filter(i=>i.purpose!=="sport-specific"));}}
+            renderItem={item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>}
+          />
+
+          {warmup.length===0&&<div style={{textAlign:"center",padding:"20px 0",color:C.muted,fontSize:13}}>Tap a section below to add exercises.</div>}
+
+          {/* ── Bottom add bar ── */}
+          <div style={{display:"flex",gap:8,marginTop:16,paddingTop:14,borderTop:`1px solid ${C.border}`,flexWrap:"wrap"}}>
             <Btn variant="ghost" color={C.purple} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem("stretching")}>+ Stretch</Btn>
             <Btn variant="ghost" color={C.teal} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem("mobility")}>+ Mobility</Btn>
+            <Btn variant="ghost" color={C.amber} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem("sport-specific")}>+ Sport Specific</Btn>
             <Btn variant="ghost" color={C.sub} style={{padding:"6px 12px",fontSize:11}} onClick={()=>setWarmup(DEFAULT_STRETCHES_FACTORY())}>Load defaults</Btn>
           </div>
         </div>
@@ -1866,6 +1992,8 @@ function Dashboard({clients,sessions,classes,programs,formats,setView,setActiveC
 const MUSCLE_GROUPS=["Chest","Back","Shoulders","Biceps","Triceps","Forearms","Quads","Hamstrings","Glutes","Calves","Core","Full Body"];
 const EQUIPMENT_LIST=["Barbell","Dumbbell","Cable","Machine","Bodyweight","Kettlebell","Resistance Band","Box","TRX","Medicine Ball","Other"];
 const CATEGORIES=["Strength","Hypertrophy","Cardio","Mobility","Plyometric","Olympic","Rehabilitation","Core"];
+const PURPOSE_TYPES=["Stretch","Mobility","Sport Specific","General","Warm Up","Cool Down","Injury Prevention","Recovery"];
+const PURPOSE_COLORS={"Stretch":C.purple,"Mobility":C.teal,"Sport Specific":C.amber,"General":C.sub,"Warm Up":C.green,"Cool Down":C.blue,"Injury Prevention":C.red,"Recovery":C.purple};
 const DIFFICULTY=["Beginner","Intermediate","Advanced","Elite"];
 
 // Leaderboard metric definitions
@@ -2016,6 +2144,14 @@ function ExerciseCatalogForm({initial,onSave,onClose}){
             {DIFFICULTY.map(d=><option key={d}>{d}</option>)}
           </select>
         </div>
+        <div>
+          <div style={{color:C.sub,fontSize:12,fontWeight:600,marginBottom:5}}>Purpose</div>
+          <select value={f.purpose||""} onChange={e=>set("purpose")(e.target.value)}
+            style={{width:"100%",background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit"}}>
+            <option value="">— Select purpose —</option>
+            {PURPOSE_TYPES.map(p=><option key={p}>{p}</option>)}
+          </select>
+        </div>
 
         <div>
           <div style={{color:C.sub,fontSize:12,fontWeight:600,marginBottom:5}}>Video URL (optional)</div>
@@ -2087,6 +2223,7 @@ function ExerciseCard({ex,onEdit,onDelete,sessions,clients}){
             <Pill color={CAT_COLORS[ex.category]||C.blue}>{ex.category}</Pill>
             <Pill color={DIFF_COLORS[ex.difficulty]||C.sub}>{ex.difficulty}</Pill>
             <Pill color={C.sub}>{ex.equipment}</Pill>
+            {ex.purpose&&<Pill color={PURPOSE_COLORS[ex.purpose]||C.sub}>{ex.purpose}</Pill>}
             {(ex.muscles||[]).slice(0,3).map(m=><Pill key={m} color={C.blue+"88"}>{m}</Pill>)}
             {(ex.muscles||[]).length>3&&<Pill color={C.muted}>+{ex.muscles.length-3}</Pill>}
           </div>
@@ -2130,6 +2267,7 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,sessions,
   const [filterCat,setFilterCat]=useState("");
   const [filterMuscle,setFilterMuscle]=useState("");
   const [filterEquip,setFilterEquip]=useState("");
+  const [filterPurpose,setFilterPurpose]=useState("");
   const [modal,setModal]=useState(null);
   const [confirm,setConfirm]=useState(null);
 
@@ -2138,7 +2276,8 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,sessions,
     const matchCat=!filterCat||ex.category===filterCat;
     const matchMuscle=!filterMuscle||(ex.muscles||[]).includes(filterMuscle);
     const matchEquip=!filterEquip||ex.equipment===filterEquip;
-    return matchSearch&&matchCat&&matchMuscle&&matchEquip;
+    const matchPurpose=!filterPurpose||(ex.purpose||"")===filterPurpose;
+    return matchSearch&&matchCat&&matchMuscle&&matchEquip&&matchPurpose;
   });
 
   const save=async f=>{
@@ -2176,8 +2315,13 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,sessions,
             <option value="">All equipment</option>
             {EQUIPMENT_LIST.map(e=><option key={e}>{e}</option>)}
           </select>
-          {(filterCat||filterMuscle||filterEquip)&&(
-            <button onClick={()=>{setFilterCat("");setFilterMuscle("");setFilterEquip("");}} style={{background:"none",border:"none",color:C.red,fontSize:12,cursor:"pointer",fontWeight:600}}>Clear filters ×</button>
+          <select value={filterPurpose} onChange={e=>setFilterPurpose(e.target.value)}
+            style={{background:filterPurpose?(PURPOSE_COLORS[filterPurpose]||C.green)+"18":C.s2,border:`1px solid ${filterPurpose?(PURPOSE_COLORS[filterPurpose]||C.green):C.border}`,borderRadius:8,padding:"6px 12px",color:filterPurpose?(PURPOSE_COLORS[filterPurpose]||C.green):C.sub,fontSize:12,outline:"none",fontFamily:"inherit",cursor:"pointer"}}>
+            <option value="">All purposes</option>
+            {PURPOSE_TYPES.map(p=><option key={p}>{p}</option>)}
+          </select>
+          {(filterCat||filterMuscle||filterEquip||filterPurpose)&&(
+            <button onClick={()=>{setFilterCat("");setFilterMuscle("");setFilterEquip("");setFilterPurpose("");}} style={{background:"none",border:"none",color:C.red,fontSize:12,cursor:"pointer",fontWeight:600}}>Clear filters ×</button>
           )}
         </div>
       </div>
@@ -2424,13 +2568,13 @@ export default function App(){
 
   // ── Catalog CRUD (Supabase)
   const addCatalogExercise=async f=>{
-    const row={id:uid(),name:f.name,category:f.category,muscles:f.muscles||[],equipment:f.equipment,difficulty:f.difficulty,instructions:f.instructions||"",video_url:f.videoUrl||"",trainer_notes:f.trainerNotes||"",tags:f.tags||[],photo_base64:f.photoBase64||""};
+    const row={id:uid(),name:f.name,category:f.category,muscles:f.muscles||[],equipment:f.equipment,difficulty:f.difficulty,purpose:f.purpose||"",instructions:f.instructions||"",video_url:f.videoUrl||"",trainer_notes:f.trainerNotes||"",tags:f.tags||[],photo_base64:f.photoBase64||""};
     const r=await db.insert("fitos_catalog",row);
     setCatalogExercises(p=>[mapCatalog(r),...p]);
     toast("Exercise added to catalog ✓");
   };
   const editCatalogExercise=async(id,f)=>{
-    const patch={name:f.name,category:f.category,muscles:f.muscles||[],equipment:f.equipment,difficulty:f.difficulty,instructions:f.instructions||"",video_url:f.videoUrl||"",trainer_notes:f.trainerNotes||"",tags:f.tags||[],photo_base64:f.photoBase64||""};
+    const patch={name:f.name,category:f.category,muscles:f.muscles||[],equipment:f.equipment,difficulty:f.difficulty,purpose:f.purpose||"",instructions:f.instructions||"",video_url:f.videoUrl||"",trainer_notes:f.trainerNotes||"",tags:f.tags||[],photo_base64:f.photoBase64||""};
     await db.update("fitos_catalog",id,patch);
     setCatalogExercises(p=>p.map(e=>e.id===id?{...e,...f}:e));
     toast("Exercise updated ✓");
