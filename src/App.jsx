@@ -1962,30 +1962,47 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function Sidebar({active,setActive,counts}){
+function Sidebar({active,setActive,counts,collapsed,setCollapsed}){
+  const w=collapsed?56:200;
   return(
-    <aside style={{width:200,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0}}>
-      <div style={{padding:"18px 16px 14px",borderBottom:`1px solid ${C.border}`}}>
-        <div style={{display:"flex",alignItems:"center",gap:9}}>
-          <div style={{width:28,height:28,borderRadius:7,background:C.green,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:14,fontWeight:900,color:"#000"}}>F</span></div>
-          <div><div style={{color:C.text,fontWeight:800,fontSize:14}}>FitOS</div><div style={{color:C.muted,fontSize:10}}>Cloud ☁️</div></div>
-        </div>
+    <aside style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden"}}>
+      {/* Logo + collapse button */}
+      <div style={{padding:"14px 10px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",gap:8,flexShrink:0}}>
+        {!collapsed&&(
+          <div style={{display:"flex",alignItems:"center",gap:9,minWidth:0}}>
+            <div style={{width:28,height:28,borderRadius:7,background:C.green,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:14,fontWeight:900,color:"#000"}}>F</span></div>
+            <div style={{minWidth:0}}><div style={{color:C.text,fontWeight:800,fontSize:14}}>FitOS</div><div style={{color:C.muted,fontSize:10}}>Cloud ☁️</div></div>
+          </div>
+        )}
+        {collapsed&&<div style={{width:28,height:28,borderRadius:7,background:C.green,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:14,fontWeight:900,color:"#000"}}>F</span></div>}
+        <button onClick={()=>setCollapsed(c=>!c)} title={collapsed?"Expand sidebar":"Collapse sidebar"}
+          style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:14,padding:4,borderRadius:6,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          {collapsed?"→":"←"}
+        </button>
       </div>
-      <nav style={{padding:"10px 8px",flex:1,display:"flex",flexDirection:"column",gap:2}}>
+
+      {/* Nav */}
+      <nav style={{padding:"10px 6px",flex:1,display:"flex",flexDirection:"column",gap:2}}>
         {NAV.map(item=>{
           const isActive=active===item.id||(active==="client"&&item.id==="clients");
           const col=item.id==="programs"?C.purple:C.green;
-          return(<button key={item.id} onClick={()=>setActive(item.id)} style={{display:"flex",alignItems:"center",gap:9,padding:"9px 10px",borderRadius:8,border:"none",cursor:"pointer",textAlign:"left",background:isActive?col+"18":"transparent",color:isActive?col:C.sub,fontWeight:isActive?700:500,fontSize:13}}>
-            <span style={{fontSize:14}}>{item.icon}</span>{item.label}
-            {counts[item.id]>0&&<span style={{marginLeft:"auto",background:col+"22",color:col,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>{counts[item.id]}</span>}
-          </button>);
+          return(
+            <button key={item.id} onClick={()=>setActive(item.id)}
+              title={collapsed?item.label:undefined}
+              style={{display:"flex",alignItems:"center",gap:collapsed?0:9,padding:collapsed?"9px 0":"9px 10px",justifyContent:collapsed?"center":"flex-start",borderRadius:8,border:"none",cursor:"pointer",textAlign:"left",background:isActive?col+"18":"transparent",color:isActive?col:C.sub,fontWeight:isActive?700:500,fontSize:13,position:"relative",width:"100%"}}>
+              <span style={{fontSize:collapsed?18:14,flexShrink:0}}>{item.icon}</span>
+              {!collapsed&&<span style={{flex:1,textAlign:"left"}}>{item.label}</span>}
+              {!collapsed&&counts[item.id]>0&&<span style={{marginLeft:"auto",background:col+"22",color:col,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>{counts[item.id]}</span>}
+              {collapsed&&counts[item.id]>0&&<span style={{position:"absolute",top:4,right:4,width:8,height:8,borderRadius:"50%",background:col}}/>}
+            </button>
+          );
         })}
       </nav>
-      <div style={{padding:"12px 14px",borderTop:`1px solid ${C.border}`}}>
-        <div style={{display:"flex",alignItems:"center",gap:9}}>
-          <Avatar name="J" size={30} color={C.purple}/>
-          <div><div style={{color:C.text,fontSize:12,fontWeight:700}}>Jordan Reeves</div><div style={{color:C.muted,fontSize:10}}>Head Coach</div></div>
-        </div>
+
+      {/* Trainer profile */}
+      <div style={{padding:collapsed?"10px 0":"12px 14px",borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:9}}>
+        <Avatar name="J" size={30} color={C.purple}/>
+        {!collapsed&&<div style={{minWidth:0}}><div style={{color:C.text,fontSize:12,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Jordan Reeves</div><div style={{color:C.muted,fontSize:10}}>Head Coach</div></div>}
       </div>
     </aside>
   );
@@ -2001,6 +2018,7 @@ export default function App(){
   const [formats,setFormats]=useState([]);
   const [activeClient,setActiveClient]=useState(null);
   const [toasts,toast]=useToast();
+  const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
 
   // Load data on mount — works on your Netlify domain (not on claude.ai due to CORS)
   useEffect(()=>{
@@ -2135,7 +2153,7 @@ export default function App(){
   return(
     <div style={{display:"flex",height:"100vh",background:C.bg,overflow:"hidden",fontFamily:"'Inter',system-ui,sans-serif"}}>
       <style>{`input[type=number]::-webkit-inner-spin-button{opacity:0.3} *{box-sizing:border-box;} input,select,button{font-family:inherit;}`}</style>
-      <Sidebar active={view} setActive={navigate} counts={counts}/>
+      <Sidebar active={view} setActive={navigate} counts={counts} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed}/>
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
         <div style={{height:54,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 22px",background:C.bg,flexShrink:0}}>
           <div><div style={{color:C.text,fontWeight:700,fontSize:16}}>{TITLES[view]}</div><div style={{color:C.muted,fontSize:11}}>{SUBS[view]}</div></div>
