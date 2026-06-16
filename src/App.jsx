@@ -4,76 +4,23 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 const SUPABASE_URL = "https://mxbzpunefucxknodoqrc.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14YnpwdW5lZnVjeGtub2RvcXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NDY1MjgsImV4cCI6MjA5NzAyMjUyOH0.JuaXxAaAAxfDBQom0DDJdlBNJlsRlkdgsKw87pcch7I";
 
-// Auth token stored in memory — refreshed on login
-let _authToken = SUPABASE_KEY; // falls back to anon key until logged in
-let _userId = null;
-
-const getHeaders = () => ({
+const headers = {
   "Content-Type": "application/json",
   "apikey": SUPABASE_KEY,
-  "Authorization": `Bearer ${_authToken}`,
+  "Authorization": `Bearer ${SUPABASE_KEY}`,
   "Prefer": "return=representation",
-});
-
-// ─── Supabase Auth helpers ────────────────────────────────────────────────────
-const auth = {
-  async signUp(email, password, name) {
-    const r = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
-      method: "POST",
-      headers: {"Content-Type":"application/json","apikey":SUPABASE_KEY},
-      body: JSON.stringify({email, password, data:{full_name:name}}),
-    });
-    const d = await r.json();
-    if (d.error) throw new Error(d.error.message||d.error);
-    if (d.access_token) { _authToken=d.access_token; _userId=d.user?.id; }
-    return d;
-  },
-  async signIn(email, password) {
-    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: "POST",
-      headers: {"Content-Type":"application/json","apikey":SUPABASE_KEY},
-      body: JSON.stringify({email, password}),
-    });
-    const d = await r.json();
-    if (d.error) throw new Error(d.error.message||d.error_description||d.error);
-    _authToken=d.access_token; _userId=d.user?.id;
-    // Persist token
-    try{localStorage.setItem("fitos_token",d.access_token);localStorage.setItem("fitos_uid",d.user?.id);}catch{}
-    return d;
-  },
-  async signOut() {
-    try{await fetch(`${SUPABASE_URL}/auth/v1/logout`,{method:"POST",headers:getHeaders()});}catch{}
-    _authToken=SUPABASE_KEY; _userId=null;
-    try{localStorage.removeItem("fitos_token");localStorage.removeItem("fitos_uid");}catch{}
-  },
-  async getUser() {
-    const r = await fetch(`${SUPABASE_URL}/auth/v1/user`,{headers:getHeaders()});
-    if (!r.ok) return null;
-    return r.json();
-  },
-  restoreSession() {
-    try{
-      const t=localStorage.getItem("fitos_token");
-      const u=localStorage.getItem("fitos_uid");
-      if(t&&u){_authToken=t;_userId=u;return{token:t,userId:u};}
-    }catch{}
-    return null;
-  }
 };
 
 // ─── Supabase REST helpers ────────────────────────────────────────────────────
-const SHARED_TABLES=["fitos_catalog"]; // no trainer_id filter
 const db = {
   async select(table) {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=created_at.desc`, { headers:getHeaders() });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=created_at.desc`, { headers });
     if (!r.ok) throw new Error(`select ${table}: ${await r.text()}`);
     return r.json();
   },
   async insert(table, row) {
-    // Auto-stamp trainer_id on private tables
-    const rowWithId = SHARED_TABLES.includes(table)||!_userId ? row : {...row, trainer_id:_userId};
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: "POST", headers:getHeaders(), body: JSON.stringify(rowWithId),
+      method: "POST", headers, body: JSON.stringify(row),
     });
     if (!r.ok) throw new Error(`insert ${table}: ${await r.text()}`);
     const data = await r.json();
@@ -81,7 +28,7 @@ const db = {
   },
   async update(table, id, patch) {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
-      method: "PATCH", headers:getHeaders(), body: JSON.stringify(patch),
+      method: "PATCH", headers, body: JSON.stringify(patch),
     });
     if (!r.ok) throw new Error(`update ${table}: ${await r.text()}`);
     const data = await r.json();
@@ -89,9 +36,16 @@ const db = {
   },
   async delete(table, id) {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
-      method: "DELETE", headers:getHeaders(),
+      method: "DELETE", headers,
     });
     if (!r.ok) throw new Error(`delete ${table}: ${await r.text()}`);
+  },
+  async rpc(fn, params = {}) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: "POST", headers, body: JSON.stringify(params),
+    });
+    if (!r.ok) throw new Error(`rpc ${fn}: ${await r.text()}`);
+    return r.json();
   },
 };
 
@@ -2517,105 +2471,6 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,sessions,
   );
 }
 
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// LOGIN / SIGNUP SCREEN
-// ═══════════════════════════════════════════════════════════════════════════════
-function LoginScreen({onLogin}){
-  const [mode,setMode]=useState("login"); // "login" | "signup"
-  const [email,setEmail]=useState("");
-  const [password,setPassword]=useState("");
-  const [name,setName]=useState("");
-  const [loading,setLoading]=useState(false);
-  const [error,setError]=useState("");
-
-  const submit=async()=>{
-    if(!email.trim()||!password.trim())return;
-    setLoading(true);setError("");
-    try{
-      if(mode==="signup"){
-        if(!name.trim()){setError("Please enter your name.");setLoading(false);return;}
-        await auth.signUp(email.trim(),password,name.trim());
-        setError("✓ Account created! Check your email to confirm, then log in.");
-        setMode("login");
-      } else {
-        const d=await auth.signIn(email.trim(),password);
-        onLogin(d.user);
-      }
-    }catch(e){
-      setError(e.message||"Something went wrong. Please try again.");
-    }finally{setLoading(false);}
-  };
-
-  return(
-    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',system-ui,sans-serif",padding:24}}>
-      <div style={{width:"100%",maxWidth:380}}>
-        {/* Logo */}
-        <div style={{textAlign:"center",marginBottom:36}}>
-          <div style={{width:56,height:56,borderRadius:14,background:C.green,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px"}}>
-            <span style={{fontSize:28,fontWeight:900,color:"#000"}}>F</span>
-          </div>
-          <div style={{color:C.text,fontWeight:900,fontSize:24,letterSpacing:"-0.02em"}}>FitOS</div>
-          <div style={{color:C.muted,fontSize:13,marginTop:4}}>Coach Portal</div>
-        </div>
-
-        {/* Card */}
-        <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,padding:28}}>
-          {/* Mode tabs */}
-          <div style={{display:"flex",background:C.s2,borderRadius:10,padding:3,marginBottom:24}}>
-            {[["login","Sign In"],["signup","Create Account"]].map(([m,l])=>(
-              <button key={m} onClick={()=>{setMode(m);setError("");}}
-                style={{flex:1,padding:"9px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:700,fontSize:13,background:mode===m?C.green:"transparent",color:mode===m?"#000":C.sub,transition:"all 0.15s"}}>
-                {l}
-              </button>
-            ))}
-          </div>
-
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            {mode==="signup"&&(
-              <div>
-                <label style={{color:C.sub,fontSize:12,fontWeight:600,display:"block",marginBottom:6}}>Your name</label>
-                <input value={name} onChange={e=>setName(e.target.value)} placeholder="Jordan Reeves"
-                  style={{width:"100%",background:C.s2,border:`1px solid ${C.border2}`,borderRadius:9,padding:"11px 14px",color:C.text,fontSize:15,outline:"none",fontFamily:"inherit"}}/>
-              </div>
-            )}
-            <div>
-              <label style={{color:C.sub,fontSize:12,fontWeight:600,display:"block",marginBottom:6}}>Email</label>
-              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@email.com"
-                onKeyDown={e=>{if(e.key==="Enter")submit();}}
-                style={{width:"100%",background:C.s2,border:`1px solid ${C.border2}`,borderRadius:9,padding:"11px 14px",color:C.text,fontSize:15,outline:"none",fontFamily:"inherit"}}/>
-            </div>
-            <div>
-              <label style={{color:C.sub,fontSize:12,fontWeight:600,display:"block",marginBottom:6}}>Password</label>
-              <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••"
-                onKeyDown={e=>{if(e.key==="Enter")submit();}}
-                style={{width:"100%",background:C.s2,border:`1px solid ${C.border2}`,borderRadius:9,padding:"11px 14px",color:C.text,fontSize:15,outline:"none",fontFamily:"inherit"}}/>
-            </div>
-
-            {error&&(
-              <div style={{background:error.startsWith("✓")?C.green+"18":C.red+"18",border:`1px solid ${error.startsWith("✓")?C.green:C.red}44`,borderRadius:8,padding:"10px 14px",color:error.startsWith("✓")?C.green:C.red,fontSize:13,lineHeight:1.5}}>
-                {error}
-              </div>
-            )}
-
-            <button onClick={submit} disabled={loading||!email||!password}
-              style={{background:loading||!email||!password?C.muted:C.green,border:"none",borderRadius:9,padding:"13px",color:"#000",fontWeight:800,fontSize:15,cursor:loading?"not-allowed":"pointer",marginTop:4,opacity:loading||!email||!password?0.6:1}}>
-              {loading?"Please wait…":mode==="login"?"Sign In →":"Create Account →"}
-            </button>
-          </div>
-        </div>
-
-        <div style={{textAlign:"center",marginTop:20,color:C.muted,fontSize:12}}>
-          {mode==="login"?"Don't have an account? ":"Already have an account? "}
-          <span onClick={()=>{setMode(mode==="login"?"signup":"login");setError("");}} style={{color:C.green,cursor:"pointer",fontWeight:600}}>
-            {mode==="login"?"Sign up":"Sign in"}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // ROOT — loads all data from Supabase, passes CRUD handlers down
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2666,11 +2521,6 @@ function BottomNav({active,setActive,counts}){
                 </button>
               );
             })}
-            <button onClick={async()=>{await auth.signOut();window.location.reload();}}
-              style={{width:"100%",display:"flex",alignItems:"center",gap:14,padding:"14px 20px",background:"transparent",border:"none",cursor:"pointer",textAlign:"left",borderTop:`1px solid ${C.border}`}}>
-              <span style={{fontSize:20}}>🚪</span>
-              <span style={{color:C.red,fontWeight:600,fontSize:15}}>Sign Out</span>
-            </button>
           </div>
         </div>
       )}
@@ -2702,7 +2552,7 @@ function BottomNav({active,setActive,counts}){
   );
 }
 
-function Sidebar({active,setActive,counts,collapsed,setCollapsed,trainerName}){
+function Sidebar({active,setActive,counts,collapsed,setCollapsed}){
   const w=collapsed?56:200;
   return(
     <aside style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden"}}>
@@ -2737,8 +2587,8 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,trainerName}){
         })}
       </nav>
       <div style={{padding:collapsed?"10px 0":"12px 14px",borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:9}}>
-        <Avatar name={trainerName||"?"} size={30} color={C.purple}/>
-        {!collapsed&&<div style={{minWidth:0}}><div style={{color:C.text,fontSize:12,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{trainerName||"Trainer"}</div><div style={{color:C.muted,fontSize:10}}>Head Coach</div></div>}
+        <Avatar name="J" size={30} color={C.purple}/>
+        {!collapsed&&<div style={{minWidth:0}}><div style={{color:C.text,fontSize:12,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Jordan Reeves</div><div style={{color:C.muted,fontSize:10}}>Head Coach</div></div>}
       </div>
     </aside>
   );
@@ -2756,19 +2606,6 @@ export default function App(){
   const [toasts,toast]=useToast();
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const [catalogExercises,setCatalogExercises]=useState([]);
-  const [authUser,setAuthUser]=useState(null);
-  const [authLoading,setAuthLoading]=useState(true);
-
-  // Restore session on mount
-  useEffect(()=>{
-    const session=auth.restoreSession();
-    if(session){
-      auth.getUser().then(u=>{
-        if(u&&!u.error){setAuthUser(u);} else {auth.signOut();}
-        setAuthLoading(false);
-      }).catch(()=>setAuthLoading(false));
-    } else { setAuthLoading(false); }
-  },[]);
 
   // Load data on mount — works on your Netlify domain (not on claude.ai due to CORS)
   useEffect(()=>{
@@ -2921,20 +2758,6 @@ export default function App(){
   if(appState==="loading")return(<div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',system-ui,sans-serif"}}><Spinner msg="Connecting to database…"/></div>);
   if(appState==="setup")return <SetupScreen onSetupDone={()=>{ setAppState("loading"); reload().then(()=>setAppState("ready")); }}/>;
 
-  // Show loading spinner while checking auth
-  if(authLoading) return(
-    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',system-ui,sans-serif"}}>
-      <div style={{textAlign:"center"}}>
-        <div style={{width:36,height:36,border:`3px solid ${C.border}`,borderTop:`3px solid ${C.green}`,borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 14px"}}/>
-        <div style={{color:C.sub,fontSize:13}}>Loading…</div>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      </div>
-    </div>
-  );
-
-  // Show login if not authenticated
-  if(!authUser) return <LoginScreen onLogin={user=>{setAuthUser(user);setAuthLoading(true);setTimeout(()=>setAuthLoading(false),100);}}/>;
-
   // Detect mobile — screens narrower than 768px get bottom nav
   const isMobile=typeof window!=="undefined"&&window.innerWidth<768;
   const [mobile,setMobile]=useState(isMobile);
@@ -2950,7 +2773,6 @@ export default function App(){
         input[type=number]::-webkit-inner-spin-button{opacity:0.3}
         *{box-sizing:border-box;}
         input,select,button{font-family:inherit;}
-        input,select,textarea{font-size:16px!important;}
         @media(max-width:767px){
           .fitos-grid-2{grid-template-columns:1fr!important;}
           .fitos-grid-3{grid-template-columns:1fr!important;}
@@ -2961,7 +2783,7 @@ export default function App(){
       `}</style>
 
       {/* Sidebar — desktop only */}
-      {!mobile&&<Sidebar active={view} setActive={navigate} counts={counts} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} trainerName={authUser?.user_metadata?.full_name||authUser?.email?.split("@")[0]}/>}
+      {!mobile&&<Sidebar active={view} setActive={navigate} counts={counts} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed}/>}
 
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
         {/* Top bar */}
@@ -2970,11 +2792,9 @@ export default function App(){
             <div style={{color:C.text,fontWeight:700,fontSize:mobile?15:16,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{TITLES[view]}</div>
             {!mobile&&<div style={{color:C.muted,fontSize:11}}>{SUBS[view]}</div>}
           </div>
-          <div style={{display:"flex",gap:8,flexShrink:0,alignItems:"center"}}>
+          <div style={{display:"flex",gap:8,flexShrink:0}}>
             {view==="client"&&<Btn variant="outline" style={{padding:"6px 10px",fontSize:11}} onClick={()=>navigate("clients")}>← Back</Btn>}
             {view==="dashboard"&&<Btn style={{padding:"6px 12px",fontSize:mobile?11:12}} onClick={()=>setView("sessions")}>⚡ Log</Btn>}
-            {!mobile&&<button onClick={async()=>{await auth.signOut();setAuthUser(null);setClients([]);setSessions([]);setClasses([]);setPrograms([]);setFormats([]);}}
-              style={{background:"none",border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",color:C.muted,fontSize:11,cursor:"pointer",fontWeight:600}}>Sign out</button>}
           </div>
         </div>
 
