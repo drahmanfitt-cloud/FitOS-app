@@ -1,7 +1,4 @@
 // FitOS — Config, Supabase, Design Tokens & Shared UI
-import React from 'react';
-import { useState, useEffect, useRef, useCallback } from 'react';
-
 import React, { useState, useCallback, useEffect, useRef } from "react";
 
 // ─── Supabase Config ──────────────────────────────────────────────────────────
