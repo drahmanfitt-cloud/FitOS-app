@@ -1,6 +1,5 @@
 // FitOS — Warmup Components & Settings
-import React from 'react';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 
 const RESISTANCE_MODES = [
