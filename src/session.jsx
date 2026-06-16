@@ -1,6 +1,6 @@
 // FitOS — Session Logger
-import React from 'react';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+
 
 function WarmupSection({warmup,setWarmup,settings,onRestStart}){
   const [open,setOpen]=useState(false);
