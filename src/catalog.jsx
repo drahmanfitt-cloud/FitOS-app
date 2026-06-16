@@ -1,6 +1,6 @@
 // FitOS — Exercise Catalog
-import React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
+
 
 const MUSCLE_GROUPS=["Chest","Back","Shoulders","Biceps","Triceps","Forearms","Quads","Hamstrings","Glutes","Calves","Core","Full Body"];
 const EQUIPMENT_LIST=["Barbell","Dumbbell","Cable","Machine","Bodyweight","Kettlebell","Resistance Band","Box","TRX","Medicine Ball","Other"];
