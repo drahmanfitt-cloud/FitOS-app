@@ -1,6 +1,6 @@
 // FitOS — Classes, Programs & Dashboard
-import React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
+
 
 function ClassForm({initial,onSave,onClose}){
   const EMPTY={name:"",date:"",time:"",duration:45,capacity:12,location:"",notes:""};
