@@ -42,8 +42,8 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
   };
 
   return(
-    <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16,minHeight:520}}>
-      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+    <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16,height:"calc(100vh - 143px)",minHeight:0}}>
+      <div style={{display:"flex",flexDirection:"column",gap:10,overflowY:"auto",paddingRight:4}}>
         <Btn color={C.purple} onClick={create}>+ New Program</Btn>
         {programs.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>📋</div><div style={{color:C.muted,fontSize:13}}>No programs yet.</div></Card>}
         {programs.map(p=>(
@@ -55,8 +55,8 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
         ))}
       </div>
 
-      {!prog?<Card style={{display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center",color:C.muted}}><div style={{fontSize:36,marginBottom:10}}>📋</div>Select or create a program</div></Card>:(
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {!prog?<Card style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:0}}><div style={{textAlign:"center",color:C.muted}}><div style={{fontSize:36,marginBottom:10}}>📋</div>Select or create a program</div></Card>:(
+        <div style={{display:"flex",flexDirection:"column",gap:14,overflowY:"auto",paddingRight:2,minHeight:0}}>
           {/* Program Settings */}
           <Card>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
