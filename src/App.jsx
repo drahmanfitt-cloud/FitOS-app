@@ -10,6 +10,7 @@ import { Dashboard } from "./dashboard.jsx";
 import { ExerciseCatalogScreen } from "./catalog.jsx";
 import { AuthScreen } from "./auth.jsx";
 import { ProfileSetup, ProfileEditor } from "./profile.jsx";
+import { SEED_LIBRARY } from "./seedLibrary.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -245,6 +246,7 @@ export default function App(){
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const [preloadDay,setPreloadDay]=useState(null);
   const [catalogExercises,setCatalogExercises]=useState([]);
+  const seededRef=useRef(false);
   const [mobile,setMobile]=useState(typeof window!=="undefined"&&window.innerWidth<768);
 
   // ── Fetch trainer profile from DB
@@ -313,6 +315,18 @@ export default function App(){
       setPrograms(p.map(mapProgram));
       setFormats(f.map(mapFormat));
       setCatalogExercises(cat.map(mapCatalog));
+      // Auto-preload the shared catalog the first time it's empty
+      if(cat.length===0 && !seededRef.current){
+        seededRef.current=true;
+        try{
+          const rows=SEED_LIBRARY.map(x=>({id:uid(),name:x.name,category:x.category||"Strength",muscles:x.muscles||[],equipment:x.equipment||"Barbell",difficulty:x.difficulty||"Intermediate",purpose:x.purpose||"",instructions:x.instructions||"",video_url:"",trainer_notes:"",tags:x.tags||[],photo_base64:""}));
+          const inserted=await db.insertMany("fitos_catalog",rows);
+          setCatalogExercises(inserted.map(mapCatalog));
+        }catch(seedErr){
+          console.warn("Catalog auto-preload skipped:", seedErr.message);
+          seededRef.current=false;
+        }
+      }
     } catch(e) {
       console.warn("Could not load from Supabase:", e.message);
     }
