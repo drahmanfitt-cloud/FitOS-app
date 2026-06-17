@@ -16,7 +16,6 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
   const [confirm,setConfirm]=useState(null);
   const [modal,setModal]=useState(null);
   const [exPicker,setExPicker]=useState(null);
-  const [progTab,setProgTab]=useState("days");
   const prog=programs.find(p=>p.id===selected);
 
   const create=async()=>{
@@ -76,56 +75,46 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
             {prog.assignedClients?.length>0&&<div style={{marginTop:12,display:"flex",gap:6,flexWrap:"wrap"}}>{prog.assignedClients.map(id=>{const cl=clients.find(c=>c.id===id);return cl?<Pill key={id} color={C.green}>👤 {cl.name}</Pill>:null;})}</div>}
           </Card>
 
-          {/* Sub-tabs: Warmup / Training Days */}
-          <div style={{display:"flex",gap:2,borderBottom:`1px solid ${C.border}`}}>
-            {[["warmup","🧘 Warmup",C.purple],["days","🏋️ Training Days",C.blue]].map(([id,label,col])=>(
-              <button key={id} onClick={()=>setProgTab(id)}
-                style={{padding:"8px 16px",border:"none",background:"none",cursor:"pointer",color:progTab===id?col:C.sub,fontWeight:progTab===id?700:500,fontSize:13,borderBottom:`2px solid ${progTab===id?col:"transparent"}`}}>
-                {label}{id==="warmup"&&(prog.warmup?.length>0)?` · ${prog.warmup.length}`:""}{id==="days"&&(prog.days?.length>0)?` · ${prog.days.length}`:""}
-              </button>
-            ))}
-          </div>
+          {/* Training Days with warmup embedded */}
+          {(prog.days||[]).map(day=>(
+            <Card key={day.id} style={{borderColor:C.purple+"33"}}>
+              {/* Day header */}
+              <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:14}}>
+                <input value={day.label} onChange={e=>updDay(day.id,{label:e.target.value})} style={{background:"none",border:"none",color:C.text,fontWeight:700,fontSize:15,outline:"none",fontFamily:"inherit",flex:1,padding:0}}/>
+                <input value={day.focus} onChange={e=>updDay(day.id,{focus:e.target.value})} placeholder="Focus (Push, Lower…)" style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",color:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",width:160}}/>
+                <button onClick={()=>rmDay(day.id)} style={{background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer",lineHeight:1}}>×</button>
+              </div>
 
-          {/* Warmup tab */}
-          {progTab==="warmup"&&(
-            <Card style={{borderColor:C.purple+"44"}}>
-              <ProgramWarmupTab warmup={prog.warmup||[]} setWarmup={w=>upd({warmup:w})}/>
-            </Card>
-          )}
+              {/* Warmup section */}
+              <div style={{background:C.s2,borderRadius:10,padding:"12px 14px",marginBottom:14,border:`1px solid ${C.purple}33`}}>
+                <ProgramWarmupTab warmup={day.warmup||[]} setWarmup={w=>updDay(day.id,{warmup:w})}/>
+              </div>
 
-          {/* Training Days tab */}
-          {progTab==="days"&&<>
-            {(prog.days||[]).map(day=>(
-              <Card key={day.id} style={{borderColor:C.blue+"44"}}>
-                <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:12}}>
-                  <input value={day.label} onChange={e=>updDay(day.id,{label:e.target.value})} style={{background:"none",border:"none",color:C.text,fontWeight:700,fontSize:15,outline:"none",fontFamily:"inherit",flex:1,padding:0}}/>
-                  <input value={day.focus} onChange={e=>updDay(day.id,{focus:e.target.value})} placeholder="Focus (Push, Lower…)" style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",color:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",width:160}}/>
-                  <button onClick={()=>rmDay(day.id)} style={{background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer",lineHeight:1}}>×</button>
-                </div>
-                {day.exercises?.length===0&&<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"10px 0"}}>No exercises yet.</div>}
-                {day.exercises?.map((ex)=>(
-                  <div key={ex.id} style={{background:C.s2,borderRadius:9,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.border}`}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                      <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                        <button onClick={()=>mvEx(day.id,ex.id,-1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▲</button>
-                        <button onClick={()=>mvEx(day.id,ex.id,1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▼</button>
-                      </div>
-                      <span style={{color:C.text,fontWeight:600,fontSize:13,flex:1}}>{ex.name}</span>
-                      <button onClick={()=>rmEx(day.id,ex.id)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer",lineHeight:1}}>×</button>
+              {/* Exercises section */}
+              <div style={{color:C.muted,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Exercises</div>
+              {(day.exercises||[]).length===0&&<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"8px 0",marginBottom:8}}>No exercises yet.</div>}
+              {(day.exercises||[]).map((ex)=>(
+                <div key={ex.id} style={{background:C.s2,borderRadius:9,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.border}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                      <button onClick={()=>mvEx(day.id,ex.id,-1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▲</button>
+                      <button onClick={()=>mvEx(day.id,ex.id,1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▼</button>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"60px 80px 80px 1fr",gap:8}}>
-                      {[{l:"Sets",f:"sets",t:"number"},{l:"Reps",f:"reps",t:"text"},{l:"Rest(s)",f:"rest",t:"number"}].map(fi=>(
-                        <div key={fi.f}><div style={{color:C.muted,fontSize:10,marginBottom:3}}>{fi.l}</div><input type={fi.t} value={ex[fi.f]} onChange={e=>updEx(day.id,ex.id,{[fi.f]:e.target.value})} style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
-                      ))}
-                      <div><div style={{color:C.muted,fontSize:10,marginBottom:3}}>Notes</div><input value={ex.notes} onChange={e=>updEx(day.id,ex.id,{notes:e.target.value})} placeholder="Cues…" style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
-                    </div>
+                    <span style={{color:C.text,fontWeight:600,fontSize:13,flex:1}}>{ex.name}</span>
+                    <button onClick={()=>rmEx(day.id,ex.id)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer",lineHeight:1}}>×</button>
                   </div>
-                ))}
-                <Btn variant="ghost" color={C.blue} style={{padding:"5px 12px",fontSize:11,marginTop:4}} onClick={()=>setExPicker(day.id)}>+ Add Exercise</Btn>
-              </Card>
-            ))}
-            <Btn variant="ghost" color={C.blue} onClick={addDay}>+ Add Training Day</Btn>
-          </>}
+                  <div style={{display:"grid",gridTemplateColumns:"60px 80px 80px 1fr",gap:8}}>
+                    {[{l:"Sets",f:"sets",t:"number"},{l:"Reps",f:"reps",t:"text"},{l:"Rest(s)",f:"rest",t:"number"}].map(fi=>(
+                      <div key={fi.f}><div style={{color:C.muted,fontSize:10,marginBottom:3}}>{fi.l}</div><input type={fi.t} value={ex[fi.f]} onChange={e=>updEx(day.id,ex.id,{[fi.f]:e.target.value})} style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
+                    ))}
+                    <div><div style={{color:C.muted,fontSize:10,marginBottom:3}}>Notes</div><input value={ex.notes} onChange={e=>updEx(day.id,ex.id,{notes:e.target.value})} placeholder="Cues…" style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
+                  </div>
+                </div>
+              ))}
+              <Btn variant="ghost" color={C.purple} style={{padding:"5px 12px",fontSize:11,marginTop:4}} onClick={()=>setExPicker(day.id)}>+ Add Exercise</Btn>
+            </Card>
+          ))}
+          <Btn variant="ghost" color={C.purple} onClick={addDay}>+ Add Training Day</Btn>
 
           {/* Modals */}
           {exPicker&&<Modal title="Add Exercise" onClose={()=>setExPicker(null)}><ExPicker onPick={name=>{addEx(exPicker,name);setExPicker(null);}} onClose={()=>setExPicker(null)}/></Modal>}
