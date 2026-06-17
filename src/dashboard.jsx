@@ -23,9 +23,9 @@ function Dashboard({clients,sessions,classes,programs,formats,setView,setActiveC
         ))}
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-        <Card>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Upcoming Classes</SL><span onClick={()=>setView("classes")} style={{color:C.green,fontSize:12,cursor:"pointer"}}>View all →</span></div>
-          {upcoming.length===0?<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"16px 0"}}>No classes. <span onClick={()=>setView("classes")} style={{color:C.green,cursor:"pointer"}}>Add one →</span></div>:upcoming.map((c,i)=>(
+        <Card onClick={()=>setView("classes")} style={{cursor:"pointer",transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=C.green} onMouseLeave={e=>e.currentTarget.style.borderColor=""}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Upcoming Classes</SL><span style={{color:C.green,fontSize:12}}>View all →</span></div>
+          {upcoming.length===0?<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"16px 0"}}>No classes. Add one →</div>:upcoming.map((c,i)=>(
             <div key={c.id} style={{display:"flex",gap:12,padding:"10px 0",borderBottom:i<upcoming.length-1?`1px solid ${C.border}`:"none"}}>
               <div style={{width:3,borderRadius:2,background:C.green,flexShrink:0,alignSelf:"stretch"}}/>
               <div style={{flex:1}}><div style={{color:C.text,fontWeight:600,fontSize:13}}>{c.name}</div><div style={{color:C.muted,fontSize:11}}>{c.date} · {c.time} · {c.bookings?.length||0}/{c.capacity}{c.formatId&&` · ${c.formatName}`}</div></div>
@@ -46,11 +46,11 @@ function Dashboard({clients,sessions,classes,programs,formats,setView,setActiveC
         </Card>
       </div>
       {active.length>0&&(
-        <Card>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Active Clients</SL><span onClick={()=>setView("clients")} style={{color:C.green,fontSize:12,cursor:"pointer"}}>All →</span></div>
+        <Card onClick={()=>setView("clients")} style={{cursor:"pointer",transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=C.green} onMouseLeave={e=>e.currentTarget.style.borderColor=""}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Active Clients</SL><span style={{color:C.green,fontSize:12}}>All →</span></div>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             {active.slice(0,10).map(c=>(
-              <div key={c.id} onClick={()=>{setActiveClient(c);setView("client");}} style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",textAlign:"center",cursor:"pointer",minWidth:90}}>
+              <div key={c.id} onClick={e=>{e.stopPropagation();setActiveClient(c);setView("client");}} style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",textAlign:"center",cursor:"pointer",minWidth:90}}>
                 <Avatar name={c.name} size={34} color={TAG_COLORS[c.tag]||C.sub}/>
                 <div style={{color:C.text,fontWeight:600,fontSize:12,marginTop:8}}>{c.name.split(" ")[0]}</div>
                 {c.programId&&<div style={{marginTop:3}}><Pill color={C.purple}>📋</Pill></div>}
