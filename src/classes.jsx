@@ -1,6 +1,6 @@
 // FitOS — Group Classes screen
 import React, { useState } from "react";
-import { C, uid, now, fmtDate } from "./config.js";
+import { C, uid, now, fmtDate, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
 
 // GROUP CLASSES
@@ -26,7 +26,7 @@ function ClassForm({initial,onSave,onClose}){
   );
 }
 
-function ClassesScreen({clients,classes,onAdd,onEdit,onDelete,formats}){
+function ClassesScreen({clients,classes,onAdd,onEdit,onDelete,formats,mobile}){
   const [selected,setSelected]=useState(null);
   const [modal,setModal]=useState(null);
   const [confirm,setConfirm]=useState(null);
@@ -49,8 +49,79 @@ function ClassesScreen({clients,classes,onAdd,onEdit,onDelete,formats}){
     await onEdit(sel.id,{bookings});
   };
 
+  // On mobile: show list OR detail, not side-by-side
+  if(mobile&&sel){
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <Btn variant="outline" style={{alignSelf:"flex-start",padding:"6px 12px",fontSize:12}} onClick={()=>setSelected(null)}>← Classes</Btn>
+        <Card>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+            <div><div style={{color:C.text,fontWeight:800,fontSize:18}}>{sel.name}</div><div style={{color:C.sub,fontSize:13,marginTop:2}}>{sel.date} · {sel.time} · {sel.duration}min{sel.location&&` · ${sel.location}`}</div></div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+              <Btn variant="ghost" color={C.blue} style={{padding:"6px 10px",fontSize:11}} onClick={()=>setModal({cls:sel})}>Edit</Btn>
+              {sel.status==="scheduled"&&<Btn variant="ghost" color={C.green} style={{padding:"6px 10px",fontSize:11}} onClick={()=>onEdit(sel.id,{status:"completed"})}>✓ Done</Btn>}
+              <Btn variant="danger" style={{padding:"6px 10px",fontSize:11}} onClick={()=>setConfirm(sel.id)}>Delete</Btn>
+            </div>
+          </div>
+          <div style={{background:C.s2,borderRadius:10,padding:"12px 14px",border:`1px solid ${selFmt?C.teal+"44":C.border}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div><SL style={{marginBottom:4}}>Format</SL>{selFmt?<div><div style={{color:C.text,fontWeight:700,fontSize:14}}>{selFmt.name}</div><div style={{color:C.muted,fontSize:11}}>{selFmt.stations?.length||0} stations</div></div>:<div style={{color:C.muted,fontSize:13}}>No format attached.</div>}</div>
+              <div style={{display:"flex",gap:6}}>
+                {selFmt&&<Btn variant="danger" style={{padding:"5px 8px",fontSize:10}} onClick={()=>onEdit(sel.id,{format_id:null,format_name:null})}>Detach</Btn>}
+                {sel.status==="scheduled"&&<Btn variant="ghost" color={C.teal} style={{padding:"5px 8px",fontSize:10}} onClick={()=>setFmtModal(true)}>📋 Attach</Btn>}
+              </div>
+            </div>
+          </div>
+        </Card>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+          {[{label:"Enrolled",val:`${sel.bookings?.length||0}/${sel.capacity}`,color:C.text},{label:"Attended",val:(sel.bookings||[]).filter(b=>b.attendance==="attended").length,color:C.green},{label:"No-shows",val:(sel.bookings||[]).filter(b=>b.attendance==="no-show").length,color:C.red}].map(s=>(
+            <div key={s.label} style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:9,padding:12,textAlign:"center"}}><div style={{color:C.muted,fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em"}}>{s.label}</div><div style={{color:s.color,fontWeight:800,fontSize:22}}>{s.val}</div></div>
+          ))}
+        </div>
+        <Card>
+          <SL>Roster</SL>
+          {(sel.bookings||[]).length===0&&<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"10px 0"}}>No one enrolled.</div>}
+          <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>
+            {(sel.bookings||[]).map(b=>{
+              const cl=clients.find(c=>c.id===b.clientId);
+              if(!cl)return null;
+              return(
+                <div key={b.clientId} style={{display:"flex",alignItems:"center",gap:10,background:C.s2,borderRadius:9,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+                  <Avatar name={cl.name} size={28} color={TAG_COLORS[cl.tag]||C.sub}/>
+                  <span style={{color:C.text,fontWeight:600,fontSize:13,flex:1}}>{cl.name}</span>
+                  {sel.status==="scheduled"&&(
+                    <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                      {["attended","late","no-show"].map(s=>(
+                        <button key={s} onClick={()=>markAttendance(b.clientId,s)} style={{padding:"3px 7px",borderRadius:6,border:`1px solid ${b.attendance===s?(AT[s]||C.green):C.border}`,background:b.attendance===s?(AT[s]||C.green)+"20":"transparent",color:b.attendance===s?(AT[s]||C.green):C.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>{s}</button>
+                      ))}
+                    </div>
+                  )}
+                  {b.attendance&&sel.status!=="scheduled"&&<Pill color={AT[b.attendance]||C.sub}>{b.attendance}</Pill>}
+                  <button onClick={()=>toggleBooking(b.clientId)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16}}>×</button>
+                </div>
+              );
+            })}
+          </div>
+          {sel.status==="scheduled"&&(
+            <><SL>Add Client</SL>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {clients.filter(c=>!(sel.bookings||[]).some(b=>b.clientId===c.id)).map(c=>(
+                <button key={c.id} onClick={()=>toggleBooking(c.id)} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 12px",background:C.s2,border:`1px solid ${C.border}`,borderRadius:8,color:C.sub,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                  <Avatar name={c.name} size={20} color={TAG_COLORS[c.tag]||C.sub}/>{c.name}
+                </button>
+              ))}
+            </div></>
+          )}
+        </Card>
+        {fmtModal&&<Modal title="Attach Format" onClose={()=>setFmtModal(false)} wide>{formats.length===0?<div style={{color:C.muted,textAlign:"center",padding:24}}>No formats yet.</div>:<div style={{display:"flex",flexDirection:"column",gap:8}}>{formats.map(f=><div key={f.id} style={{background:C.s2,borderRadius:10,padding:"12px 14px",border:`1px solid ${sel.formatId===f.id?C.teal+"55":C.border}`,cursor:"pointer"}} onClick={async()=>{await onEdit(sel.id,{format_id:f.id,format_name:f.name});setFmtModal(false);}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{color:C.text,fontWeight:700,fontSize:14}}>{f.name}</div><div style={{color:C.muted,fontSize:11}}>{f.stations?.length||0} stations · {f.totalDuration}min</div></div>{sel.formatId===f.id&&<Pill color={C.teal}>Attached</Pill>}</div></div>)}</div>}</Modal>}
+        {(modal==="add"||modal?.cls)&&<Modal title={modal==="add"?"New Class":"Edit Class"} onClose={()=>setModal(null)} wide><ClassForm initial={modal?.cls} onSave={async f=>{if(modal==="add")await onAdd(f);else await onEdit(modal.cls.id,f);setModal(null);}} onClose={()=>setModal(null)}/></Modal>}
+        {confirm&&<Confirm msg="Delete this class?" onConfirm={async()=>{await onDelete(confirm);if(selected===confirm)setSelected(null);setConfirm(null);}} onCancel={()=>setConfirm(null)}/>}
+      </div>
+    );
+  }
+
   return(
-    <div style={{display:"grid",gridTemplateColumns:"280px 1fr",gap:16,minHeight:500}}>
+    <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"280px 1fr",gap:16,minHeight:mobile?0:500}}>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         <Btn onClick={()=>setModal("add")}>+ New Class</Btn>
         {sorted.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>📅</div><div style={{color:C.muted,fontSize:13}}>No classes yet.</div></Card>}

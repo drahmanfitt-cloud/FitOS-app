@@ -3,13 +3,13 @@ import React, { useState } from "react";
 import { C, uid, now, fmtDate, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
 
-function ClientForm({initial,onSave,onClose}){
+function ClientForm({initial,onSave,onClose,mobile}){
   const EMPTY={name:"",email:"",phone:"",dob:"",tag:"General",status:"active",notes:""};
   const [f,setF]=useState(initial||EMPTY);
   const set=k=>v=>setF(p=>({...p,[k]:v}));
   return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr",gap:12}}>
         <Input label="Full name" value={f.name} onChange={set("name")} required/>
         <Input label="Email" value={f.email} onChange={set("email")} type="email"/>
         <Input label="Phone" value={f.phone} onChange={set("phone")}/>
@@ -23,7 +23,7 @@ function ClientForm({initial,onSave,onClose}){
   );
 }
 
-function ClientsScreen({clients,onAdd,onEdit,onDelete,programs,setView,setActiveClient}){
+function ClientsScreen({clients,onAdd,onEdit,onDelete,programs,setView,setActiveClient,mobile}){
   const [search,setSearch]=useState("");
   const [modal,setModal]=useState(null);
   const [confirm,setConfirm]=useState(null);
@@ -48,6 +48,35 @@ function ClientsScreen({clients,onAdd,onEdit,onDelete,programs,setView,setActive
           <div style={{color:C.sub,marginBottom:16}}>{search?"No matches.":"Add your first client."}</div>
           {!search&&<Btn onClick={()=>setModal("add")}>+ Add Client</Btn>}
         </Card>
+      ):mobile?(
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {filtered.map(c=>{
+            const prog=programs.find(p=>p.id===c.programId);
+            return(
+              <div key={c.id} onClick={()=>{setActiveClient(c);setView("client");}}
+                style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px",cursor:"pointer",display:"flex",gap:12,alignItems:"center"}}>
+                <Avatar name={c.name} size={38} color={TAG_COLORS[c.tag]||C.sub}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{color:C.text,fontWeight:700,fontSize:14}}>{c.name}</div>
+                  <div style={{color:C.muted,fontSize:11,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.email||"—"}</div>
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6}}>
+                    <Pill color={TAG_COLORS[c.tag]||C.sub}>{c.tag}</Pill>
+                    <Pill color={SC[c.status]||C.sub}>{c.status}</Pill>
+                    {prog&&<Pill color={C.purple}>{prog.name}</Pill>}
+                  </div>
+                </div>
+                <div style={{color:C.muted,fontSize:11,textAlign:"right",flexShrink:0}} onClick={e=>e.stopPropagation()}>
+                  <div style={{color:C.sub,fontWeight:700,fontSize:18,lineHeight:1}}>{c.sessionCount||0}</div>
+                  <div style={{marginBottom:6}}>sessions</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                    <Btn variant="ghost" color={C.blue} style={{padding:"4px 8px",fontSize:10}} onClick={()=>setModal({client:c})}>Edit</Btn>
+                    <Btn variant="danger" style={{padding:"4px 8px",fontSize:10}} onClick={()=>setConfirm(c.id)}>Delete</Btn>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ):(
         <Card style={{padding:0,overflow:"hidden"}}>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -78,7 +107,7 @@ function ClientsScreen({clients,onAdd,onEdit,onDelete,programs,setView,setActive
           </table>
         </Card>
       )}
-      {(modal==="add"||modal?.client)&&<Modal title={modal==="add"?"New Client":"Edit Client"} onClose={()=>setModal(null)} wide><ClientForm initial={modal?.client} onSave={save} onClose={()=>setModal(null)}/></Modal>}
+      {(modal==="add"||modal?.client)&&<Modal title={modal==="add"?"New Client":"Edit Client"} onClose={()=>setModal(null)} wide><ClientForm initial={modal?.client} onSave={save} onClose={()=>setModal(null)} mobile={mobile}/></Modal>}
       {confirm&&<Confirm msg="Delete this client?" onConfirm={async()=>{await onDelete(confirm);setConfirm(null);}} onCancel={()=>setConfirm(null)}/>}
     </div>
   );

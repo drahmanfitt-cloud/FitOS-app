@@ -6,14 +6,14 @@ import { Avatar, Pill, Card, SL } from "./ui.jsx";
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function Dashboard({clients,sessions,classes,programs,formats,setView,setActiveClient}){
+function Dashboard({clients,sessions,classes,programs,formats,setView,setActiveClient,mobile}){
   const active=clients.filter(c=>c.status==="active");
   const upcoming=[...classes].filter(c=>c.status==="scheduled").sort((a,b)=>new Date(a.date+" "+a.time)-new Date(b.date+" "+b.time)).slice(0,4);
   const recent=[...sessions].sort((a,b)=>new Date(b.startedAt)-new Date(a.startedAt)).slice(0,5);
   const totalPRs=sessions.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(st=>st.pr&&st.done).length,0),0);
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(130px,1fr))",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:mobile?"repeat(2,1fr)":"repeat(4,minmax(130px,1fr))",gap:mobile?8:12}}>
         {[{label:"Active Clients",val:active.length,sub:`${clients.length} total`,color:C.green,icon:"👥",nav:"clients"},{label:"Sessions Logged",val:sessions.length,sub:"all time",color:C.blue,icon:"⚡",nav:"sessions"},{label:"Programs Built",val:programs.length,sub:`${formats.length} class formats`,color:C.purple,icon:"📋",nav:"programs"},{label:"PRs Logged",val:totalPRs,sub:"all time",color:C.amber,icon:"🏆",nav:"sessions"}].map(s=>(
           <Card key={s.label} onClick={()=>setView(s.nav)} style={{padding:"14px 16px",cursor:"pointer",transition:"border-color 0.15s",minWidth:0}} onMouseEnter={e=>e.currentTarget.style.borderColor=s.color} onMouseLeave={e=>e.currentTarget.style.borderColor=""}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,gap:6}}>
@@ -25,7 +25,7 @@ function Dashboard({clients,sessions,classes,programs,formats,setView,setActiveC
           </Card>
         ))}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+      <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr",gap:mobile?10:16}}>
         <Card onClick={()=>setView("classes")} style={{cursor:"pointer",transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=C.green} onMouseLeave={e=>e.currentTarget.style.borderColor=""}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Upcoming Classes</SL><span style={{color:C.green,fontSize:12}}>View all →</span></div>
           {upcoming.length===0?<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"16px 0"}}>No classes. Add one →</div>:upcoming.map((c,i)=>(

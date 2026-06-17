@@ -11,7 +11,7 @@ import { ExPicker } from "./catalog.jsx";
 
 const FORMAT_TYPES=[{value:"station",label:"Station Rotation"},{value:"circuit",label:"Circuit"},{value:"amrap",label:"AMRAP"},{value:"emom",label:"EMOM"},{value:"tabata",label:"Tabata"},{value:"custom",label:"Custom"}];
 
-function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClient}){
+function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClient,mobile}){
   const [selected,setSelected]=useState(null);
   const [confirm,setConfirm]=useState(null);
   const [modal,setModal]=useState(null);
@@ -41,6 +41,122 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
     await onUpdateClient(clientId,{program_id:already?null:prog.id});
   };
 
+  const renderEditor=()=>!prog?null:(
+    <div style={{display:"flex",flexDirection:"column",gap:14,overflowY:"auto",padding:"2px 6px 20px 2px",minHeight:0}}>
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+          <SL>Program Settings</SL>
+          <div style={{display:"flex",gap:8}}>
+            <Btn variant="ghost" color={C.green} style={{padding:"5px 10px",fontSize:11}} onClick={()=>setModal("assign")}>👥 Assign</Btn>
+            <Btn variant="danger" style={{padding:"5px 10px",fontSize:11}} onClick={()=>setConfirm(prog.id)}>Delete</Btn>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"2fr 1fr 1fr",gap:12}}>
+          <Input label="Program name" value={prog.name} onChange={v=>upd({name:v})} required/>
+          {mobile?(
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <Input label="Weeks" type="number" value={prog.weeks} onChange={v=>upd({weeks:v})} min="1"/>
+              <Input label="Days/week" type="number" value={prog.daysPerWeek} onChange={v=>upd({daysPerWeek:v})} min="1"/>
+            </div>
+          ):(
+            <>
+              <Input label="Weeks" type="number" value={prog.weeks} onChange={v=>upd({weeks:v})} min="1"/>
+              <Input label="Days/week" type="number" value={prog.daysPerWeek} onChange={v=>upd({daysPerWeek:v})} min="1"/>
+            </>
+          )}
+        </div>
+        <div style={{marginTop:10}}><Input label="Description" value={prog.description} onChange={v=>upd({description:v})} placeholder="Goals, periodisation…"/></div>
+        {prog.assignedClients?.length>0&&<div style={{marginTop:12,display:"flex",gap:6,flexWrap:"wrap"}}>{prog.assignedClients.map(id=>{const cl=clients.find(c=>c.id===id);return cl?<Pill key={id} color={C.green}>👤 {cl.name}</Pill>:null;})}</div>}
+      </Card>
+      {(prog.days||[]).map(day=>(
+        <Card key={day.id} style={{borderColor:C.purple+"33"}}>
+          <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:14}}>
+            <input value={day.label} onChange={e=>updDay(day.id,{label:e.target.value})} style={{background:"none",border:"none",color:C.text,fontWeight:700,fontSize:15,outline:"none",fontFamily:"inherit",flex:1,padding:0}}/>
+            <input value={day.focus} onChange={e=>updDay(day.id,{focus:e.target.value})} placeholder="Focus (Push, Lower…)" style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",color:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",width:mobile?100:160}}/>
+            <button onClick={()=>rmDay(day.id)} style={{background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer",lineHeight:1}}>×</button>
+          </div>
+          <div style={{background:C.s2,borderRadius:10,padding:"12px 14px",marginBottom:14,border:`1px solid ${C.purple}33`}}>
+            <ProgramWarmupTab warmup={day.warmup||[]} setWarmup={w=>updDay(day.id,{warmup:w})}/>
+          </div>
+          <div style={{color:C.muted,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Exercises</div>
+          {(day.exercises||[]).length===0&&<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"8px 0",marginBottom:8}}>No exercises yet.</div>}
+          {(day.exercises||[]).map((ex)=>(
+            <div key={ex.id} style={{background:C.s2,borderRadius:9,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.border}`}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                  <button onClick={()=>mvEx(day.id,ex.id,-1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▲</button>
+                  <button onClick={()=>mvEx(day.id,ex.id,1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▼</button>
+                </div>
+                <span style={{color:C.text,fontWeight:600,fontSize:13,flex:1}}>{ex.name}</span>
+                <button onClick={()=>rmEx(day.id,ex.id)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer",lineHeight:1}}>×</button>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:mobile?"1fr 1fr":"60px 80px 80px 1fr",gap:8}}>
+                {[{l:"Sets",f:"sets",t:"number"},{l:"Reps",f:"reps",t:"text"},{l:"Rest(s)",f:"rest",t:"number"}].map(fi=>(
+                  <div key={fi.f}><div style={{color:C.muted,fontSize:10,marginBottom:3}}>{fi.l}</div><input type={fi.t} value={ex[fi.f]} onChange={e=>updEx(day.id,ex.id,{[fi.f]:e.target.value})} style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
+                ))}
+                <div><div style={{color:C.muted,fontSize:10,marginBottom:3}}>Notes</div><input value={ex.notes} onChange={e=>updEx(day.id,ex.id,{notes:e.target.value})} placeholder="Cues…" style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
+              </div>
+            </div>
+          ))}
+          <Btn variant="ghost" color={C.purple} style={{padding:"5px 12px",fontSize:11,marginTop:4}} onClick={()=>setExPicker(day.id)}>+ Add Exercise</Btn>
+        </Card>
+      ))}
+      <Btn variant="ghost" color={C.purple} onClick={addDay}>+ Add Training Day</Btn>
+      {exPicker&&<Modal title="Add Exercise" onClose={()=>setExPicker(null)}><ExPicker onPick={name=>{addEx(exPicker,name);setExPicker(null);}} onClose={()=>setExPicker(null)}/></Modal>}
+      {modal==="assign"&&(
+        <Modal title={`Assign "${prog.name}"`} onClose={()=>setModal(null)} wide>
+          <p style={{color:C.sub,fontSize:13,marginBottom:16}}>Assign this program to clients so they can load sessions from it.</p>
+          {clients.length===0&&<div style={{color:C.muted,textAlign:"center",padding:24}}>No clients yet.</div>}
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {clients.map(cl=>{
+              const assigned=prog.assignedClients?.includes(cl.id);
+              return(
+                <div key={cl.id} style={{display:"flex",alignItems:"center",gap:12,background:C.s2,borderRadius:10,padding:"10px 14px",border:`1px solid ${assigned?C.green+"44":C.border}`}}>
+                  <Avatar name={cl.name} size={30} color={TAG_COLORS[cl.tag]||C.sub}/>
+                  <div style={{flex:1}}><div style={{color:C.text,fontWeight:600,fontSize:13}}>{cl.name}</div><div style={{color:C.muted,fontSize:11}}>{cl.tag} · {cl.status}</div></div>
+                  <Btn variant={assigned?"danger":"ghost"} color={assigned?C.red:C.green} style={{padding:"5px 12px",fontSize:11}} onClick={()=>toggleAssign(cl.id)}>{assigned?"Unassign":"Assign"}</Btn>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:16}}><Btn onClick={()=>setModal(null)}>Done</Btn></div>
+        </Modal>
+      )}
+      {confirm&&<Confirm msg={`Delete "${prog.name}"?`} onConfirm={async()=>{await onDelete(confirm);setSelected(null);setConfirm(null);}} onCancel={()=>setConfirm(null)}/>}
+    </div>
+  );
+
+  // Mobile: show list OR editor, not side-by-side
+  if(mobile&&prog){
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <Btn variant="outline" style={{alignSelf:"flex-start",padding:"6px 12px",fontSize:12}} onClick={()=>setSelected(null)}>← Programs</Btn>
+        {renderEditor()}
+      </div>
+    );
+  }
+  if(mobile){
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <Btn color={C.purple} onClick={create}>+ New Program</Btn>
+        {programs.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>📋</div><div style={{color:C.muted,fontSize:13}}>No programs yet.</div></Card>}
+        {programs.map(p=>(
+          <div key={p.id} onClick={()=>setSelected(p.id)} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${C.purple}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{color:C.text,fontWeight:700,fontSize:14}}>{p.name}</div>
+              <span style={{color:C.muted,fontSize:18}}>›</span>
+            </div>
+            <div style={{color:C.muted,fontSize:11,marginTop:3}}>{p.weeks}wk · {p.daysPerWeek}d/wk · {p.days?.length||0} days</div>
+            {p.assignedClients?.length>0&&<div style={{marginTop:5}}><Pill color={C.green}>{p.assignedClients.length} client{p.assignedClients.length>1?"s":""}</Pill></div>}
+          </div>
+        ))}
+        {confirm&&<Confirm msg="Delete program?" onConfirm={async()=>{await onDelete(confirm);setSelected(null);setConfirm(null);}} onCancel={()=>setConfirm(null)}/>}
+        {modal==="assign"&&prog&&<Modal title="Assign Clients" onClose={()=>setModal(null)}>{clients.map(cl=>{const on=prog.assignedClients?.includes(cl.id);return(<div key={cl.id} onClick={()=>toggleAssign(cl.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,cursor:"pointer",background:on?C.green+"12":C.s2,marginBottom:6,border:`1px solid ${on?C.green+"44":C.border}`}}><Avatar name={cl.name} size={28} color={TAG_COLORS[cl.tag]||C.sub}/><span style={{color:C.text,flex:1,fontSize:13}}>{cl.name}</span>{on&&<Pill color={C.green}>✓</Pill>}</div>);})}</Modal>}
+        {exPicker&&<Modal title="Add Exercise" onClose={()=>setExPicker(null)} wide><ExPicker onSelect={name=>{addEx(exPicker,name);setExPicker(null);}}/></Modal>}
+      </div>
+    );
+  }
+
   return(
     <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16,height:"calc(100vh - 143px)",minHeight:0}}>
       <div style={{display:"flex",flexDirection:"column",gap:10,overflowY:"auto",padding:"6px 10px 20px 10px"}}>
@@ -55,91 +171,10 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
         ))}
       </div>
 
-      {!prog?<Card style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:0}}><div style={{textAlign:"center",color:C.muted}}><div style={{fontSize:36,marginBottom:10}}>📋</div>Select or create a program</div></Card>:(
-        <div style={{display:"flex",flexDirection:"column",gap:14,overflowY:"auto",padding:"2px 6px 20px 2px",minHeight:0}}>
-          {/* Program Settings */}
-          <Card>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
-              <SL>Program Settings</SL>
-              <div style={{display:"flex",gap:8}}>
-                <Btn variant="ghost" color={C.green} style={{padding:"5px 10px",fontSize:11}} onClick={()=>setModal("assign")}>👥 Assign</Btn>
-                <Btn variant="danger" style={{padding:"5px 10px",fontSize:11}} onClick={()=>setConfirm(prog.id)}>Delete</Btn>
-              </div>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:12}}>
-              <Input label="Program name" value={prog.name} onChange={v=>upd({name:v})} required/>
-              <Input label="Weeks" type="number" value={prog.weeks} onChange={v=>upd({weeks:v})} min="1"/>
-              <Input label="Days/week" type="number" value={prog.daysPerWeek} onChange={v=>upd({daysPerWeek:v})} min="1"/>
-            </div>
-            <div style={{marginTop:10}}><Input label="Description" value={prog.description} onChange={v=>upd({description:v})} placeholder="Goals, periodisation…"/></div>
-            {prog.assignedClients?.length>0&&<div style={{marginTop:12,display:"flex",gap:6,flexWrap:"wrap"}}>{prog.assignedClients.map(id=>{const cl=clients.find(c=>c.id===id);return cl?<Pill key={id} color={C.green}>👤 {cl.name}</Pill>:null;})}</div>}
-          </Card>
-
-          {/* Training Days with warmup embedded */}
-          {(prog.days||[]).map(day=>(
-            <Card key={day.id} style={{borderColor:C.purple+"33"}}>
-              {/* Day header */}
-              <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:14}}>
-                <input value={day.label} onChange={e=>updDay(day.id,{label:e.target.value})} style={{background:"none",border:"none",color:C.text,fontWeight:700,fontSize:15,outline:"none",fontFamily:"inherit",flex:1,padding:0}}/>
-                <input value={day.focus} onChange={e=>updDay(day.id,{focus:e.target.value})} placeholder="Focus (Push, Lower…)" style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",color:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",width:160}}/>
-                <button onClick={()=>rmDay(day.id)} style={{background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer",lineHeight:1}}>×</button>
-              </div>
-
-              {/* Warmup section */}
-              <div style={{background:C.s2,borderRadius:10,padding:"12px 14px",marginBottom:14,border:`1px solid ${C.purple}33`}}>
-                <ProgramWarmupTab warmup={day.warmup||[]} setWarmup={w=>updDay(day.id,{warmup:w})}/>
-              </div>
-
-              {/* Exercises section */}
-              <div style={{color:C.muted,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Exercises</div>
-              {(day.exercises||[]).length===0&&<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"8px 0",marginBottom:8}}>No exercises yet.</div>}
-              {(day.exercises||[]).map((ex)=>(
-                <div key={ex.id} style={{background:C.s2,borderRadius:9,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.border}`}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                      <button onClick={()=>mvEx(day.id,ex.id,-1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▲</button>
-                      <button onClick={()=>mvEx(day.id,ex.id,1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▼</button>
-                    </div>
-                    <span style={{color:C.text,fontWeight:600,fontSize:13,flex:1}}>{ex.name}</span>
-                    <button onClick={()=>rmEx(day.id,ex.id)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer",lineHeight:1}}>×</button>
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"60px 80px 80px 1fr",gap:8}}>
-                    {[{l:"Sets",f:"sets",t:"number"},{l:"Reps",f:"reps",t:"text"},{l:"Rest(s)",f:"rest",t:"number"}].map(fi=>(
-                      <div key={fi.f}><div style={{color:C.muted,fontSize:10,marginBottom:3}}>{fi.l}</div><input type={fi.t} value={ex[fi.f]} onChange={e=>updEx(day.id,ex.id,{[fi.f]:e.target.value})} style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
-                    ))}
-                    <div><div style={{color:C.muted,fontSize:10,marginBottom:3}}>Notes</div><input value={ex.notes} onChange={e=>updEx(day.id,ex.id,{notes:e.target.value})} placeholder="Cues…" style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
-                  </div>
-                </div>
-              ))}
-              <Btn variant="ghost" color={C.purple} style={{padding:"5px 12px",fontSize:11,marginTop:4}} onClick={()=>setExPicker(day.id)}>+ Add Exercise</Btn>
-            </Card>
-          ))}
-          <Btn variant="ghost" color={C.purple} onClick={addDay}>+ Add Training Day</Btn>
-
-          {/* Modals */}
-          {exPicker&&<Modal title="Add Exercise" onClose={()=>setExPicker(null)}><ExPicker onPick={name=>{addEx(exPicker,name);setExPicker(null);}} onClose={()=>setExPicker(null)}/></Modal>}
-          {modal==="assign"&&(
-            <Modal title={`Assign "${prog.name}"`} onClose={()=>setModal(null)} wide>
-              <p style={{color:C.sub,fontSize:13,marginBottom:16}}>Assign this program to clients so they can load sessions from it.</p>
-              {clients.length===0&&<div style={{color:C.muted,textAlign:"center",padding:24}}>No clients yet.</div>}
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {clients.map(cl=>{
-                  const assigned=prog.assignedClients?.includes(cl.id);
-                  return(
-                    <div key={cl.id} style={{display:"flex",alignItems:"center",gap:12,background:C.s2,borderRadius:10,padding:"10px 14px",border:`1px solid ${assigned?C.green+"44":C.border}`}}>
-                      <Avatar name={cl.name} size={30} color={TAG_COLORS[cl.tag]||C.sub}/>
-                      <div style={{flex:1}}><div style={{color:C.text,fontWeight:600,fontSize:13}}>{cl.name}</div><div style={{color:C.muted,fontSize:11}}>{cl.tag} · {cl.status}</div></div>
-                      <Btn variant={assigned?"danger":"ghost"} color={assigned?C.red:C.green} style={{padding:"5px 12px",fontSize:11}} onClick={()=>toggleAssign(cl.id)}>{assigned?"Unassign":"Assign"}</Btn>
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{display:"flex",justifyContent:"flex-end",marginTop:16}}><Btn onClick={()=>setModal(null)}>Done</Btn></div>
-            </Modal>
-          )}
-          {confirm&&<Confirm msg={`Delete "${prog.name}"?`} onConfirm={async()=>{await onDelete(confirm);setSelected(null);setConfirm(null);}} onCancel={()=>setConfirm(null)}/>}
-        </div>
-      )}
+      {!prog
+        ?<Card style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:0}}><div style={{textAlign:"center",color:C.muted}}><div style={{fontSize:36,marginBottom:10}}>📋</div>Select or create a program</div></Card>
+        :renderEditor()
+      }
     </div>
   );
 }
@@ -372,16 +407,16 @@ function ProgramWarmupTab({warmup,setWarmup}){
   );
 }
 
-function ProgramsHub({programs,onSaveProgram,onUpdateProgram,onDeleteProgram,formats,onSaveFormat,onUpdateFormat,onDeleteFormat,clients,onUpdateClient,classes,onUpdateClass}){
+function ProgramsHub({programs,onSaveProgram,onUpdateProgram,onDeleteProgram,formats,onSaveFormat,onUpdateFormat,onDeleteFormat,clients,onUpdateClient,classes,onUpdateClass,mobile}){
   const [tab,setTab]=useState("programs");
   return(
     <div>
       <div style={{display:"flex",gap:2,marginBottom:20,borderBottom:`1px solid ${C.border}`,overflowX:"auto"}}>
         {[["programs","📋 Training Programs",C.purple],["formats","🏋️ Class Formats",C.teal]].map(([id,label,color])=>(
-          <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 18px",border:"none",background:"none",cursor:"pointer",color:tab===id?color:C.sub,fontWeight:tab===id?700:500,fontSize:14,borderBottom:`2px solid ${tab===id?color:"transparent"}`,whiteSpace:"nowrap"}}>{label}</button>
+          <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 18px",border:"none",background:"none",cursor:"pointer",color:tab===id?color:C.sub,fontWeight:tab===id?700:500,fontSize:mobile?12:14,borderBottom:`2px solid ${tab===id?color:"transparent"}`,whiteSpace:"nowrap"}}>{label}</button>
         ))}
       </div>
-      {tab==="programs"&&<ProgramBuilder programs={programs} onSave={onSaveProgram} onUpdate={onUpdateProgram} onDelete={onDeleteProgram} clients={clients} onUpdateClient={onUpdateClient}/>}
+      {tab==="programs"&&<ProgramBuilder programs={programs} onSave={onSaveProgram} onUpdate={onUpdateProgram} onDelete={onDeleteProgram} clients={clients} onUpdateClient={onUpdateClient} mobile={mobile}/>}
       {tab==="formats"&&<ClassFormatBuilder formats={formats} onSave={onSaveFormat} onUpdate={onUpdateFormat} onDelete={onDeleteFormat} classes={classes} onUpdateClass={onUpdateClass}/>}
     </div>
   );
