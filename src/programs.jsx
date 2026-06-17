@@ -158,11 +158,9 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
   };
   const COLS=(i)=>[C.green,C.blue,C.purple,C.amber,C.red,C.teal][i%6];
 
-  // Stations with floor plan positions
-  const stationsWithPos=(fmt?.stations||[]).map((st,i)=>({
+  // Stations — keep their saved floor-plan position (undefined = not yet placed)
+  const stationsWithPos=(fmt?.stations||[]).map(st=>({
     ...st,
-    x:st.x||[25,70,25,70,50][i%5],
-    y:st.y||[25,25,65,65,45][i%5],
     sidesMode:st.sidesMode||"none",
   }));
 

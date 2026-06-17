@@ -34,20 +34,28 @@ function FloorPlanEditor({stations,onUpdateStation}){
     const rect=planRef.current.getBoundingClientRect();
     const st=stations.find(s=>s.id===id);
     setDragging(id);
-    setDragOffset({
-      x:e.clientX-rect.left-st.x*(rect.width/100),
-      y:e.clientY-rect.top-st.y*(rect.height/100),
-    });
+    if(st.x==null||st.y==null){
+      // from the tray — only placed once dragged onto the room
+      setDragOffset({x:0,y:0});
+    }else{
+      setDragOffset({
+        x:e.clientX-rect.left-st.x*(rect.width/100),
+        y:e.clientY-rect.top-st.y*(rect.height/100),
+      });
+    }
     e.preventDefault();
   };
 
   const handleMouseMove=useCallback((e)=>{
     if(!dragging||!planRef.current)return;
     const rect=planRef.current.getBoundingClientRect();
+    const st=stations.find(s=>s.id===dragging);
+    const inside=e.clientX>=rect.left&&e.clientX<=rect.right&&e.clientY>=rect.top&&e.clientY<=rect.bottom;
+    if(st&&(st.x==null||st.y==null)&&!inside)return; // tray item: place only when over the room
     const x=Math.min(90,Math.max(5,((e.clientX-rect.left-dragOffset.x)/rect.width)*100));
     const y=Math.min(90,Math.max(5,((e.clientY-rect.top-dragOffset.y)/rect.height)*100));
     onUpdateStation(dragging,{x,y});
-  },[dragging,dragOffset,onUpdateStation]);
+  },[dragging,dragOffset,onUpdateStation,stations]);
 
   const handleMouseUp=useCallback(()=>setDragging(null),[]);
 
@@ -57,18 +65,25 @@ function FloorPlanEditor({stations,onUpdateStation}){
     const rect=planRef.current.getBoundingClientRect();
     const st=stations.find(s=>s.id===id);
     setDragging(id);
-    setDragOffset({x:touch.clientX-rect.left-st.x*(rect.width/100),y:touch.clientY-rect.top-st.y*(rect.height/100)});
+    if(st.x==null||st.y==null){
+      setDragOffset({x:0,y:0});
+    }else{
+      setDragOffset({x:touch.clientX-rect.left-st.x*(rect.width/100),y:touch.clientY-rect.top-st.y*(rect.height/100)});
+    }
     e.preventDefault();
   };
   const handleTouchMove=useCallback((e)=>{
     if(!dragging||!planRef.current)return;
     const touch=e.touches[0];
     const rect=planRef.current.getBoundingClientRect();
+    const st=stations.find(s=>s.id===dragging);
+    const inside=touch.clientX>=rect.left&&touch.clientX<=rect.right&&touch.clientY>=rect.top&&touch.clientY<=rect.bottom;
+    if(st&&(st.x==null||st.y==null)&&!inside)return; // tray item: place only when over the room
     const x=Math.min(90,Math.max(5,((touch.clientX-rect.left-dragOffset.x)/rect.width)*100));
     const y=Math.min(90,Math.max(5,((touch.clientY-rect.top-dragOffset.y)/rect.height)*100));
     onUpdateStation(dragging,{x,y});
     e.preventDefault();
-  },[dragging,dragOffset,onUpdateStation]);
+  },[dragging,dragOffset,onUpdateStation,stations]);
 
   useEffect(()=>{
     window.addEventListener("mousemove",handleMouseMove);
@@ -98,10 +113,28 @@ function FloorPlanEditor({stations,onUpdateStation}){
 
       {/* Floor plan */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-        <span style={{color:C.muted,fontSize:11}}>Drag stations to position them in the space</span>
-        <span style={{color:C.muted,fontSize:11,fontWeight:600}}>{stations.length} station{stations.length===1?"":"s"}</span>
+        <span style={{color:C.muted,fontSize:11}}>Drag stations from the tray onto the room — reposition any time</span>
+        <span style={{color:C.muted,fontSize:11,fontWeight:600}}>{stations.filter(s=>s.x!=null&&s.y!=null).length}/{stations.length} placed</span>
       </div>
-      <div ref={planRef} style={{position:"relative",width:"100%",paddingBottom:"56%",background:C.s2,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden",userSelect:"none",touchAction:"none"}}>
+
+      {/* Tray of unplaced stations */}
+      {stations.some(s=>s.x==null||s.y==null)&&(
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",background:C.s2,border:`1px dashed ${C.border2}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+          <span style={{color:C.muted,fontSize:11,fontWeight:600,marginRight:2}}>Tray →</span>
+          {stations.map((st,i)=>(st.x==null||st.y==null)&&(
+            <div key={st.id}
+              onMouseDown={e=>handleMouseDown(e,st.id)}
+              onTouchStart={e=>handleTouchStart(e,st.id)}
+              title={st.name}
+              style={{display:"flex",alignItems:"center",gap:6,background:C.s3,borderRadius:8,padding:"5px 9px 5px 6px",border:`1px solid ${STATION_COLORS[i%8]}55`,cursor:"grab",touchAction:"none"}}>
+              <div style={{width:24,height:24,borderRadius:7,background:STATION_COLORS[i%8],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:11,color:"#000",flexShrink:0}}>{i+1}</div>
+              <span style={{color:C.text,fontSize:12,fontWeight:600,maxWidth:90,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{st.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div ref={planRef} style={{position:"relative",width:"100%",paddingBottom:"56%",background:C.s2,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden",userSelect:"none",touchAction:"pan-y"}}>
         {/* Room outline */}
         <svg style={{position:"absolute",inset:0,width:"100%",height:"100%"}} viewBox="0 0 100 100" preserveAspectRatio="none">
           <path d={getRoomPath()} fill={C.s3} stroke={C.border2} strokeWidth="0.6"/>
@@ -114,38 +147,33 @@ function FloorPlanEditor({stations,onUpdateStation}){
           <span style={{color:C.muted,fontSize:9,fontWeight:700,letterSpacing:"0.08em"}}>ENTRANCE</span>
         </div>
 
-        {/* Empty state */}
+        {/* Empty / hint states */}
         {stations.length===0&&(
           <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,pointerEvents:"none",padding:16,textAlign:"center"}}>
             <div style={{fontSize:30,opacity:0.5}}>🗺</div>
             <div style={{color:C.sub,fontSize:13,fontWeight:600}}>No stations to place yet</div>
-            <div style={{color:C.muted,fontSize:11,maxWidth:240}}>Add stations in the “Stations” tab, then drag them around the room here.</div>
+            <div style={{color:C.muted,fontSize:11,maxWidth:240}}>Add stations in the “Stations” tab, then drag them onto the room.</div>
+          </div>
+        )}
+        {stations.length>0&&stations.every(s=>s.x==null||s.y==null)&&(
+          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,pointerEvents:"none",padding:16,textAlign:"center"}}>
+            <div style={{fontSize:26,opacity:0.5}}>👆</div>
+            <div style={{color:C.muted,fontSize:12,maxWidth:240}}>Drag a station from the tray above onto the room.</div>
           </div>
         )}
 
-        {/* Station markers */}
-        {stations.map((st,i)=>(
+        {/* Placed station markers */}
+        {stations.map((st,i)=>(st.x!=null&&st.y!=null)&&(
           <div key={st.id}
             onMouseDown={e=>handleMouseDown(e,st.id)}
             onTouchStart={e=>handleTouchStart(e,st.id)}
-            style={{position:"absolute",left:`${st.x}%`,top:`${st.y}%`,transform:"translate(-50%,-50%)",cursor:"grab",zIndex:dragging===st.id?10:1}}>
-            <div style={{width:36,height:36,borderRadius:10,background:STATION_COLORS[i%8],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:14,color:"#000",boxShadow:dragging===st.id?"0 4px 16px rgba(0,0,0,0.5)":"0 2px 8px rgba(0,0,0,0.3)",border:"2px solid rgba(255,255,255,0.3)",transition:dragging===st.id?"none":"box-shadow 0.15s"}}>
+            style={{position:"absolute",left:`${st.x}%`,top:`${st.y}%`,transform:"translate(-50%,-50%)",cursor:"grab",touchAction:"none",zIndex:dragging===st.id?10:1}}>
+            <div style={{width:28,height:28,borderRadius:8,background:STATION_COLORS[i%8],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:12,color:"#000",boxShadow:dragging===st.id?"0 4px 16px rgba(0,0,0,0.5)":"0 2px 8px rgba(0,0,0,0.3)",border:"2px solid rgba(255,255,255,0.3)",transition:dragging===st.id?"none":"box-shadow 0.15s"}}>
               {i+1}
             </div>
-            <div style={{textAlign:"center",marginTop:3,fontSize:9,fontWeight:700,color:C.text,whiteSpace:"nowrap",textShadow:"0 1px 3px rgba(0,0,0,0.8)",maxWidth:60,overflow:"hidden",textOverflow:"ellipsis"}}>
+            <div style={{textAlign:"center",marginTop:2,fontSize:8,fontWeight:700,color:C.text,whiteSpace:"nowrap",textShadow:"0 1px 3px rgba(0,0,0,0.8)",maxWidth:52,overflow:"hidden",textOverflow:"ellipsis"}}>
               {st.name.split(" ").slice(0,2).join(" ")}
             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Station list below plan */}
-      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:12}}>
-        {stations.map((st,i)=>(
-          <div key={st.id} style={{display:"flex",alignItems:"center",gap:6,background:C.s2,borderRadius:8,padding:"5px 10px",border:`1px solid ${STATION_COLORS[i%8]}44`}}>
-            <div style={{width:18,height:18,borderRadius:4,background:STATION_COLORS[i%8],display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#000"}}>{i+1}</div>
-            <span style={{color:C.text,fontSize:12,fontWeight:600}}>{st.name}</span>
-            <span style={{color:C.muted,fontSize:11}}>{st.workSec}s</span>
           </div>
         ))}
       </div>
