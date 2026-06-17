@@ -167,9 +167,15 @@ function FloorPlanEditor({stations,onUpdateStation}){
           <div key={st.id}
             onMouseDown={e=>handleMouseDown(e,st.id)}
             onTouchStart={e=>handleTouchStart(e,st.id)}
-            style={{position:"absolute",left:`${st.x}%`,top:`${st.y}%`,transform:"translate(-50%,-50%)",cursor:"grab",touchAction:"none",zIndex:dragging===st.id?10:1}}>
-            <div style={{width:28,height:28,borderRadius:8,background:STATION_COLORS[i%8],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:12,color:"#000",boxShadow:dragging===st.id?"0 4px 16px rgba(0,0,0,0.5)":"0 2px 8px rgba(0,0,0,0.3)",border:"2px solid rgba(255,255,255,0.3)",transition:dragging===st.id?"none":"box-shadow 0.15s"}}>
+            style={{position:"absolute",left:`${st.x}%`,top:`${st.y}%`,transform:"translate(-50%,-50%)",cursor:"grab",touchAction:"none",zIndex:dragging===st.id?10:1,display:"flex",flexDirection:"column",alignItems:"center"}}>
+            <div style={{position:"relative",width:28,height:28,borderRadius:8,background:STATION_COLORS[i%8],display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:12,color:"#000",boxShadow:dragging===st.id?"0 4px 16px rgba(0,0,0,0.5)":"0 2px 8px rgba(0,0,0,0.3)",border:"2px solid rgba(255,255,255,0.3)",transition:dragging===st.id?"none":"box-shadow 0.15s"}}>
               {i+1}
+              <button
+                onMouseDown={e=>e.stopPropagation()}
+                onTouchStart={e=>{e.stopPropagation();onUpdateStation(st.id,{x:null,y:null});}}
+                onClick={e=>{e.stopPropagation();onUpdateStation(st.id,{x:null,y:null});}}
+                title="Return to tray"
+                style={{position:"absolute",top:-7,right:-7,width:16,height:16,borderRadius:"50%",background:C.bg,color:C.text,border:`1px solid ${C.border2}`,fontSize:11,lineHeight:1,fontWeight:900,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0,touchAction:"none"}}>×</button>
             </div>
             <div style={{textAlign:"center",marginTop:2,fontSize:8,fontWeight:700,color:C.text,whiteSpace:"nowrap",textShadow:"0 1px 3px rgba(0,0,0,0.8)",maxWidth:52,overflow:"hidden",textOverflow:"ellipsis"}}>
               {st.name.split(" ").slice(0,2).join(" ")}
