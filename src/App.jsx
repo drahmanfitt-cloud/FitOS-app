@@ -1,6 +1,6 @@
 // FitOS — Root App
 import React, { useState, useEffect, useRef } from "react";
-import { C, uid, now, fmtDate, db, mapClient, mapSession, mapClass, mapProgram, mapFormat, mapCatalog, TAG_COLORS } from "./config.js";
+import { C, uid, now, fmtDate, db, supabase, mapClient, mapSession, mapClass, mapProgram, mapFormat, mapCatalog, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Modal, useToast, Toast, ErrorBoundary } from "./ui.jsx";
 import { ClientsScreen, ClientProfile } from "./clients.jsx";
 import { SessionLogger } from "./session.jsx";
@@ -8,21 +8,19 @@ import { ClassesScreen } from "./classes.jsx";
 import { ProgramsHub } from "./programs.jsx";
 import { Dashboard } from "./dashboard.jsx";
 import { ExerciseCatalogScreen } from "./catalog.jsx";
+import { AuthScreen } from "./auth.jsx";
+import { ProfileSetup, ProfileEditor } from "./profile.jsx";
 
-// ROOT — loads all data from Supabase, passes CRUD handlers down
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const NAV=[{id:"dashboard",label:"Dashboard",icon:"▦"},{id:"clients",label:"Clients",icon:"👥"},{id:"sessions",label:"Log Session",icon:"⚡"},{id:"classes",label:"Classes",icon:"📅"},{id:"programs",label:"Programs",icon:"📋"},{id:"catalog",label:"Exercise Catalog",icon:"📖"}];
 
-// ── Error Boundary ───────────────────────────────────────────────────────────
-
 // ── Bottom nav for mobile ─────────────────────────────────────────────────────
 function BottomNav({active,setActive,counts}){
-  const visible=NAV.slice(0,5); // show first 5, "more" handles rest
+  const visible=NAV.slice(0,5);
   const [showMore,setShowMore]=useState(false);
   return(
     <>
-      {/* More menu overlay */}
       {showMore&&(
         <div style={{position:"fixed",inset:0,zIndex:800}} onClick={()=>setShowMore(false)}>
           <div style={{position:"absolute",bottom:66,left:0,right:0,background:C.surface,borderTop:`1px solid ${C.border}`,padding:"8px 0"}} onClick={e=>e.stopPropagation()}>
@@ -38,11 +36,9 @@ function BottomNav({active,setActive,counts}){
                 </button>
               );
             })}
-
           </div>
         </div>
       )}
-      {/* Bottom bar */}
       <nav style={{position:"fixed",bottom:0,left:0,right:0,height:62,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"stretch",zIndex:700,paddingBottom:"env(safe-area-inset-bottom)"}}>
         {visible.map(item=>{
           const isActive=active===item.id||(active==="client"&&item.id==="clients");
@@ -57,7 +53,6 @@ function BottomNav({active,setActive,counts}){
             </button>
           );
         })}
-        {/* More button if >5 items */}
         {NAV.length>5&&(
           <button onClick={()=>setShowMore(m=>!m)}
             style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:showMore?C.s2:"transparent",cursor:"pointer"}}>
@@ -70,69 +65,41 @@ function BottomNav({active,setActive,counts}){
   );
 }
 
-function Sidebar({active,setActive,counts,collapsed,setCollapsed,trainerName}){
+function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfileClick}){
   const w=collapsed?56:200;
   const touchStart=useRef(null);
   const [swipeDir,setSwipeDir]=useState(null);
-
   const navIds=NAV.map(n=>n.id);
 
-  const onTouchStart=e=>{
-    touchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};
-    setSwipeDir(null);
-  };
-
+  const onTouchStart=e=>{touchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};setSwipeDir(null);};
   const onTouchMove=e=>{
     if(!touchStart.current)return;
     const dx=e.touches[0].clientX-touchStart.current.x;
     const dy=e.touches[0].clientY-touchStart.current.y;
-    // Determine dominant direction
     if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>15) setSwipeDir(dy<0?"up":"down");
     else if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>15) setSwipeDir(dx<0?"left":"right");
   };
-
   const onTouchEnd=e=>{
     if(!touchStart.current||!swipeDir)return;
     const dx=e.changedTouches[0].clientX-touchStart.current.x;
     const dy=e.changedTouches[0].clientY-touchStart.current.y;
-    setSwipeDir(null);
-    touchStart.current=null;
-
-    // Swipe left = collapse, swipe right = expand
-    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>50){
-      if(dx<0) setCollapsed(true);
-      else setCollapsed(false);
-      return;
-    }
-
-    // Swipe up = next screen, swipe down = previous screen
+    setSwipeDir(null);touchStart.current=null;
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>50){if(dx<0)setCollapsed(true);else setCollapsed(false);return;}
     if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>50){
-      const cur=navIds.indexOf(active);
-      const total=navIds.length;
-      if(dy<0) setActive(navIds[(cur+1)%total]);
-      else setActive(navIds[(cur-1+total)%total]);
+      const cur=navIds.indexOf(active);const total=navIds.length;
+      if(dy<0)setActive(navIds[(cur+1)%total]);else setActive(navIds[(cur-1+total)%total]);
     }
   };
 
   return(
-    <aside
-      onTouchStart={onTouchStart}
-      onTouchMove={e=>{e.preventDefault();onTouchMove(e);}}
-      onTouchEnd={onTouchEnd}
+    <aside onTouchStart={onTouchStart} onTouchMove={e=>{e.preventDefault();onTouchMove(e);}} onTouchEnd={onTouchEnd}
       style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden",position:"relative",touchAction:"none"}}>
-
-      {/* Swipe hint */}
       {swipeDir&&(
-        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:20,pointerEvents:"none",borderRadius:0}}>
-          <div style={{color:"#fff",fontSize:22,fontWeight:900}}>
-            {swipeDir==="up"?"↑":swipeDir==="down"?"↓":swipeDir==="left"?"←":"→"}
-          </div>
+        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:20,pointerEvents:"none"}}>
+          <div style={{color:"#fff",fontSize:22,fontWeight:900}}>{swipeDir==="up"?"↑":swipeDir==="down"?"↓":swipeDir==="left"?"←":"→"}</div>
         </div>
       )}
-
-      {/* Logo + collapse button */}
       <div style={{padding:"14px 10px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",gap:8,flexShrink:0}}>
-        {/* F icon always same size */}
         <div style={{width:28,height:28,borderRadius:7,background:C.green,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
           <span style={{fontSize:14,fontWeight:900,color:"#000"}}>F</span>
         </div>
@@ -142,27 +109,22 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,trainerName}){
             <div style={{color:C.muted,fontSize:10}}>Cloud ☁️</div>
           </div>
         )}
-        <button onClick={()=>setCollapsed(c=>!c)} title={collapsed?"Expand sidebar":"Collapse sidebar"}
+        <button onClick={()=>setCollapsed(c=>!c)} title={collapsed?"Expand":"Collapse"}
           style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:14,padding:4,borderRadius:6,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
           {collapsed?"→":"←"}
         </button>
       </div>
-
       <nav style={{padding:"10px 6px",flex:1,display:"flex",flexDirection:"column",gap:2,position:"relative",overflow:"hidden"}}>
         {NAV.map((item,i)=>{
           const isActive=active===item.id||(active==="client"&&item.id==="clients");
           const col=item.id==="programs"?C.purple:item.id==="catalog"?C.teal:C.green;
-          const navIds=NAV.map(n=>n.id);
-          const cur=navIds.indexOf(active);
-          const total=navIds.length;
-          const fwd=(i-cur+total)%total;
-          const bwd=(cur-i+total)%total;
+          const cur=navIds.indexOf(active);const total=navIds.length;
+          const fwd=(i-cur+total)%total;const bwd=(cur-i+total)%total;
           const dist=Math.min(fwd,bwd);
           const opacity=dist===0?1:dist===1?0.45:0.18;
           const scale=dist===0?1:dist===1?0.95:0.88;
           return(
-            <button key={item.id} onClick={()=>setActive(item.id)}
-              title={collapsed?item.label:undefined}
+            <button key={item.id} onClick={()=>setActive(item.id)} title={collapsed?item.label:undefined}
               style={{display:"flex",alignItems:"center",gap:collapsed?0:9,padding:collapsed?"9px 0":"9px 10px",justifyContent:collapsed?"center":"flex-start",borderRadius:8,border:"none",cursor:"pointer",textAlign:"left",background:isActive?col+"18":"transparent",color:isActive?col:C.sub,fontWeight:isActive?700:500,fontSize:13,position:"relative",width:"100%",transition:"all 0.2s",opacity,transform:`scale(${scale})`}}>
               <span style={{fontSize:collapsed?18:14,flexShrink:0}}>{item.icon}</span>
               {!collapsed&&<span style={{flex:1,textAlign:"left"}}>{item.label}</span>}
@@ -174,25 +136,48 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,trainerName}){
         <div style={{position:"absolute",top:0,left:0,right:0,height:32,background:`linear-gradient(to bottom, ${C.surface}, transparent)`,pointerEvents:"none"}}/>
         <div style={{position:"absolute",bottom:0,left:0,right:0,height:32,background:`linear-gradient(to top, ${C.surface}, transparent)`,pointerEvents:"none"}}/>
       </nav>
-
-      {/* Swipe hint labels when collapsed */}
       {collapsed&&(
         <div style={{padding:"6px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:2,borderTop:`1px solid ${C.border}`,opacity:0.4}}>
           <span style={{color:C.muted,fontSize:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>↑↓ nav</span>
           <span style={{color:C.muted,fontSize:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>← close</span>
         </div>
       )}
-
-      <div style={{padding:collapsed?"10px 0":"12px 14px",borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:9}}>
-        <Avatar name={trainerName||"?"} size={30} color={C.purple}/>
-        {!collapsed&&<div style={{minWidth:0}}><div style={{color:C.text,fontSize:12,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{trainerName||"Trainer"}</div><div style={{color:C.muted,fontSize:10}}>Head Coach</div></div>}
-      </div>
+      {/* Trainer profile footer — click to open editor */}
+      <button onClick={onProfileClick} title="Edit profile / Sign out"
+        style={{padding:collapsed?"10px 0":"12px 14px",borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:9,background:"transparent",cursor:"pointer",width:"100%",textAlign:"left"}}>
+        <Avatar name={profile?.name||"?"} size={30} color={C.purple}/>
+        {!collapsed&&(
+          <div style={{minWidth:0,flex:1}}>
+            <div style={{color:C.text,fontSize:12,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{profile?.name||"Trainer"}</div>
+            <div style={{color:C.muted,fontSize:10}}>{profile?.role||"Coach"}</div>
+          </div>
+        )}
+        {!collapsed&&<span style={{color:C.muted,fontSize:11,flexShrink:0}}>⚙</span>}
+      </button>
     </aside>
   );
 }
 
+// Simple full-screen spinner
+function Spinner({msg="Loading…"}){
+  return(
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,fontFamily:"'Inter',system-ui,sans-serif"}}>
+      <div style={{width:36,height:36,border:`3px solid ${C.border}`,borderTop:`3px solid ${C.green}`,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+      <div style={{color:C.sub,fontSize:13}}>{msg}</div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
 export default function App(){
-  const [appState,setAppState]=useState("ready"); // loading | setup | ready
+  // ── Auth state
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authUser, setAuthUser]       = useState(null);
+  const [profile, setProfile]         = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
+
+  // ── App data state
   const [view,setView]=useState("dashboard");
   const [clients,setClients]=useState([]);
   const [sessions,setSessions]=useState([]);
@@ -203,39 +188,100 @@ export default function App(){
   const [toasts,toast]=useToast();
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const [catalogExercises,setCatalogExercises]=useState([]);
+  const [mobile,setMobile]=useState(typeof window!=="undefined"&&window.innerWidth<768);
 
-  // Load data on mount — works on your Netlify domain (not on claude.ai due to CORS)
+  // ── Fetch trainer profile from DB
+  const fetchProfile = async (userId) => {
+    setProfileLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("fitos_trainer_profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows
+      setProfile(data || null);
+    } catch(e) {
+      console.warn("Profile fetch error:", e.message);
+      setProfile(null);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  // ── Auth listener — fires on login, logout, token refresh
   useEffect(()=>{
-    (async()=>{
-      try {
-        const [c,s,cl,p,f,cat]=await Promise.all([
-          db.select("fitos_clients"),
-          db.select("fitos_sessions"),
-          db.select("fitos_classes"),
-          db.select("fitos_programs"),
-          db.select("fitos_formats"),
-          db.select("fitos_catalog"),
-        ]);
-        setClients(c.map(mapClient));
-        setSessions(s.map(mapSession));
-        setClasses(cl.map(mapClass));
-        setPrograms(p.map(mapProgram));
-        setFormats(f.map(mapFormat));
-        setCatalogExercises(cat.map(mapCatalog));
-      } catch(e) {
-        console.warn("Could not load from Supabase:", e.message);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const user = session?.user || null;
+      setAuthUser(user);
+      if (user) fetchProfile(user.id);
+      else setAuthLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user || null;
+      setAuthUser(user);
+      if (user) {
+        fetchProfile(user.id);
+      } else {
+        setProfile(null);
+        setAuthLoading(false);
       }
-    })();
+    });
+    return () => subscription.unsubscribe();
   },[]);
+
+  // ── Once profile is resolved, load app data
+  useEffect(()=>{
+    if (profileLoading) return;
+    if (!authUser) { setAuthLoading(false); return; }
+    if (!profile)  { setAuthLoading(false); return; } // will show ProfileSetup
+    setAuthLoading(false);
+    loadAll();
+  },[profile, profileLoading, authUser]);
+
+  const loadAll = async () => {
+    try {
+      const [c,s,cl,p,f,cat]=await Promise.all([
+        db.select("fitos_clients"),
+        db.select("fitos_sessions"),
+        db.select("fitos_classes"),
+        db.select("fitos_programs"),
+        db.select("fitos_formats"),
+        db.select("fitos_catalog"),
+      ]);
+      setClients(c.map(mapClient));
+      setSessions(s.map(mapSession));
+      setClasses(cl.map(mapClass));
+      setPrograms(p.map(mapProgram));
+      setFormats(f.map(mapFormat));
+      setCatalogExercises(cat.map(mapCatalog));
+    } catch(e) {
+      console.warn("Could not load from Supabase:", e.message);
+    }
+  };
 
   const reload=async()=>{
     const [c,s,cl,p,f]=await Promise.all([
       db.select("fitos_clients"),db.select("fitos_sessions"),db.select("fitos_classes"),
       db.select("fitos_programs"),db.select("fitos_formats"),
     ]);
-    setClients(c.map(mapClient)); setSessions(s.map(mapSession)); setClasses(cl.map(mapClass));
-    setPrograms(p.map(mapProgram)); setFormats(f.map(mapFormat));
+    setClients(c.map(mapClient));setSessions(s.map(mapSession));setClasses(cl.map(mapClass));
+    setPrograms(p.map(mapProgram));setFormats(f.map(mapFormat));
   };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setClients([]);setSessions([]);setClasses([]);setPrograms([]);setFormats([]);setCatalogExercises([]);
+    setView("dashboard");setActiveClient(null);setShowProfileEditor(false);
+  };
+
+  // ── Mobile resize listener
+  useEffect(()=>{
+    const fn=()=>setMobile(window.innerWidth<768);
+    window.addEventListener("resize",fn);
+    return()=>window.removeEventListener("resize",fn);
+  },[]);
 
   // ── Client CRUD
   const addClient=async f=>{
@@ -262,7 +308,6 @@ export default function App(){
     const row={id:s.id,client_id:s.clientId,name:s.name,notes:s.notes,exercises:s.exercises,program_day:s.programDay,started_at:s.startedAt};
     const r=await db.insert("fitos_sessions",row);
     setSessions(p=>[mapSession(r),...p]);
-    // increment session count
     const cl=clients.find(c=>c.id===s.clientId);
     if(cl){ await db.update("fitos_clients",s.clientId,{session_count:(cl.sessionCount||0)+1}); setClients(p=>p.map(c=>c.id===s.clientId?{...c,sessionCount:(c.sessionCount||0)+1}:c)); }
     toast("Session saved! 💪");
@@ -275,7 +320,6 @@ export default function App(){
     setClasses(p=>[mapClass(r),...p]); toast("Class scheduled ✓");
   };
   const editClass=async(id,patch)=>{
-    // convert camelCase fields to snake_case for DB
     const dbPatch={};
     if(patch.name!==undefined)dbPatch.name=patch.name;
     if(patch.date!==undefined)dbPatch.date=patch.date;
@@ -328,7 +372,7 @@ export default function App(){
     setFormats(fs=>fs.filter(f=>f.id!==id)); toast("Format deleted","error");
   };
 
-  // ── Catalog CRUD (Supabase)
+  // ── Catalog CRUD
   const addCatalogExercise=async f=>{
     const row={id:uid(),name:f.name,category:f.category,muscles:f.muscles||[],equipment:f.equipment,difficulty:f.difficulty,purpose:f.purpose||"",instructions:f.instructions||"",video_url:f.videoUrl||"",trainer_notes:f.trainerNotes||"",tags:f.tags||[],photo_base64:f.photoBase64||""};
     const r=await db.insert("fitos_catalog",row);
@@ -352,17 +396,10 @@ export default function App(){
   const SUBS={dashboard:`${clients.filter(c=>c.status==="active").length} active clients`,clients:`${clients.length} clients`,client:activeClient?.name||"",sessions:"Track sets, reps & weight",classes:`${classes.filter(c=>c.status==="scheduled").length} upcoming`,programs:`${programs.length} programs · ${formats.length} class formats`,catalog:`${catalogExercises.length} exercises`};
   const counts={clients:clients.length,programs:programs.length+formats.length,dashboard:0,sessions:0,classes:classes.filter(c=>c.status==="scheduled").length};
 
-  if(appState==="loading")return(<div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',system-ui,sans-serif"}}><Spinner msg="Connecting to database…"/></div>);
-  if(appState==="setup")return <SetupScreen onSetupDone={()=>{ setAppState("loading"); reload().then(()=>setAppState("ready")); }}/>;
-
-  // Detect mobile — screens narrower than 768px get bottom nav
-  const isMobile=typeof window!=="undefined"&&window.innerWidth<768;
-  const [mobile,setMobile]=useState(isMobile);
-  useEffect(()=>{
-    const fn=()=>setMobile(window.innerWidth<768);
-    window.addEventListener("resize",fn);
-    return()=>window.removeEventListener("resize",fn);
-  },[]);
+  // ── Auth gate
+  if (authLoading) return <Spinner msg="Connecting…"/>;
+  if (!authUser)   return <AuthScreen/>;
+  if (!profile)    return <ProfileSetup user={authUser} onComplete={p => { setProfile(p); }}/>;
 
   return(
     <div style={{display:"flex",height:"100vh",background:C.bg,overflow:"hidden",fontFamily:"'Inter',system-ui,sans-serif"}}>
@@ -380,11 +417,9 @@ export default function App(){
         }
       `}</style>
 
-      {/* Sidebar — desktop only */}
-      {!mobile&&<Sidebar active={view} setActive={navigate} counts={counts} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} trainerName="Jordan Reeves"/>}
+      {!mobile&&<Sidebar active={view} setActive={navigate} counts={counts} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} profile={profile} onProfileClick={()=>setShowProfileEditor(true)}/>}
 
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
-        {/* Top bar */}
         <div style={{height:54,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:mobile?"0 14px":"0 22px",background:C.bg,flexShrink:0}}>
           <div style={{minWidth:0,flex:1}}>
             <div style={{color:C.text,fontWeight:700,fontSize:mobile?15:16,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{TITLES[view]}</div>
@@ -393,11 +428,15 @@ export default function App(){
           <div style={{display:"flex",gap:8,flexShrink:0,alignItems:"center"}}>
             {view==="client"&&<Btn variant="outline" style={{padding:"6px 10px",fontSize:11}} onClick={()=>navigate("clients")}>← Back</Btn>}
             {view==="dashboard"&&<Btn style={{padding:"6px 12px",fontSize:mobile?11:12}} onClick={()=>setView("sessions")}>⚡ Log</Btn>}
-
+            {mobile&&(
+              <button onClick={()=>setShowProfileEditor(true)} title="Profile / Sign out"
+                style={{width:32,height:32,borderRadius:"50%",background:C.purple+"22",border:`1px solid ${C.purple}44`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:C.purple,fontWeight:800,fontSize:13}}>
+                {(profile?.name||"?").charAt(0).toUpperCase()}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Main content */}
         <main style={{flex:1,overflowY:"auto",padding:mobile?12:20,paddingBottom:mobile?80:20}}>
           {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} setView={setView} setActiveClient={setActiveClient}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} setView={setView} setActiveClient={setActiveClient}/>}
@@ -409,8 +448,16 @@ export default function App(){
         </main>
       </div>
 
-      {/* Bottom nav — mobile only */}
       {mobile&&<BottomNav active={view} setActive={navigate} counts={counts}/>}
+
+      {showProfileEditor&&(
+        <ProfileEditor
+          profile={profile}
+          onSave={p=>setProfile(p)}
+          onClose={()=>setShowProfileEditor(false)}
+          onSignOut={signOut}
+        />
+      )}
 
       <Toast toasts={toasts}/>
     </div>
