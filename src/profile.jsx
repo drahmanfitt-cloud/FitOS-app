@@ -25,7 +25,7 @@ export function ProfileSetup({ user, onComplete }) {
     try {
       const { error } = await supabase
         .from("fitos_trainer_profiles")
-        .upsert({ id: user.id, name: name.trim(), gym: gym.trim(), role: role.trim(), specialties: selected });
+        .upsert({ id: user.id, name: name.trim(), gym: gym.trim(), specialties: selected });
       if (error) throw error;
       onComplete({ id: user.id, name: name.trim(), gym: gym.trim(), role: role.trim(), specialties: selected });
     } catch (err) {
@@ -114,7 +114,7 @@ export function ProfileEditor({ profile, onSave, onClose, onSignOut }) {
     try {
       const { error } = await supabase
         .from("fitos_trainer_profiles")
-        .upsert({ id: profile.id, name: name.trim(), gym: gym.trim(), role: role.trim(), specialties: selected });
+        .upsert({ id: profile.id, name: name.trim(), gym: gym.trim(), specialties: selected });
       if (error) throw error;
       onSave({ ...profile, name: name.trim(), gym: gym.trim(), role: role.trim(), specialties: selected });
       onClose();
