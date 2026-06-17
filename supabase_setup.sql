@@ -7,9 +7,13 @@ create table if not exists fitos_trainer_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   name text not null,
   gym text default '',
+  role text default '',
   specialties text[] default '{}',
   created_at timestamptz default now()
 );
+
+-- If the table already existed without the role column, add it:
+alter table fitos_trainer_profiles add column if not exists role text default '';
 
 -- 2. Add trainer_id column to all data tables
 alter table fitos_clients  add column if not exists trainer_id uuid references auth.users(id);
