@@ -99,7 +99,7 @@ function FloorPlanEditor({stations,onUpdateStation}){
   },[handleMouseMove,handleMouseUp,handleTouchMove]);
 
   return(
-    <div>
+    <div style={{userSelect:"none",WebkitUserSelect:"none",WebkitTouchCallout:"none"}}>
       {/* Room shape selector */}
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
         <span style={{color:C.muted,fontSize:12,alignSelf:"center",fontWeight:600}}>Room:</span>
