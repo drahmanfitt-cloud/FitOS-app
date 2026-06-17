@@ -105,19 +105,27 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfi
   const wheelLock=useRef({locked:false,timer:null});
   const [swipeDir,setSwipeDir]=useState(null);
   const navIds=NAV.map(n=>n.id);
+  const sideRef=useRef(null);
+  const activeRef=useRef(active);
+  activeRef.current=active;
 
-  // Touchpad / mouse wheel — one step per scroll gesture (locked until events stop)
-  const onWheel=e=>{
-    if(Math.abs(e.deltaY)<6||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
-    clearTimeout(wheelLock.current.timer);
-    const wasLocked=wheelLock.current.locked;
-    // keep locked while a continuous (inertial) gesture is still firing events
-    wheelLock.current={locked:true,timer:setTimeout(()=>{wheelLock.current={locked:false,timer:null};},200)};
-    if(wasLocked)return;
-    const cur=navIds.indexOf(active);const total=navIds.length;const base=cur<0?0:cur;
-    if(e.deltaY>0)setActive(navIds[(base+1)%total]);else setActive(navIds[(base-1+total)%total]);
-    setSwipeDir(e.deltaY>0?"down":"up");setTimeout(()=>setSwipeDir(null),220);
-  };
+  // Native wheel listener — prevents page scroll and cycles nav items
+  useEffect(()=>{
+    const el=sideRef.current; if(!el) return;
+    const handler=e=>{
+      if(Math.abs(e.deltaY)<6||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
+      e.preventDefault();
+      clearTimeout(wheelLock.current.timer);
+      const wasLocked=wheelLock.current.locked;
+      wheelLock.current={locked:true,timer:setTimeout(()=>{wheelLock.current={locked:false,timer:null};},200)};
+      if(wasLocked)return;
+      const cur=navIds.indexOf(activeRef.current);const total=navIds.length;const base=cur<0?0:cur;
+      if(e.deltaY>0)setActive(navIds[(base+1)%total]);else setActive(navIds[(base-1+total)%total]);
+      setSwipeDir(e.deltaY>0?"down":"up");setTimeout(()=>setSwipeDir(null),220);
+    };
+    el.addEventListener("wheel",handler,{passive:false});
+    return()=>el.removeEventListener("wheel",handler);
+  },[]);
 
   const onTouchStart=e=>{touchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};setSwipeDir(null);};
   const onTouchMove=e=>{
@@ -140,7 +148,7 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfi
   };
 
   return(
-    <aside onTouchStart={onTouchStart} onTouchMove={e=>{e.preventDefault();onTouchMove(e);}} onTouchEnd={onTouchEnd} onWheel={onWheel}
+    <aside ref={sideRef} onTouchStart={onTouchStart} onTouchMove={e=>{e.preventDefault();onTouchMove(e);}} onTouchEnd={onTouchEnd}
       style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden",position:"relative",touchAction:"none"}}>
       {swipeDir&&(
         <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:20,pointerEvents:"none"}}>

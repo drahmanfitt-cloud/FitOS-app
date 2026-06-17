@@ -1,6 +1,6 @@
 // FitOS — Programs Hub & Class Format Builder
 import React, { useState } from "react";
-import { C, uid, now, clamp, fmt } from "./config.js";
+import { C, uid, now, clamp, fmt, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
 import { WARMUP_CATS, WarmupItem, WarmupSubsection } from "./warmup.jsx";
 import { FloorPlanEditor, FollowAlongDisplay, StationRotationDisplay, YOGA_SECTIONS, YogaSectionBlock } from "./display.jsx";
