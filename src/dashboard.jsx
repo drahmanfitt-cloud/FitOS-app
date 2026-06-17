@@ -50,7 +50,7 @@ function Dashboard({clients,sessions,classes,programs,formats,setView,setActiveC
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Active Clients</SL><span style={{color:C.green,fontSize:12}}>All →</span></div>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             {active.slice(0,10).map(c=>(
-              <div key={c.id} onClick={e=>{e.stopPropagation();setActiveClient(c);setView("client");}} style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",textAlign:"center",cursor:"pointer",minWidth:90}}>
+              <div key={c.id} onClick={e=>{e.stopPropagation();setActiveClient(c);setView("client");}} onMouseEnter={e=>{e.stopPropagation();e.currentTarget.style.borderColor=TAG_COLORS[c.tag]||C.green;}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;}} style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",textAlign:"center",cursor:"pointer",minWidth:90,transition:"border-color 0.15s"}}>
                 <Avatar name={c.name} size={34} color={TAG_COLORS[c.tag]||C.sub}/>
                 <div style={{color:C.text,fontWeight:600,fontSize:12,marginTop:8}}>{c.name.split(" ")[0]}</div>
                 {c.programId&&<div style={{marginTop:3}}><Pill color={C.purple}>📋</Pill></div>}
