@@ -1,0 +1,60 @@
+// FitOS — Supabase config, design tokens, helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const SUPABASE_URL = "https://mxbzpunefucxknodoqrc.supabase.co";
+export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14YnpwdW5lZnVjeGtub2RvcXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NDY1MjgsImV4cCI6MjA5NzAyMjUyOH0.JuaXxAaAAxfDBQom0DDJdlBNJlsRlkdgsKw87pcch7I";
+
+export const C = {
+  bg:"#0B0D11", surface:"#13161D", s2:"#1A1E28", s3:"#222738",
+  border:"#2A2F42", border2:"#353B52",
+  green:"#22D98A", blue:"#4B8EF8", purple:"#9B72F5",
+  amber:"#F5A524", red:"#F5445A", teal:"#22C4D9",
+  text:"#EDF0FA", sub:"#8A92B2", muted:"#4E566E",
+};
+
+export const TAG_COLORS = {Active:C.green,Inactive:"#F5445A",Lead:"#4B8EF8",VIP:"#9B72F5"};
+
+export const uid = () => Math.random().toString(36).slice(2,10);
+export const now = () => new Date().toISOString();
+export const fmtDate = d => d ? new Date(d).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—";
+export const fmtTime = d => d ? new Date(d).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"}) : "—";
+export const fmt = s => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+export const clamp = (v,mn,mx) => Math.min(mx,Math.max(mn,v));
+
+const headers = {
+  "Content-Type": "application/json",
+  "apikey": SUPABASE_KEY,
+  "Authorization": `Bearer ${SUPABASE_KEY}`,
+  "Prefer": "return=representation",
+};
+
+export const db = {
+  async select(table) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=created_at.desc`, { headers });
+    if (!r.ok) throw new Error(`select ${table}: ${await r.text()}`);
+    return r.json();
+  },
+  async insert(table, row) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method:"POST", headers, body:JSON.stringify(row) });
+    if (!r.ok) throw new Error(`insert ${table}: ${await r.text()}`);
+    const data = await r.json();
+    return Array.isArray(data) ? data[0] : data;
+  },
+  async update(table, id, patch) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method:"PATCH", headers, body:JSON.stringify(patch) });
+    if (!r.ok) throw new Error(`update ${table}: ${await r.text()}`);
+    const data = await r.json();
+    return Array.isArray(data) ? data[0] : data;
+  },
+  async delete(table, id) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method:"DELETE", headers });
+    if (!r.ok) throw new Error(`delete ${table}: ${await r.text()}`);
+  },
+};
+
+export const mapClient  = r => r ? ({id:r.id,name:r.name,email:r.email||"",phone:r.phone||"",dob:r.dob||"",tag:r.tag||"Active",status:r.status||"active",notes:r.notes||"",sessionCount:r.session_count||0,programId:r.program_id||null,createdAt:r.created_at}) : null;
+export const mapSession = r => r ? ({id:r.id,clientId:r.client_id,name:r.name||"",notes:r.notes||"",exercises:r.exercises||[],warmup:r.warmup||[],programDay:r.program_day||"",startedAt:r.started_at,createdAt:r.created_at}) : null;
+export const mapClass   = r => r ? ({id:r.id,name:r.name,date:r.date||"",time:r.time||"",duration:r.duration||60,capacity:r.capacity||10,location:r.location||"",status:r.status||"scheduled",bookings:r.bookings||[],formatId:r.format_id||null,formatName:r.format_name||"",createdAt:r.created_at}) : null;
+export const mapProgram = r => r ? ({id:r.id,name:r.name,description:r.description||"",weeks:r.weeks||4,daysPerWeek:r.days_per_week||3,days:r.days||[],assignedClients:r.assigned_clients||[],createdAt:r.created_at}) : null;
+export const mapFormat  = r => r ? ({id:r.id,name:r.name,type:r.type||"circuit",description:r.description||"",totalDuration:r.total_duration||45,workSec:r.work_sec||40,restSec:r.rest_sec||20,rounds:r.rounds||3,stations:r.stations||[],createdAt:r.created_at}) : null;
+export const mapCatalog = r => r ? ({id:r.id,name:r.name,category:r.category||"Strength",muscles:r.muscles||[],equipment:r.equipment||"Barbell",difficulty:r.difficulty||"Intermediate",purpose:r.purpose||"",instructions:r.instructions||"",videoUrl:r.video_url||"",trainerNotes:r.trainer_notes||"",tags:r.tags||[],photoBase64:r.photo_base64||"",createdAt:r.created_at}) : null;
