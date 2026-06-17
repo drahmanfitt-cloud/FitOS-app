@@ -9,9 +9,20 @@ import { ExPicker } from "./catalog.jsx";
 // ═══════════════════════════════════════════════════════════════════════════════
 function SettingsPanel({settings,onChange,onClose}){
   const set = (k,v) => onChange({...settings,[k]:v});
+  const scrollRef=useRef(null);
+  useEffect(()=>{
+    const el=scrollRef.current; if(!el) return;
+    const handler=e=>{
+      e.stopPropagation();
+      const m=e.deltaMode===1?16:e.deltaMode===2?el.clientHeight:1;
+      el.scrollTop+=e.deltaY*m;
+    };
+    el.addEventListener("wheel",handler,{passive:false});
+    return()=>el.removeEventListener("wheel",handler);
+  },[]);
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:600,backdropFilter:"blur(6px)"}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div onWheel={e=>{e.stopPropagation();const m=e.deltaMode===1?16:e.deltaMode===2?e.currentTarget.clientHeight:1;e.currentTarget.scrollTop+=e.deltaY*m;}} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:640,maxHeight:"85vh",overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",touchAction:"pan-y",padding:24}}>
+      <div ref={scrollRef} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:640,maxHeight:"85vh",overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",touchAction:"pan-y",padding:24}}>
         {/* Handle */}
         <div style={{width:40,height:4,borderRadius:2,background:C.border,margin:"0 auto 20px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>

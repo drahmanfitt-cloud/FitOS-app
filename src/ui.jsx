@@ -49,17 +49,30 @@ export const Select = ({label,value,onChange,options=[],required}) => (
   </div>
 );
 
-export const Modal = ({title,children,onClose,wide}) => (
-  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-    <div onWheel={e=>{e.stopPropagation();const m=e.deltaMode===1?16:e.deltaMode===2?e.currentTarget.clientHeight:1;e.currentTarget.scrollTop+=e.deltaY*m;}} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,padding:24,width:"100%",maxWidth:wide?720:480,maxHeight:"90vh",overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",touchAction:"pan-y"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-        <span style={{color:C.text,fontWeight:800,fontSize:16}}>{title}</span>
-        <button onClick={onClose} style={{background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer",lineHeight:1}}>×</button>
+export function Modal({title,children,onClose,wide}){
+  const scrollRef=useRef(null);
+  useEffect(()=>{
+    const el=scrollRef.current; if(!el) return;
+    const handler=e=>{
+      e.stopPropagation();
+      const m=e.deltaMode===1?16:e.deltaMode===2?el.clientHeight:1;
+      el.scrollTop+=e.deltaY*m;
+    };
+    el.addEventListener("wheel",handler,{passive:false});
+    return()=>el.removeEventListener("wheel",handler);
+  },[]);
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div ref={scrollRef} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,padding:24,width:"100%",maxWidth:wide?720:480,maxHeight:"90vh",overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",touchAction:"pan-y"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <span style={{color:C.text,fontWeight:800,fontSize:16}}>{title}</span>
+          <button onClick={onClose} style={{background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer",lineHeight:1}}>×</button>
+        </div>
+        {children}
       </div>
-      {children}
     </div>
-  </div>
-);
+  );
+}
 
 export const Confirm = ({msg,onConfirm,onCancel}) => (
   <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:600,padding:16}}>
