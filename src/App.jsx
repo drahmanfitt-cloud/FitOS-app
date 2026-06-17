@@ -67,7 +67,7 @@ function BottomNav({active,setActive,counts}){
         style={{position:"fixed",bottom:0,left:0,right:0,height:62,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"stretch",zIndex:700,paddingBottom:"env(safe-area-inset-bottom)",touchAction:"pan-y"}}>
         {swipeDir&&(
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:5,pointerEvents:"none"}}>
-            <div style={{color:"#fff",fontSize:22,fontWeight:900}}>{swipeDir==="left"?"←":"→"}</div>
+            <div style={{color:"#fff",fontSize:22,fontWeight:900}}>{swipeDir==="left"?"→":"←"}</div>
           </div>
         )}
         {visible.map(item=>{
