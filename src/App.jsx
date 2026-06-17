@@ -19,6 +19,27 @@ const NAV=[{id:"dashboard",label:"Dashboard",icon:"▦"},{id:"clients",label:"Cl
 function BottomNav({active,setActive,counts}){
   const visible=NAV.slice(0,5);
   const [showMore,setShowMore]=useState(false);
+  const touchStart=useRef(null);
+  const [swipeDir,setSwipeDir]=useState(null);
+  const navIds=NAV.map(n=>n.id);
+
+  const onTouchStart=e=>{touchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};setSwipeDir(null);};
+  const onTouchMove=e=>{
+    if(!touchStart.current)return;
+    const dx=e.touches[0].clientX-touchStart.current.x;
+    const dy=e.touches[0].clientY-touchStart.current.y;
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>15) setSwipeDir(dx<0?"left":"right");
+  };
+  const onTouchEnd=e=>{
+    if(!touchStart.current){setSwipeDir(null);return;}
+    const dx=e.changedTouches[0].clientX-touchStart.current.x;
+    const dy=e.changedTouches[0].clientY-touchStart.current.y;
+    setSwipeDir(null);touchStart.current=null;
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>50){
+      const cur=navIds.indexOf(active);const total=navIds.length;
+      if(dx<0)setActive(navIds[(cur+1)%total]);else setActive(navIds[(cur-1+total)%total]);
+    }
+  };
   return(
     <>
       {showMore&&(
@@ -39,7 +60,13 @@ function BottomNav({active,setActive,counts}){
           </div>
         </div>
       )}
-      <nav style={{position:"fixed",bottom:0,left:0,right:0,height:62,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"stretch",zIndex:700,paddingBottom:"env(safe-area-inset-bottom)"}}>
+      <nav onTouchStart={onTouchStart} onTouchMove={e=>{e.preventDefault();onTouchMove(e);}} onTouchEnd={onTouchEnd}
+        style={{position:"fixed",bottom:0,left:0,right:0,height:62,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"stretch",zIndex:700,paddingBottom:"env(safe-area-inset-bottom)",touchAction:"none"}}>
+        {swipeDir&&(
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:5,pointerEvents:"none"}}>
+            <div style={{color:"#fff",fontSize:22,fontWeight:900}}>{swipeDir==="left"?"←":"→"}</div>
+          </div>
+        )}
         {visible.map(item=>{
           const isActive=active===item.id||(active==="client"&&item.id==="clients");
           const col=item.id==="programs"?C.purple:item.id==="catalog"?C.teal:C.green;
