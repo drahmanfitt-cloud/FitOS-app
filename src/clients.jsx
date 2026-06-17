@@ -84,7 +84,7 @@ function ClientsScreen({clients,onAdd,onEdit,onDelete,programs,setView,setActive
   );
 }
 
-function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient}){
+function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient,onLogDay}){
   const [modal,setModal]=useState(null);
   const prog=programs.find(p=>p.id===client.programId);
   const clientSessions=sessions.filter(s=>s.clientId===client.id).sort((a,b)=>new Date(b.startedAt)-new Date(a.startedAt));
@@ -117,11 +117,15 @@ function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient}
           <SL>Assigned Program — {prog.name}</SL>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:8}}>
             {prog.days?.map(d=>(
-              <div key={d.id} style={{background:C.s2,borderRadius:9,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+              <div key={d.id} onClick={()=>onLogDay&&onLogDay(d)}
+                style={{background:C.s2,borderRadius:9,padding:"10px 12px",border:`1px solid ${C.border}`,cursor:onLogDay?"pointer":"default",transition:"border-color 0.15s"}}
+                onMouseEnter={e=>{if(onLogDay)e.currentTarget.style.borderColor=C.green;}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;}}>
                 <div style={{color:C.text,fontWeight:700,fontSize:13,marginBottom:2}}>{d.label}</div>
                 {d.focus&&<div style={{marginBottom:6}}><Pill color={C.purple}>{d.focus}</Pill></div>}
                 {d.exercises?.slice(0,3).map(e=><div key={e.id} style={{color:C.sub,fontSize:11,marginTop:2}}>· {e.name} {e.sets}×{e.reps}</div>)}
                 {d.exercises?.length>3&&<div style={{color:C.muted,fontSize:10,marginTop:2}}>+{d.exercises.length-3} more</div>}
+                {onLogDay&&<div style={{color:C.green,fontSize:10,fontWeight:600,marginTop:6}}>⚡ Log this day →</div>}
               </div>
             ))}
           </div>

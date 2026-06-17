@@ -683,7 +683,7 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
   );
 }
 
-function SessionLogger({clients,sessions,onSave,activeClient,programs}){
+function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay}){
   const [settings,setSettings]=useState(DEFAULT_SETTINGS);
   const [showSettings,setShowSettings]=useState(false);
   const [clientId,setClientId]=useState(activeClient?.id||"");
@@ -740,6 +740,9 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs}){
     setExercises((day.exercises||[]).map(e=>({id:uid(),name:e.name,resistanceMode:"weighted",sets:[],templateSets:e.sets,templateReps:e.reps,templateRest:e.rest||settings.defaultRestSec,notes:e.notes||""})));
     setLoadModal(false);
   };
+
+  // Pre-load a program day when navigated from client profile
+  useEffect(()=>{if(initialDay)loadFromDay(initialDay);},[]);
 
   const addSet=exId=>setExercises(p=>p.map(e=>e.id===exId?{...e,sets:[...e.sets,{id:uid(),load:"",reps:"",setNotes:"",done:false,pr:false}]}:e));
   const updateSet=(exId,sid,field,val)=>setExercises(p=>p.map(e=>e.id!==exId?e:{...e,sets:e.sets.map(s=>s.id!==sid?s:{...s,[field]:val})}));
