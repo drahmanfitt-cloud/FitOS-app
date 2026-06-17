@@ -40,13 +40,6 @@ const db = {
     });
     if (!r.ok) throw new Error(`delete ${table}: ${await r.text()}`);
   },
-  async rpc(fn, params = {}) {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
-      method: "POST", headers, body: JSON.stringify(params),
-    });
-    if (!r.ok) throw new Error(`rpc ${fn}: ${await r.text()}`);
-    return r.json();
-  },
 };
 
 // ─── Auto-create tables via SQL ───────────────────────────────────────────────
@@ -2471,6 +2464,7 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,sessions,
   );
 }
 
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // ROOT — loads all data from Supabase, passes CRUD handlers down
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2521,6 +2515,7 @@ function BottomNav({active,setActive,counts}){
                 </button>
               );
             })}
+
           </div>
         </div>
       )}
@@ -2552,32 +2547,100 @@ function BottomNav({active,setActive,counts}){
   );
 }
 
-function Sidebar({active,setActive,counts,collapsed,setCollapsed}){
+function Sidebar({active,setActive,counts,collapsed,setCollapsed,trainerName}){
   const w=collapsed?56:200;
+  const touchStart=useRef(null);
+  const [swipeDir,setSwipeDir]=useState(null);
+
+  const navIds=NAV.map(n=>n.id);
+
+  const onTouchStart=e=>{
+    touchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    setSwipeDir(null);
+  };
+
+  const onTouchMove=e=>{
+    if(!touchStart.current)return;
+    const dx=e.touches[0].clientX-touchStart.current.x;
+    const dy=e.touches[0].clientY-touchStart.current.y;
+    // Determine dominant direction
+    if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>15) setSwipeDir(dy<0?"up":"down");
+    else if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>15) setSwipeDir(dx<0?"left":"right");
+  };
+
+  const onTouchEnd=e=>{
+    if(!touchStart.current||!swipeDir)return;
+    const dx=e.changedTouches[0].clientX-touchStart.current.x;
+    const dy=e.changedTouches[0].clientY-touchStart.current.y;
+    setSwipeDir(null);
+    touchStart.current=null;
+
+    // Swipe left = collapse, swipe right = expand
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>50){
+      if(dx<0) setCollapsed(true);
+      else setCollapsed(false);
+      return;
+    }
+
+    // Swipe up = next screen, swipe down = previous screen
+    if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>50){
+      const cur=navIds.indexOf(active);
+      const total=navIds.length;
+      if(dy<0) setActive(navIds[(cur+1)%total]);
+      else setActive(navIds[(cur-1+total)%total]);
+    }
+  };
+
   return(
-    <aside style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden"}}>
+    <aside
+      onTouchStart={onTouchStart}
+      onTouchMove={e=>{e.preventDefault();onTouchMove(e);}}
+      onTouchEnd={onTouchEnd}
+      style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden",position:"relative",touchAction:"none"}}>
+
+      {/* Swipe hint */}
+      {swipeDir&&(
+        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:20,pointerEvents:"none",borderRadius:0}}>
+          <div style={{color:"#fff",fontSize:22,fontWeight:900}}>
+            {swipeDir==="up"?"↑":swipeDir==="down"?"↓":swipeDir==="left"?"←":"→"}
+          </div>
+        </div>
+      )}
+
       {/* Logo + collapse button */}
       <div style={{padding:"14px 10px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",gap:8,flexShrink:0}}>
+        {/* F icon always same size */}
+        <div style={{width:28,height:28,borderRadius:7,background:C.green,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          <span style={{fontSize:14,fontWeight:900,color:"#000"}}>F</span>
+        </div>
         {!collapsed&&(
-          <div style={{display:"flex",alignItems:"center",gap:9,minWidth:0}}>
-            <div style={{width:28,height:28,borderRadius:7,background:C.green,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:14,fontWeight:900,color:"#000"}}>F</span></div>
-            <div style={{minWidth:0}}><div style={{color:C.text,fontWeight:800,fontSize:14}}>FitOS</div><div style={{color:C.muted,fontSize:10}}>Cloud ☁️</div></div>
+          <div style={{minWidth:0,flex:1}}>
+            <div style={{color:C.text,fontWeight:800,fontSize:14}}>FitOS</div>
+            <div style={{color:C.muted,fontSize:10}}>Cloud ☁️</div>
           </div>
         )}
-        {collapsed&&<div style={{width:28,height:28,borderRadius:7,background:C.green,display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:14,fontWeight:900,color:"#000"}}>F</span></div>}
         <button onClick={()=>setCollapsed(c=>!c)} title={collapsed?"Expand sidebar":"Collapse sidebar"}
           style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:14,padding:4,borderRadius:6,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
           {collapsed?"→":"←"}
         </button>
       </div>
-      <nav style={{padding:"10px 6px",flex:1,display:"flex",flexDirection:"column",gap:2}}>
-        {NAV.map(item=>{
+
+      <nav style={{padding:"10px 6px",flex:1,display:"flex",flexDirection:"column",gap:2,position:"relative",overflow:"hidden"}}>
+        {NAV.map((item,i)=>{
           const isActive=active===item.id||(active==="client"&&item.id==="clients");
-          const col=item.id==="programs"?C.purple:C.green;
+          const col=item.id==="programs"?C.purple:item.id==="catalog"?C.teal:C.green;
+          const navIds=NAV.map(n=>n.id);
+          const cur=navIds.indexOf(active);
+          const total=navIds.length;
+          const fwd=(i-cur+total)%total;
+          const bwd=(cur-i+total)%total;
+          const dist=Math.min(fwd,bwd);
+          const opacity=dist===0?1:dist===1?0.45:0.18;
+          const scale=dist===0?1:dist===1?0.95:0.88;
           return(
             <button key={item.id} onClick={()=>setActive(item.id)}
               title={collapsed?item.label:undefined}
-              style={{display:"flex",alignItems:"center",gap:collapsed?0:9,padding:collapsed?"9px 0":"9px 10px",justifyContent:collapsed?"center":"flex-start",borderRadius:8,border:"none",cursor:"pointer",textAlign:"left",background:isActive?col+"18":"transparent",color:isActive?col:C.sub,fontWeight:isActive?700:500,fontSize:13,position:"relative",width:"100%"}}>
+              style={{display:"flex",alignItems:"center",gap:collapsed?0:9,padding:collapsed?"9px 0":"9px 10px",justifyContent:collapsed?"center":"flex-start",borderRadius:8,border:"none",cursor:"pointer",textAlign:"left",background:isActive?col+"18":"transparent",color:isActive?col:C.sub,fontWeight:isActive?700:500,fontSize:13,position:"relative",width:"100%",transition:"all 0.2s",opacity,transform:`scale(${scale})`}}>
               <span style={{fontSize:collapsed?18:14,flexShrink:0}}>{item.icon}</span>
               {!collapsed&&<span style={{flex:1,textAlign:"left"}}>{item.label}</span>}
               {!collapsed&&counts[item.id]>0&&<span style={{marginLeft:"auto",background:col+"22",color:col,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>{counts[item.id]}</span>}
@@ -2585,10 +2648,21 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed}){
             </button>
           );
         })}
+        <div style={{position:"absolute",top:0,left:0,right:0,height:32,background:`linear-gradient(to bottom, ${C.surface}, transparent)`,pointerEvents:"none"}}/>
+        <div style={{position:"absolute",bottom:0,left:0,right:0,height:32,background:`linear-gradient(to top, ${C.surface}, transparent)`,pointerEvents:"none"}}/>
       </nav>
+
+      {/* Swipe hint labels when collapsed */}
+      {collapsed&&(
+        <div style={{padding:"6px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:2,borderTop:`1px solid ${C.border}`,opacity:0.4}}>
+          <span style={{color:C.muted,fontSize:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>↑↓ nav</span>
+          <span style={{color:C.muted,fontSize:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>← close</span>
+        </div>
+      )}
+
       <div style={{padding:collapsed?"10px 0":"12px 14px",borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:9}}>
-        <Avatar name="J" size={30} color={C.purple}/>
-        {!collapsed&&<div style={{minWidth:0}}><div style={{color:C.text,fontSize:12,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Jordan Reeves</div><div style={{color:C.muted,fontSize:10}}>Head Coach</div></div>}
+        <Avatar name={trainerName||"?"} size={30} color={C.purple}/>
+        {!collapsed&&<div style={{minWidth:0}}><div style={{color:C.text,fontSize:12,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{trainerName||"Trainer"}</div><div style={{color:C.muted,fontSize:10}}>Head Coach</div></div>}
       </div>
     </aside>
   );
@@ -2773,6 +2847,7 @@ export default function App(){
         input[type=number]::-webkit-inner-spin-button{opacity:0.3}
         *{box-sizing:border-box;}
         input,select,button{font-family:inherit;}
+        input,select,textarea{font-size:16px!important;}
         @media(max-width:767px){
           .fitos-grid-2{grid-template-columns:1fr!important;}
           .fitos-grid-3{grid-template-columns:1fr!important;}
@@ -2783,7 +2858,7 @@ export default function App(){
       `}</style>
 
       {/* Sidebar — desktop only */}
-      {!mobile&&<Sidebar active={view} setActive={navigate} counts={counts} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed}/>}
+      {!mobile&&<Sidebar active={view} setActive={navigate} counts={counts} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} trainerName="Jordan Reeves"/>}
 
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
         {/* Top bar */}
@@ -2792,9 +2867,10 @@ export default function App(){
             <div style={{color:C.text,fontWeight:700,fontSize:mobile?15:16,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{TITLES[view]}</div>
             {!mobile&&<div style={{color:C.muted,fontSize:11}}>{SUBS[view]}</div>}
           </div>
-          <div style={{display:"flex",gap:8,flexShrink:0}}>
+          <div style={{display:"flex",gap:8,flexShrink:0,alignItems:"center"}}>
             {view==="client"&&<Btn variant="outline" style={{padding:"6px 10px",fontSize:11}} onClick={()=>navigate("clients")}>← Back</Btn>}
             {view==="dashboard"&&<Btn style={{padding:"6px 12px",fontSize:mobile?11:12}} onClick={()=>setView("sessions")}>⚡ Log</Btn>}
+
           </div>
         </div>
 
