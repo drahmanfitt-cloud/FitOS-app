@@ -102,39 +102,9 @@ function BottomNav({active,setActive,counts}){
 
 function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfileClick}){
   const w=collapsed?56:200;
-  const touchStart=useRef(null);
-  const [swipeDir,setSwipeDir]=useState(null);
-  const navIds=NAV.map(n=>n.id);
-  const sideRef=useRef(null);
-
-  const onTouchStart=e=>{touchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};setSwipeDir(null);};
-  const onTouchMove=e=>{
-    if(!touchStart.current)return;
-    const dx=e.touches[0].clientX-touchStart.current.x;
-    const dy=e.touches[0].clientY-touchStart.current.y;
-    if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>15) setSwipeDir(dy<0?"up":"down");
-    else if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>15) setSwipeDir(dx<0?"left":"right");
-  };
-  const onTouchEnd=e=>{
-    if(!touchStart.current||!swipeDir)return;
-    const dx=e.changedTouches[0].clientX-touchStart.current.x;
-    const dy=e.changedTouches[0].clientY-touchStart.current.y;
-    setSwipeDir(null);touchStart.current=null;
-    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>50){if(dx<0)setCollapsed(true);else setCollapsed(false);return;}
-    if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>50){
-      const cur=navIds.indexOf(active);const total=navIds.length;
-      if(dy<0)setActive(navIds[(cur+1)%total]);else setActive(navIds[(cur-1+total)%total]);
-    }
-  };
 
   return(
-    <aside ref={sideRef} onTouchStart={onTouchStart} onTouchMove={e=>{e.preventDefault();onTouchMove(e);}} onTouchEnd={onTouchEnd}
-      style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden",position:"relative",touchAction:"none"}}>
-      {swipeDir&&(
-        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:20,pointerEvents:"none"}}>
-          <div style={{color:"#fff",fontSize:22,fontWeight:900}}>{swipeDir==="up"?"↓":swipeDir==="down"?"↑":swipeDir==="left"?"→":"←"}</div>
-        </div>
-      )}
+    <aside style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden",position:"relative"}}>
       <div style={{padding:"14px 10px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",gap:8,flexShrink:0}}>
         <div style={{width:28,height:28,borderRadius:7,background:C.green,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
           <span style={{fontSize:14,fontWeight:900,color:"#000"}}>F</span>
@@ -150,18 +120,13 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfi
           {collapsed?"→":"←"}
         </button>
       </div>
-      <nav style={{padding:"10px 6px",flex:1,display:"flex",flexDirection:"column",gap:2,position:"relative",overflow:"hidden"}}>
-        {NAV.map((item,i)=>{
+      <nav style={{padding:"10px 6px",flex:1,display:"flex",flexDirection:"column",gap:2,overflowY:"auto"}}>
+        {NAV.map(item=>{
           const isActive=active===item.id||(active==="client"&&item.id==="clients");
           const col=item.id==="programs"?C.purple:item.id==="catalog"?C.teal:C.green;
-          const cur=navIds.indexOf(active);const total=navIds.length;
-          const fwd=(i-cur+total)%total;const bwd=(cur-i+total)%total;
-          const dist=Math.min(fwd,bwd);
-          const opacity=dist===0?1:dist===1?0.45:0.18;
-          const scale=dist===0?1:dist===1?0.95:0.88;
           return(
             <button key={item.id} onClick={()=>setActive(item.id)} title={collapsed?item.label:undefined}
-              style={{display:"flex",alignItems:"center",gap:collapsed?0:9,padding:collapsed?"9px 0":"9px 10px",justifyContent:collapsed?"center":"flex-start",borderRadius:8,border:"none",cursor:"pointer",textAlign:"left",background:isActive?col+"18":"transparent",color:isActive?col:C.sub,fontWeight:isActive?700:500,fontSize:13,position:"relative",width:"100%",transition:"all 0.2s",opacity,transform:`scale(${scale})`}}>
+              style={{display:"flex",alignItems:"center",gap:collapsed?0:9,padding:collapsed?"9px 0":"9px 10px",justifyContent:collapsed?"center":"flex-start",borderRadius:8,border:"none",cursor:"pointer",textAlign:"left",background:isActive?col+"18":"transparent",color:isActive?col:C.sub,fontWeight:isActive?700:500,fontSize:13,position:"relative",width:"100%",transition:"background 0.15s,color 0.15s"}}>
               <span style={{fontSize:collapsed?18:14,flexShrink:0}}>{item.icon}</span>
               {!collapsed&&<span style={{flex:1,textAlign:"left"}}>{item.label}</span>}
               {!collapsed&&counts[item.id]>0&&<span style={{marginLeft:"auto",background:col+"22",color:col,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>{counts[item.id]}</span>}
@@ -169,15 +134,7 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfi
             </button>
           );
         })}
-        <div style={{position:"absolute",top:0,left:0,right:0,height:32,background:`linear-gradient(to bottom, ${C.surface}, transparent)`,pointerEvents:"none"}}/>
-        <div style={{position:"absolute",bottom:0,left:0,right:0,height:32,background:`linear-gradient(to top, ${C.surface}, transparent)`,pointerEvents:"none"}}/>
       </nav>
-      {collapsed&&(
-        <div style={{padding:"6px 0",display:"flex",flexDirection:"column",alignItems:"center",gap:2,borderTop:`1px solid ${C.border}`,opacity:0.4}}>
-          <span style={{color:C.muted,fontSize:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>↑↓ nav</span>
-          <span style={{color:C.muted,fontSize:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>← close</span>
-        </div>
-      )}
       {/* Trainer profile footer — click to open editor */}
       <button onClick={onProfileClick} title="Edit profile / Sign out"
         style={{padding:collapsed?"10px 0":"12px 14px",borderLeft:"none",borderRight:"none",borderBottom:"none",borderTop:`1px solid ${C.border}`,outline:"none",WebkitTapHighlightColor:"transparent",display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:9,background:"transparent",cursor:"pointer",width:"100%",textAlign:"left"}}>
