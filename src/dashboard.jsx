@@ -13,12 +13,15 @@ function Dashboard({clients,sessions,classes,programs,formats,setView,setActiveC
   const totalPRs=sessions.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(st=>st.pr&&st.done).length,0),0);
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(130px,1fr))",gap:12}}>
         {[{label:"Active Clients",val:active.length,sub:`${clients.length} total`,color:C.green,icon:"👥",nav:"clients"},{label:"Sessions Logged",val:sessions.length,sub:"all time",color:C.blue,icon:"⚡",nav:"sessions"},{label:"Programs Built",val:programs.length,sub:`${formats.length} class formats`,color:C.purple,icon:"📋",nav:"programs"},{label:"PRs Logged",val:totalPRs,sub:"all time",color:C.amber,icon:"🏆",nav:"sessions"}].map(s=>(
-          <Card key={s.label} onClick={()=>setView(s.nav)} style={{padding:"14px 16px",cursor:"pointer",transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=s.color} onMouseLeave={e=>e.currentTarget.style.borderColor=""}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:11,color:C.sub}}>{s.label}</span><span style={{fontSize:16}}>{s.icon}</span></div>
+          <Card key={s.label} onClick={()=>setView(s.nav)} style={{padding:"14px 16px",cursor:"pointer",transition:"border-color 0.15s",minWidth:0}} onMouseEnter={e=>e.currentTarget.style.borderColor=s.color} onMouseLeave={e=>e.currentTarget.style.borderColor=""}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,gap:6}}>
+              <span style={{fontSize:11,color:C.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}>{s.label}</span>
+              <span style={{fontSize:14,flexShrink:0}}>{s.icon}</span>
+            </div>
             <div style={{fontSize:30,fontWeight:800,color:C.text,lineHeight:1}}>{s.val}</div>
-            <div style={{fontSize:11,color:s.color,fontWeight:600,marginTop:4}}>{s.sub} →</div>
+            <div style={{fontSize:11,color:s.color,fontWeight:600,marginTop:6,whiteSpace:"nowrap"}}>{s.sub} →</div>
           </Card>
         ))}
       </div>
