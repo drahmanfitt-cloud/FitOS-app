@@ -62,9 +62,9 @@ function ClientsScreen({clients,onAdd,onEdit,onDelete,programs,setView,setActive
                     onMouseEnter={e=>e.currentTarget.style.background=C.s2} onMouseLeave={e=>e.currentTarget.style.background="transparent"}
                     onClick={()=>{setActiveClient(c);setView("client");}}>
                     <td style={{padding:"12px 16px"}}><div style={{display:"flex",alignItems:"center",gap:10}}><Avatar name={c.name} size={30} color={TAG_COLORS[c.tag]||C.sub}/><div><div style={{color:C.text,fontWeight:600,fontSize:14}}>{c.name}</div><div style={{color:C.muted,fontSize:11}}>{c.email||"—"}</div></div></div></td>
-                    <td style={{padding:"12px 16px"}}><Pill color={TAG_COLORS[c.tag]||C.sub}>{c.tag}</Pill></td>
-                    <td style={{padding:"12px 16px"}}><Pill color={SC[c.status]||C.sub}>{c.status}</Pill></td>
-                    <td style={{padding:"12px 16px"}}>{prog?<Pill color={C.purple}>{prog.name}</Pill>:<span style={{color:C.muted,fontSize:12}}>—</span>}</td>
+                    <td style={{padding:"12px 8px"}}><Pill color={TAG_COLORS[c.tag]||C.sub}>{c.tag}</Pill></td>
+                    <td style={{padding:"12px 8px"}}><Pill color={SC[c.status]||C.sub}>{c.status}</Pill></td>
+                    <td style={{padding:"12px 8px"}}>{prog?<Pill color={C.purple}>{prog.name}</Pill>:<span style={{color:C.muted,fontSize:12}}>—</span>}</td>
                     <td style={{padding:"12px 16px",color:C.sub,fontSize:14}}>{c.sessionCount||0}</td>
                     <td style={{padding:"12px 16px",color:C.muted,fontSize:13}}>{fmtDate(c.createdAt)}</td>
                     <td style={{padding:"12px 16px"}}><div style={{display:"flex",gap:6}} onClick={e=>e.stopPropagation()}>
