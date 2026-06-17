@@ -144,7 +144,7 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfi
       )}
       {/* Trainer profile footer — click to open editor */}
       <button onClick={onProfileClick} title="Edit profile / Sign out"
-        style={{padding:collapsed?"10px 0":"12px 14px",borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:9,background:"transparent",cursor:"pointer",width:"100%",textAlign:"left"}}>
+        style={{padding:collapsed?"10px 0":"12px 14px",border:"none",borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",gap:9,background:"transparent",cursor:"pointer",width:"100%",textAlign:"left"}}>
         <Avatar name={profile?.name||"?"} size={30} color={C.purple}/>
         {!collapsed&&(
           <div style={{minWidth:0,flex:1}}>
