@@ -143,7 +143,7 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfi
           {collapsed?"→":"←"}
         </button>
       </div>
-      <nav style={{padding:"10px 6px",flex:1,display:"flex",flexDirection:"column",gap:2,overflowY:"auto"}}>
+      <nav style={{padding:"8px 6px",flex:1,display:"flex",flexDirection:"column",gap:2,overflowY:"hidden",justifyContent:"center"}}>
         {NAV.map(item=>{
           const isActive=active===item.id||(active==="client"&&item.id==="clients");
           const col=item.id==="programs"?C.purple:item.id==="catalog"?C.teal:C.green;
