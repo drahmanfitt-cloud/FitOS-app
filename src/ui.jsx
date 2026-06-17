@@ -17,6 +17,12 @@ export const Btn = ({children,onClick,variant="primary",color=C.green,disabled,s
   return <button disabled={disabled} onClick={onClick} style={{...s[variant],borderRadius:8,cursor:disabled?"not-allowed":"pointer",fontWeight:700,fontSize:12,padding:"8px 14px",display:"inline-flex",alignItems:"center",gap:5,opacity:disabled?0.5:1,...sx}}>{children}</button>;
 };
 
+export const NumInput = ({value,onChange,min,max,width=56}) => (
+  <input type="number" value={value??""} min={min} max={max}
+    onChange={e=>{const v=Number(e.target.value);onChange(max!==undefined?Math.min(max,Math.max(min??0,v)):v);}}
+    style={{width,background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,padding:"7px 8px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit",textAlign:"center"}}/>
+);
+
 export const Card = ({children,style:sx={},...rest}) => (
   <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:18,...sx}} {...rest}>{children}</div>
 );

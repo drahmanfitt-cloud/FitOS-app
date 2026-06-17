@@ -1,7 +1,7 @@
 // FitOS — Session Logger components
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { C, uid, now, fmtDate, fmt } from "./config.js";
-import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal } from "./ui.jsx";
+import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, NumInput } from "./ui.jsx";
 import { DEFAULT_SETTINGS, ResistanceToggle } from "./clients.jsx";
 import { ExPicker } from "./catalog.jsx";
 
