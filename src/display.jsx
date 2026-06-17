@@ -20,6 +20,7 @@ function FloorPlanEditor({stations,onUpdateStation}){
   const [dragging,setDragging]=useState(null);
   const [dragOffset,setDragOffset]=useState({x:0,y:0});
   const planRef=useRef(null);
+  const pointerInside=useRef(true);
 
   const getRoomPath=()=>{
     switch(roomShape){
@@ -34,6 +35,7 @@ function FloorPlanEditor({stations,onUpdateStation}){
     const rect=planRef.current.getBoundingClientRect();
     const st=stations.find(s=>s.id===id);
     setDragging(id);
+    pointerInside.current=!(st.x==null||st.y==null);
     if(st.x==null||st.y==null){
       // from the tray — only placed once dragged onto the room
       setDragOffset({x:0,y:0});
@@ -49,15 +51,19 @@ function FloorPlanEditor({stations,onUpdateStation}){
   const handleMouseMove=useCallback((e)=>{
     if(!dragging||!planRef.current)return;
     const rect=planRef.current.getBoundingClientRect();
-    const st=stations.find(s=>s.id===dragging);
     const inside=e.clientX>=rect.left&&e.clientX<=rect.right&&e.clientY>=rect.top&&e.clientY<=rect.bottom;
-    if(st&&(st.x==null||st.y==null)&&!inside)return; // tray item: place only when over the room
+    pointerInside.current=inside;
+    if(!inside)return; // outside the room — releasing here returns it to the tray
     const x=Math.min(90,Math.max(5,((e.clientX-rect.left-dragOffset.x)/rect.width)*100));
     const y=Math.min(90,Math.max(5,((e.clientY-rect.top-dragOffset.y)/rect.height)*100));
     onUpdateStation(dragging,{x,y});
-  },[dragging,dragOffset,onUpdateStation,stations]);
+  },[dragging,dragOffset,onUpdateStation]);
 
-  const handleMouseUp=useCallback(()=>setDragging(null),[]);
+  const handleMouseUp=useCallback(()=>{
+    if(dragging&&!pointerInside.current) onUpdateStation(dragging,{x:null,y:null});
+    pointerInside.current=true;
+    setDragging(null);
+  },[dragging,onUpdateStation]);
 
   // Touch support
   const handleTouchStart=(e,id)=>{
@@ -65,6 +71,7 @@ function FloorPlanEditor({stations,onUpdateStation}){
     const rect=planRef.current.getBoundingClientRect();
     const st=stations.find(s=>s.id===id);
     setDragging(id);
+    pointerInside.current=!(st.x==null||st.y==null);
     if(st.x==null||st.y==null){
       setDragOffset({x:0,y:0});
     }else{
@@ -76,14 +83,14 @@ function FloorPlanEditor({stations,onUpdateStation}){
     if(!dragging||!planRef.current)return;
     const touch=e.touches[0];
     const rect=planRef.current.getBoundingClientRect();
-    const st=stations.find(s=>s.id===dragging);
     const inside=touch.clientX>=rect.left&&touch.clientX<=rect.right&&touch.clientY>=rect.top&&touch.clientY<=rect.bottom;
-    if(st&&(st.x==null||st.y==null)&&!inside)return; // tray item: place only when over the room
+    pointerInside.current=inside;
+    if(!inside){e.preventDefault();return;} // outside the room — release returns it to the tray
     const x=Math.min(90,Math.max(5,((touch.clientX-rect.left-dragOffset.x)/rect.width)*100));
     const y=Math.min(90,Math.max(5,((touch.clientY-rect.top-dragOffset.y)/rect.height)*100));
     onUpdateStation(dragging,{x,y});
     e.preventDefault();
-  },[dragging,dragOffset,onUpdateStation,stations]);
+  },[dragging,dragOffset,onUpdateStation]);
 
   useEffect(()=>{
     window.addEventListener("mousemove",handleMouseMove);
