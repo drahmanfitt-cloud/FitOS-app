@@ -40,7 +40,13 @@ export function AuthScreen() {
       provider: "google",
       options: { redirectTo: window.location.origin },
     });
-    if (error) { setError(error.message); setGoogleLoading(false); }
+    if (error) {
+      const notEnabled = /provider is not enabled|unsupported provider/i.test(error.message || "");
+      setError(notEnabled
+        ? "Google sign-in isn't set up yet. Please use email & password for now."
+        : error.message);
+      setGoogleLoading(false);
+    }
   };
 
   return (
