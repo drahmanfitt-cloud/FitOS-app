@@ -399,12 +399,12 @@ export default function App(){
 
   // ── Program CRUD
   const addProgram=async p=>{
-    const row={id:p.id,name:p.name,description:p.description,weeks:Number(p.weeks),days_per_week:Number(p.daysPerWeek),days:p.days,assigned_clients:p.assignedClients};
+    const row={id:p.id,name:p.name,description:p.description,weeks:Number(p.weeks),days_per_week:Number(p.daysPerWeek),days:p.days,warmup:p.warmup||[],assigned_clients:p.assignedClients};
     const r=await db.insert("fitos_programs",row);
     setPrograms(ps=>[mapProgram(r),...ps]); toast("Program created ✓");
   };
   const updateProgram=async(id,p)=>{
-    const patch={name:p.name,description:p.description,weeks:Number(p.weeks),days_per_week:Number(p.daysPerWeek),days:p.days,assigned_clients:p.assignedClients};
+    const patch={name:p.name,description:p.description,weeks:Number(p.weeks),days_per_week:Number(p.daysPerWeek),days:p.days,warmup:p.warmup||[],assigned_clients:p.assignedClients};
     await db.update("fitos_programs",id,patch);
     setPrograms(ps=>ps.map(pr=>pr.id===id?{...pr,...p}:pr));
   };

@@ -16,6 +16,7 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
   const [confirm,setConfirm]=useState(null);
   const [modal,setModal]=useState(null);
   const [exPicker,setExPicker]=useState(null);
+  const [progTab,setProgTab]=useState("days");
   const prog=programs.find(p=>p.id===selected);
 
   const create=async()=>{
@@ -57,6 +58,7 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
 
       {!prog?<Card style={{display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center",color:C.muted}}><div style={{fontSize:36,marginBottom:10}}>📋</div>Select or create a program</div></Card>:(
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          {/* Program Settings */}
           <Card>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
               <SL>Program Settings</SL>
@@ -74,38 +76,58 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
             {prog.assignedClients?.length>0&&<div style={{marginTop:12,display:"flex",gap:6,flexWrap:"wrap"}}>{prog.assignedClients.map(id=>{const cl=clients.find(c=>c.id===id);return cl?<Pill key={id} color={C.green}>👤 {cl.name}</Pill>:null;})}</div>}
           </Card>
 
-          {(prog.days||[]).map(day=>(
-            <Card key={day.id} style={{borderColor:C.purple+"44"}}>
-              <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:12}}>
-                <input value={day.label} onChange={e=>updDay(day.id,{label:e.target.value})} style={{background:"none",border:"none",color:C.text,fontWeight:700,fontSize:15,outline:"none",fontFamily:"inherit",flex:1,padding:0}}/>
-                <input value={day.focus} onChange={e=>updDay(day.id,{focus:e.target.value})} placeholder="Focus (Push, Lower…)" style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",color:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",width:160}}/>
-                <button onClick={()=>rmDay(day.id)} style={{background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer",lineHeight:1}}>×</button>
-              </div>
-              {day.exercises?.length===0&&<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"10px 0"}}>No exercises yet.</div>}
-              {day.exercises?.map((ex,ei)=>(
-                <div key={ex.id} style={{background:C.s2,borderRadius:9,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.border}`}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                      <button onClick={()=>mvEx(day.id,ex.id,-1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▲</button>
-                      <button onClick={()=>mvEx(day.id,ex.id,1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▼</button>
-                    </div>
-                    <span style={{color:C.text,fontWeight:600,fontSize:13,flex:1}}>{ex.name}</span>
-                    <button onClick={()=>rmEx(day.id,ex.id)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer",lineHeight:1}}>×</button>
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"60px 80px 80px 1fr",gap:8}}>
-                    {[{l:"Sets",f:"sets",t:"number"},{l:"Reps",f:"reps",t:"text"},{l:"Rest(s)",f:"rest",t:"number"}].map(fi=>(
-                      <div key={fi.f}><div style={{color:C.muted,fontSize:10,marginBottom:3}}>{fi.l}</div><input type={fi.t} value={ex[fi.f]} onChange={e=>updEx(day.id,ex.id,{[fi.f]:e.target.value})} style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
-                    ))}
-                    <div><div style={{color:C.muted,fontSize:10,marginBottom:3}}>Notes</div><input value={ex.notes} onChange={e=>updEx(day.id,ex.id,{notes:e.target.value})} placeholder="Cues…" style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
-                  </div>
-                </div>
-              ))}
-              <Btn variant="ghost" color={C.purple} style={{padding:"5px 12px",fontSize:11,marginTop:4}} onClick={()=>setExPicker(day.id)}>+ Add Exercise</Btn>
+          {/* Sub-tabs: Warmup / Training Days */}
+          <div style={{display:"flex",gap:2,borderBottom:`1px solid ${C.border}`}}>
+            {[["warmup","🧘 Warmup",C.purple],["days","🏋️ Training Days",C.blue]].map(([id,label,col])=>(
+              <button key={id} onClick={()=>setProgTab(id)}
+                style={{padding:"8px 16px",border:"none",background:"none",cursor:"pointer",color:progTab===id?col:C.sub,fontWeight:progTab===id?700:500,fontSize:13,borderBottom:`2px solid ${progTab===id?col:"transparent"}`}}>
+                {label}{id==="warmup"&&(prog.warmup?.length>0)?` · ${prog.warmup.length}`:""}{id==="days"&&(prog.days?.length>0)?` · ${prog.days.length}`:""}
+              </button>
+            ))}
+          </div>
+
+          {/* Warmup tab */}
+          {progTab==="warmup"&&(
+            <Card style={{borderColor:C.purple+"44"}}>
+              <ProgramWarmupTab warmup={prog.warmup||[]} setWarmup={w=>upd({warmup:w})}/>
             </Card>
-          ))}
+          )}
 
-          <Btn variant="ghost" color={C.teal} onClick={addDay}>+ Add Training Day</Btn>
+          {/* Training Days tab */}
+          {progTab==="days"&&<>
+            {(prog.days||[]).map(day=>(
+              <Card key={day.id} style={{borderColor:C.blue+"44"}}>
+                <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:12}}>
+                  <input value={day.label} onChange={e=>updDay(day.id,{label:e.target.value})} style={{background:"none",border:"none",color:C.text,fontWeight:700,fontSize:15,outline:"none",fontFamily:"inherit",flex:1,padding:0}}/>
+                  <input value={day.focus} onChange={e=>updDay(day.id,{focus:e.target.value})} placeholder="Focus (Push, Lower…)" style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",color:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",width:160}}/>
+                  <button onClick={()=>rmDay(day.id)} style={{background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer",lineHeight:1}}>×</button>
+                </div>
+                {day.exercises?.length===0&&<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"10px 0"}}>No exercises yet.</div>}
+                {day.exercises?.map((ex)=>(
+                  <div key={ex.id} style={{background:C.s2,borderRadius:9,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.border}`}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                      <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                        <button onClick={()=>mvEx(day.id,ex.id,-1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▲</button>
+                        <button onClick={()=>mvEx(day.id,ex.id,1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▼</button>
+                      </div>
+                      <span style={{color:C.text,fontWeight:600,fontSize:13,flex:1}}>{ex.name}</span>
+                      <button onClick={()=>rmEx(day.id,ex.id)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer",lineHeight:1}}>×</button>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"60px 80px 80px 1fr",gap:8}}>
+                      {[{l:"Sets",f:"sets",t:"number"},{l:"Reps",f:"reps",t:"text"},{l:"Rest(s)",f:"rest",t:"number"}].map(fi=>(
+                        <div key={fi.f}><div style={{color:C.muted,fontSize:10,marginBottom:3}}>{fi.l}</div><input type={fi.t} value={ex[fi.f]} onChange={e=>updEx(day.id,ex.id,{[fi.f]:e.target.value})} style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
+                      ))}
+                      <div><div style={{color:C.muted,fontSize:10,marginBottom:3}}>Notes</div><input value={ex.notes} onChange={e=>updEx(day.id,ex.id,{notes:e.target.value})} placeholder="Cues…" style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
+                    </div>
+                  </div>
+                ))}
+                <Btn variant="ghost" color={C.blue} style={{padding:"5px 12px",fontSize:11,marginTop:4}} onClick={()=>setExPicker(day.id)}>+ Add Exercise</Btn>
+              </Card>
+            ))}
+            <Btn variant="ghost" color={C.blue} onClick={addDay}>+ Add Training Day</Btn>
+          </>}
 
+          {/* Modals */}
           {exPicker&&<Modal title="Add Exercise" onClose={()=>setExPicker(null)}><ExPicker onPick={name=>{addEx(exPicker,name);setExPicker(null);}} onClose={()=>setExPicker(null)}/></Modal>}
           {modal==="assign"&&(
             <Modal title={`Assign "${prog.name}"`} onClose={()=>setModal(null)} wide>
@@ -327,20 +349,19 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
   );
 }
 
-// ── Standalone warmup tab for programs ───────────────────────────────────────
+// ── Warmup tab embedded inside a program ─────────────────────────────────────
 function ProgramWarmupTab({warmup,setWarmup}){
-  const addItem=cat=>{
-    setWarmup(w=>[...w,{id:uid(),name:`New ${cat.label}`,category:cat.id,holdSec:30,reps:"",resistanceMode:"bodyweight",sidesMode:"none",sides:false,notes:"",expanded:true}]);
-  };
-  const updateItem=(id,patch)=>setWarmup(w=>w.map(i=>i.id===id?{...i,...patch}:i));
-  const removeItem=id=>setWarmup(w=>w.filter(i=>i.id!==id));
-  const totalMin=Math.round((warmup||[]).reduce((a,i)=>a+(i.sides?(i.holdSec||0)*2:(i.holdSec||0)),0)/60);
+  const w=warmup||[];
+  const addItem=cat=>setWarmup([...w,{id:uid(),name:`New ${cat.label}`,category:cat.id,holdSec:30,reps:"",resistanceMode:"bodyweight",sidesMode:"none",sides:false,notes:""}]);
+  const updateItem=(id,patch)=>setWarmup(w.map(i=>i.id===id?{...i,...patch}:i));
+  const removeItem=id=>setWarmup(w.filter(i=>i.id!==id));
+  const totalMin=Math.round(w.reduce((a,i)=>a+(i.sidesMode==="both"?(i.holdSec||0)*2:(i.holdSec||0)),0)/60);
   return(
     <div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
         <div>
           <div style={{color:C.text,fontWeight:700,fontSize:15}}>Warmup Protocol</div>
-          <div style={{color:C.muted,fontSize:12,marginTop:2}}>{(warmup||[]).length} exercises · ~{totalMin} min</div>
+          <div style={{color:C.muted,fontSize:12,marginTop:2}}>{w.length} exercises · ~{totalMin} min</div>
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {WARMUP_CATS.map(cat=>(
@@ -352,27 +373,25 @@ function ProgramWarmupTab({warmup,setWarmup}){
       </div>
       {WARMUP_CATS.map(cat=>(
         <WarmupSubsection key={cat.id} cat={cat}
-          items={(warmup||[]).filter(i=>i.category===cat.id)}
+          items={w.filter(i=>i.category===cat.id)}
           onAdd={()=>addItem(cat)}
           onUpdate={updateItem}
           onRemove={removeItem}/>
       ))}
-      {(warmup||[]).length===0&&<div style={{textAlign:"center",padding:"32px 0",color:C.muted,fontSize:13}}>Add exercises to build your warmup protocol.</div>}
+      {w.length===0&&<div style={{textAlign:"center",padding:"32px 0",color:C.muted,fontSize:13}}>Plan your warmup — add stretching, mobility, and sport-specific exercises.</div>}
     </div>
   );
 }
 
 function ProgramsHub({programs,onSaveProgram,onUpdateProgram,onDeleteProgram,formats,onSaveFormat,onUpdateFormat,onDeleteFormat,clients,onUpdateClient,classes,onUpdateClass}){
   const [tab,setTab]=useState("programs");
-  const [programWarmup,setProgramWarmup]=useState([]);
   return(
     <div>
       <div style={{display:"flex",gap:2,marginBottom:20,borderBottom:`1px solid ${C.border}`,overflowX:"auto"}}>
-        {[["warmup","🧘 Warmup",C.purple],["programs","📋 Training Programs",C.purple],["formats","🏋️ Class Formats",C.teal]].map(([id,label,color])=>(
+        {[["programs","📋 Training Programs",C.purple],["formats","🏋️ Class Formats",C.teal]].map(([id,label,color])=>(
           <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 18px",border:"none",background:"none",cursor:"pointer",color:tab===id?color:C.sub,fontWeight:tab===id?700:500,fontSize:14,borderBottom:`2px solid ${tab===id?color:"transparent"}`,whiteSpace:"nowrap"}}>{label}</button>
         ))}
       </div>
-      {tab==="warmup"&&<ProgramWarmupTab warmup={programWarmup} setWarmup={setProgramWarmup}/>}
       {tab==="programs"&&<ProgramBuilder programs={programs} onSave={onSaveProgram} onUpdate={onUpdateProgram} onDelete={onDeleteProgram} clients={clients} onUpdateClient={onUpdateClient}/>}
       {tab==="formats"&&<ClassFormatBuilder formats={formats} onSave={onSaveFormat} onUpdate={onUpdateFormat} onDelete={onDeleteFormat} classes={classes} onUpdateClass={onUpdateClass}/>}
     </div>

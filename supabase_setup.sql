@@ -20,6 +20,7 @@ alter table fitos_clients  add column if not exists trainer_id uuid references a
 alter table fitos_sessions add column if not exists trainer_id uuid references auth.users(id);
 alter table fitos_classes  add column if not exists trainer_id uuid references auth.users(id);
 alter table fitos_programs add column if not exists trainer_id uuid references auth.users(id);
+alter table fitos_programs add column if not exists warmup jsonb default '[]';
 alter table fitos_formats  add column if not exists trainer_id uuid references auth.users(id);
 
 -- 3. Enable Row Level Security on all tables
