@@ -412,7 +412,6 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,onSeed,se
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search exercises…"
               style={{background:"none",border:"none",color:C.text,fontSize:14,flex:1,outline:"none",fontFamily:"inherit"}}/>
           </div>
-          <Btn variant="outline" color={C.teal} onClick={handleSeed} disabled={seeding}>{seeding?"Adding…":"📥 Starter library"}</Btn>
           <Btn onClick={()=>setModal("add")}>+ Add Exercise</Btn>
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",rowGap:10}}>
