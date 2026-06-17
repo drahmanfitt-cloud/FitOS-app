@@ -557,9 +557,10 @@ function StationRotationDisplay({stations,workSec=40,restSec=20,onClose}){
   const current=stations[stationIdx];
   const next=stations[stationIdx+1];
   const sidesMode=current?.sidesMode||"none";
+  const switchSec=Number(current?.switchSec)||5;
   const isRest=phase==="rest";
   const isSwitching=phase==="switching";
-  const totalSec=isRest?restSec:workSec;
+  const totalSec=isRest?restSec:isSwitching?switchSec:workSec;
   const pct=seconds/totalSec*100;
   const circ=2*Math.PI*70;
   const done=!running&&seconds===0&&!isSwitching;
@@ -586,26 +587,20 @@ function StationRotationDisplay({stations,workSec=40,restSec=20,onClose}){
   if(isSwitching) ringColor=C.purple;
 
   useEffect(()=>{
-    if(!running||isSwitching) return;
+    if(!running) return;
     const timer=setInterval(()=>{
       setSeconds(s=>{
         if(s<=1){
           clearInterval(timer);
-          if(phase==="work"){
+          if(phase==="switching"){
+            setSide("right");setPhase("work");setSeconds(workSec);setRunning(true);
+          } else if(phase==="work"){
             const sm=stations[stationIdx]?.sidesMode||"none";
+            const sw=Number(stations[stationIdx]?.switchSec)||5;
             if(sm==="both"&&side==="left"){
-              setPhase("switching");
-              setTimeout(()=>{
-                setSide("right");
-                setPhase("work");
-                setSeconds(workSec);
-                setRunning(true);
-              },1200);
+              setPhase("switching");setSeconds(sw);setRunning(true);
             } else {
-              setPhase("rest");
-              setSide("left");
-              setSeconds(restSec);
-              setRunning(true);
+              setPhase("rest");setSide("left");setSeconds(restSec);setRunning(true);
             }
           } else {
             const n=stationIdx+1;
@@ -618,15 +613,17 @@ function StationRotationDisplay({stations,workSec=40,restSec=20,onClose}){
       });
     },1000);
     return()=>clearInterval(timer);
-  },[running,phase,stationIdx,side,isSwitching]);
+  },[running,phase,stationIdx,side]);
 
   const skip=useCallback(()=>{
     setRunning(false);
-    if(phase==="work"){
+    if(phase==="switching"){
+      setSide("right");setPhase("work");setSeconds(workSec);setRunning(true);
+    } else if(phase==="work"){
       const sm=stations[stationIdx]?.sidesMode||"none";
+      const sw=Number(stations[stationIdx]?.switchSec)||5;
       if(sm==="both"&&side==="left"){
-        setPhase("switching");
-        setTimeout(()=>{setSide("right");setPhase("work");setSeconds(workSec);setRunning(true);},800);
+        setPhase("switching");setSeconds(sw);setRunning(true);
       } else {
         setPhase("rest");setSide("left");setSeconds(restSec);setRunning(true);
       }
@@ -694,12 +691,15 @@ function StationRotationDisplay({stations,workSec=40,restSec=20,onClose}){
               <svg width="180" height="180" style={{transform:"rotate(-90deg)"}}>
                 <circle cx="90" cy="90" r="70" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="10"/>
                 <circle cx="90" cy="90" r="70" fill="none" stroke={ringColor} strokeWidth="10"
-                  strokeDasharray={circ} strokeDashoffset={isSwitching?circ:circ*(1-pct/100)}
+                  strokeDasharray={circ} strokeDashoffset={circ*(1-pct/100)}
                   strokeLinecap="round" style={{transition:"stroke-dashoffset 1s linear,stroke 0.5s"}}/>
               </svg>
-              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
                 {isSwitching?(
-                  <span style={{color:C.purple,fontSize:36}}>↔</span>
+                  <>
+                    <span style={{color:C.purple,fontSize:28,lineHeight:1}}>↔</span>
+                    <span style={{color:C.purple,fontWeight:900,fontSize:32,fontVariantNumeric:"tabular-nums"}}>{fmt(seconds)}</span>
+                  </>
                 ):(
                   <span style={{color:"#fff",fontWeight:900,fontSize:48,fontVariantNumeric:"tabular-nums"}}>{fmt(seconds)}</span>
                 )}

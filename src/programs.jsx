@@ -272,6 +272,22 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
                     <div key={fi.f}><div style={{color:C.muted,fontSize:10,marginBottom:3}}>{fi.l}</div><input type={fi.t} value={st[fi.f]} onChange={e=>updSt(st.id,{[fi.f]:e.target.value})} style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:fi.f==="workSec"?COLS(i):C.text,fontWeight:fi.f==="workSec"?700:400,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
                   ))}
                 </div>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,flexWrap:"wrap"}}>
+                  <button onClick={()=>updSt(st.id,{sidesMode:st.sidesMode==="both"?"none":"both",switchSec:st.switchSec??5})}
+                    style={{display:"flex",alignItems:"center",gap:7,background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"inherit"}}>
+                    <div style={{width:34,height:20,borderRadius:10,background:st.sidesMode==="both"?COLS(i):C.s3,border:`1px solid ${st.sidesMode==="both"?COLS(i):C.border}`,position:"relative",transition:"background 0.15s",flexShrink:0}}>
+                      <div style={{position:"absolute",top:2,left:st.sidesMode==="both"?16:2,width:14,height:14,borderRadius:"50%",background:st.sidesMode==="both"?"#000":C.muted,transition:"left 0.15s"}}/>
+                    </div>
+                    <span style={{color:st.sidesMode==="both"?C.text:C.muted,fontSize:12,fontWeight:600}}>Unilateral (per side)</span>
+                  </button>
+                  {st.sidesMode==="both"&&(
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{color:C.muted,fontSize:11}}>Side switch (s)</span>
+                      <input type="number" min={1} value={st.switchSec??5} onChange={e=>updSt(st.id,{switchSec:e.target.value})}
+                        style={{width:64,background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:COLS(i),fontWeight:700,fontSize:12,outline:"none",fontFamily:"inherit"}}/>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </Card>}
