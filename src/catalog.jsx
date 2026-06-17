@@ -523,16 +523,32 @@ const EXERCISES = [
   "Bike Sprint","Row Sprint","Ski Erg","Assault Bike","Treadmill Sprint",
 ];
 
-function ExPicker({onPick,onClose}){
+function ExPicker({onPick,onSelect,onClose,catalog=[],onAddToCatalog}){
   const [q,setQ]=useState("");
-  const hits=EXERCISES.filter(e=>e.toLowerCase().includes(q.toLowerCase()));
+  const pickFn=onPick||onSelect||(()=>{});
+  // Merge saved catalog names with the built-in list (catalog first), case-insensitive dedupe
+  const catNames=(catalog||[]).map(c=>typeof c==="string"?c:c?.name).filter(Boolean);
+  const seen=new Set();
+  const allNames=[];
+  [...catNames,...EXERCISES].forEach(n=>{const k=n.toLowerCase().trim();if(k&&!seen.has(k)){seen.add(k);allNames.push(n);}});
+  const catSet=new Set(catNames.map(n=>n.toLowerCase().trim()));
+  const hits=allNames.filter(e=>e.toLowerCase().includes(q.toLowerCase()));
+  const exists=q&&allNames.some(n=>n.toLowerCase()===q.toLowerCase().trim());
+  const choose=name=>{pickFn(name);onClose?.();};
+  const chooseCustom=async()=>{
+    const clean=q.trim();
+    if(!clean)return;
+    if(onAddToCatalog){try{await onAddToCatalog(clean);}catch(e){console.error("save to catalog failed",e);}}
+    pickFn(clean);
+    onClose?.();
+  };
   return(
     <div>
       <input autoFocus value={q} onChange={e=>setQ(e.target.value)} placeholder="Search or type custom name…"
         style={{width:"100%",background:C.s2,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit",marginBottom:10}}/>
       <div style={{maxHeight:240,overflowY:"auto",display:"flex",flexDirection:"column",gap:2}}>
-        {q&&!EXERCISES.includes(q)&&<div onClick={()=>{onPick(q);onClose();}} style={{padding:"8px 10px",borderRadius:7,cursor:"pointer",color:C.green,fontSize:13,display:"flex",gap:8,alignItems:"center"}}><Pill color={C.purple}>custom</Pill>{q}</div>}
-        {hits.map(e=><div key={e} onClick={()=>{onPick(e);onClose();}} style={{padding:"8px 10px",borderRadius:7,cursor:"pointer",color:C.text,fontSize:13}} onMouseEnter={el=>el.currentTarget.style.background=C.s2} onMouseLeave={el=>el.currentTarget.style.background="transparent"}>{e}</div>)}
+        {q&&!exists&&<div onClick={chooseCustom} style={{padding:"8px 10px",borderRadius:7,cursor:"pointer",color:C.green,fontSize:13,display:"flex",gap:8,alignItems:"center"}}><Pill color={C.purple}>{onAddToCatalog?"+ save to catalog":"custom"}</Pill>{q}</div>}
+        {hits.map(e=><div key={e} onClick={()=>choose(e)} style={{padding:"8px 10px",borderRadius:7,cursor:"pointer",color:C.text,fontSize:13,display:"flex",gap:8,alignItems:"center"}} onMouseEnter={el=>el.currentTarget.style.background=C.s2} onMouseLeave={el=>el.currentTarget.style.background="transparent"}>{catSet.has(e.toLowerCase().trim())&&<Pill color={C.teal}>catalog</Pill>}{e}</div>)}
       </div>
     </div>
   );

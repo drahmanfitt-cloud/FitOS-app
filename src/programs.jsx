@@ -11,7 +11,7 @@ import { ExPicker } from "./catalog.jsx";
 
 const FORMAT_TYPES=[{value:"station",label:"Station Rotation"},{value:"circuit",label:"Circuit"},{value:"amrap",label:"AMRAP"},{value:"emom",label:"EMOM"},{value:"tabata",label:"Tabata"},{value:"custom",label:"Custom"}];
 
-function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClient,mobile}){
+function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClient,mobile,catalog,onAddToCatalog}){
   const [selected,setSelected]=useState(null);
   const [confirm,setConfirm]=useState(null);
   const [modal,setModal]=useState(null);
@@ -102,7 +102,7 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
         </Card>
       ))}
       <Btn variant="ghost" color={C.purple} onClick={addDay}>+ Add Training Day</Btn>
-      {exPicker&&<Modal title="Add Exercise" onClose={()=>setExPicker(null)}><ExPicker onPick={name=>{addEx(exPicker,name);setExPicker(null);}} onClose={()=>setExPicker(null)}/></Modal>}
+      {exPicker&&<Modal title="Add Exercise" onClose={()=>setExPicker(null)}><ExPicker onPick={name=>{addEx(exPicker,name);setExPicker(null);}} onClose={()=>setExPicker(null)} catalog={catalog} onAddToCatalog={onAddToCatalog}/></Modal>}
       {modal==="assign"&&(
         <Modal title={`Assign "${prog.name}"`} onClose={()=>setModal(null)} wide>
           <p style={{color:C.sub,fontSize:13,marginBottom:16}}>Assign this program to clients so they can load sessions from it.</p>
@@ -152,7 +152,7 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
         ))}
         {confirm&&<Confirm msg="Delete program?" onConfirm={async()=>{await onDelete(confirm);setSelected(null);setConfirm(null);}} onCancel={()=>setConfirm(null)}/>}
         {modal==="assign"&&prog&&<Modal title="Assign Clients" onClose={()=>setModal(null)}>{clients.map(cl=>{const on=prog.assignedClients?.includes(cl.id);return(<div key={cl.id} onClick={()=>toggleAssign(cl.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,cursor:"pointer",background:on?C.green+"12":C.s2,marginBottom:6,border:`1px solid ${on?C.green+"44":C.border}`}}><Avatar name={cl.name} size={28} color={TAG_COLORS[cl.tag]||C.sub}/><span style={{color:C.text,flex:1,fontSize:13}}>{cl.name}</span>{on&&<Pill color={C.green}>✓</Pill>}</div>);})}</Modal>}
-        {exPicker&&<Modal title="Add Exercise" onClose={()=>setExPicker(null)} wide><ExPicker onSelect={name=>{addEx(exPicker,name);setExPicker(null);}}/></Modal>}
+        {exPicker&&<Modal title="Add Exercise" onClose={()=>setExPicker(null)} wide><ExPicker onPick={name=>{addEx(exPicker,name);setExPicker(null);}} onClose={()=>setExPicker(null)} catalog={catalog} onAddToCatalog={onAddToCatalog}/></Modal>}
       </div>
     );
   }
@@ -179,7 +179,7 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
   );
 }
 
-function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateClass}){
+function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateClass,catalog,onAddToCatalog}){
   const [selected,setSelected]=useState(null);
   const [confirm,setConfirm]=useState(null);
   const [stPicker,setStPicker]=useState(false);
@@ -348,7 +348,7 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
             ))}
           </Card>}
 
-          {stPicker&&<Modal title="Add Station" onClose={()=>setStPicker(false)}><ExPicker onPick={name=>{addSt(name);setStPicker(false);}} onClose={()=>setStPicker(false)}/></Modal>}
+          {stPicker&&<Modal title="Add Station" onClose={()=>setStPicker(false)}><ExPicker onPick={name=>{addSt(name);setStPicker(false);}} onClose={()=>setStPicker(false)} catalog={catalog} onAddToCatalog={onAddToCatalog}/></Modal>}
           {loadModal&&(
             <Modal title={`Load "${fmt.name}" into a Class`} onClose={()=>setLoadModal(false)} wide>
               {classes.filter(c=>c.status==="scheduled").length===0?<div style={{color:C.muted,textAlign:"center",padding:24}}>No upcoming classes.</div>:(
@@ -407,7 +407,7 @@ function ProgramWarmupTab({warmup,setWarmup}){
   );
 }
 
-function ProgramsHub({programs,onSaveProgram,onUpdateProgram,onDeleteProgram,formats,onSaveFormat,onUpdateFormat,onDeleteFormat,clients,onUpdateClient,classes,onUpdateClass,mobile}){
+function ProgramsHub({programs,onSaveProgram,onUpdateProgram,onDeleteProgram,formats,onSaveFormat,onUpdateFormat,onDeleteFormat,clients,onUpdateClient,classes,onUpdateClass,mobile,catalog,onAddToCatalog}){
   const [tab,setTab]=useState("programs");
   return(
     <div>
@@ -416,8 +416,8 @@ function ProgramsHub({programs,onSaveProgram,onUpdateProgram,onDeleteProgram,for
           <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 18px",border:"none",background:"none",cursor:"pointer",color:tab===id?color:C.sub,fontWeight:tab===id?700:500,fontSize:mobile?12:14,borderBottom:`2px solid ${tab===id?color:"transparent"}`,whiteSpace:"nowrap"}}>{label}</button>
         ))}
       </div>
-      {tab==="programs"&&<ProgramBuilder programs={programs} onSave={onSaveProgram} onUpdate={onUpdateProgram} onDelete={onDeleteProgram} clients={clients} onUpdateClient={onUpdateClient} mobile={mobile}/>}
-      {tab==="formats"&&<ClassFormatBuilder formats={formats} onSave={onSaveFormat} onUpdate={onUpdateFormat} onDelete={onDeleteFormat} classes={classes} onUpdateClass={onUpdateClass}/>}
+      {tab==="programs"&&<ProgramBuilder programs={programs} onSave={onSaveProgram} onUpdate={onUpdateProgram} onDelete={onDeleteProgram} clients={clients} onUpdateClient={onUpdateClient} mobile={mobile} catalog={catalog} onAddToCatalog={onAddToCatalog}/>}
+      {tab==="formats"&&<ClassFormatBuilder formats={formats} onSave={onSaveFormat} onUpdate={onUpdateFormat} onDelete={onDeleteFormat} classes={classes} onUpdateClass={onUpdateClass} catalog={catalog} onAddToCatalog={onAddToCatalog}/>}
     </div>
   );
 }

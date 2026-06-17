@@ -683,7 +683,7 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
   );
 }
 
-function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay}){
+function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay,catalog,onAddToCatalog}){
   const [settings,setSettings]=useState(DEFAULT_SETTINGS);
   const [showSettings,setShowSettings]=useState(false);
   const [clientId,setClientId]=useState(activeClient?.id||"");
@@ -873,7 +873,7 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
         <Btn variant="ghost" color={C.green} onClick={()=>setShowPicker(p=>!p)}>+ Add Exercise</Btn>
         {showPicker&&(
           <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:14,position:"absolute",top:"calc(100% + 8px)",left:0,zIndex:200,width:290,boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}}>
-            <ExPicker onPick={n=>{addEx(n);setShowPicker(false);}} onClose={()=>setShowPicker(false)}/>
+            <ExPicker onPick={n=>{addEx(n);setShowPicker(false);}} onClose={()=>setShowPicker(false)} catalog={catalog} onAddToCatalog={onAddToCatalog}/>
           </div>
         )}
       </div>

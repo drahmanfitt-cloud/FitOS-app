@@ -466,6 +466,17 @@ export default function App(){
       return 0;
     }
   };
+  const quickAddCatalog=async name=>{
+    const clean=(name||"").trim();
+    if(!clean)return;
+    if((catalogExercises||[]).some(e=>e.name.toLowerCase().trim()===clean.toLowerCase()))return;
+    const row={id:uid(),name:clean,category:"Strength",muscles:[],equipment:"Other",difficulty:"Intermediate",purpose:"",instructions:"",video_url:"",trainer_notes:"",tags:[],photo_base64:""};
+    try{
+      const r=await db.insert("fitos_catalog",row);
+      setCatalogExercises(p=>[mapCatalog(r),...p]);
+      toast(`Saved "${clean}" to catalog ✓`);
+    }catch(e){console.warn("quick add catalog failed:",e.message);toast(`Couldn't save "${clean}" to catalog — added to this session only`);}
+  };
   const editCatalogExercise=async(id,f)=>{
     const patch={name:f.name,category:f.category,muscles:f.muscles||[],equipment:f.equipment,difficulty:f.difficulty,purpose:f.purpose||"",instructions:f.instructions||"",video_url:f.videoUrl||"",trainer_notes:f.trainerNotes||"",tags:f.tags||[],photo_base64:f.photoBase64||""};
     await db.update("fitos_catalog",id,patch);
@@ -528,9 +539,9 @@ export default function App(){
           {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient} onLogDay={day=>{setPreloadDay(day);setView("sessions");}}/>}
-          {view==="sessions"&&<ErrorBoundary><SessionLogger clients={clients} sessions={sessions} onSave={addSession} activeClient={activeClient} programs={programs} initialDay={preloadDay}/></ErrorBoundary>}
+          {view==="sessions"&&<ErrorBoundary><SessionLogger clients={clients} sessions={sessions} onSave={addSession} activeClient={activeClient} programs={programs} initialDay={preloadDay} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/></ErrorBoundary>}
           {view==="classes"&&<ClassesScreen clients={clients} classes={classes} onAdd={addClass} onEdit={editClass} onDelete={deleteClass} formats={formats} mobile={mobile}/>}
-          {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass} mobile={mobile}/>}
+          {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass} mobile={mobile} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/>}
           {view==="catalog"&&<ExerciseCatalogScreen catalogExercises={catalogExercises} onAdd={addCatalogExercise} onEdit={editCatalogExercise} onDelete={deleteCatalogExercise} onSeed={seedCatalogExercises} sessions={sessions} clients={clients}/>}
         </main>
       </div>
