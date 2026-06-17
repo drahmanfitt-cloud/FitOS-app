@@ -28,7 +28,10 @@ function BottomNav({active,setActive,counts}){
     if(!touchStart.current)return;
     const dx=e.touches[0].clientX-touchStart.current.x;
     const dy=e.touches[0].clientY-touchStart.current.y;
-    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>15) setSwipeDir(dx<0?"left":"right");
+    if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>15){
+      setSwipeDir(dx<0?"left":"right");
+      if(e.cancelable)e.preventDefault(); // only hijack clear horizontal swipes; vertical scroll passes through
+    }
   };
   const onTouchEnd=e=>{
     if(!touchStart.current){setSwipeDir(null);return;}
@@ -60,8 +63,8 @@ function BottomNav({active,setActive,counts}){
           </div>
         </div>
       )}
-      <nav onTouchStart={onTouchStart} onTouchMove={e=>{e.preventDefault();onTouchMove(e);}} onTouchEnd={onTouchEnd}
-        style={{position:"fixed",bottom:0,left:0,right:0,height:62,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"stretch",zIndex:700,paddingBottom:"env(safe-area-inset-bottom)",touchAction:"none"}}>
+      <nav onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+        style={{position:"fixed",bottom:0,left:0,right:0,height:62,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"stretch",zIndex:700,paddingBottom:"env(safe-area-inset-bottom)",touchAction:"pan-y"}}>
         {swipeDir&&(
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:5,pointerEvents:"none"}}>
             <div style={{color:"#fff",fontSize:22,fontWeight:900}}>{swipeDir==="left"?"←":"→"}</div>
@@ -70,9 +73,13 @@ function BottomNav({active,setActive,counts}){
         {visible.map(item=>{
           const isActive=active===item.id||(active==="client"&&item.id==="clients");
           const col=item.id==="programs"?C.purple:item.id==="catalog"?C.teal:C.green;
+          const cur=navIds.indexOf(active);const total=navIds.length;
+          const idx=navIds.indexOf(item.id);
+          const dist=cur<0?1:Math.min((idx-cur+total)%total,(cur-idx+total)%total);
+          const opacity=dist===0?1:dist===1?0.6:0.38;
           return(
             <button key={item.id} onClick={()=>setActive(item.id)}
-              style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",position:"relative"}}>
+              style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,border:"none",background:"transparent",cursor:"pointer",position:"relative",opacity,transition:"opacity 0.2s"}}>
               <span style={{fontSize:20,lineHeight:1}}>{item.icon}</span>
               <span style={{fontSize:9,fontWeight:isActive?700:500,color:isActive?col:C.muted,letterSpacing:"0.02em"}}>{item.label.split(" ")[0]}</span>
               {isActive&&<div style={{position:"absolute",top:0,left:"20%",right:"20%",height:2,background:col,borderRadius:"0 0 2px 2px"}}/>}
