@@ -102,8 +102,19 @@ function BottomNav({active,setActive,counts}){
 function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfileClick}){
   const w=collapsed?56:200;
   const touchStart=useRef(null);
+  const wheelLock=useRef(false);
   const [swipeDir,setSwipeDir]=useState(null);
   const navIds=NAV.map(n=>n.id);
+
+  // Touchpad / mouse wheel — scroll vertically to cycle nav (mirrors swipe)
+  const onWheel=e=>{
+    if(Math.abs(e.deltaY)<6||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
+    if(wheelLock.current)return;
+    wheelLock.current=true;setTimeout(()=>{wheelLock.current=false;},350);
+    const cur=navIds.indexOf(active);const total=navIds.length;const base=cur<0?0:cur;
+    if(e.deltaY>0)setActive(navIds[(base+1)%total]);else setActive(navIds[(base-1+total)%total]);
+    setSwipeDir(e.deltaY>0?"down":"up");setTimeout(()=>setSwipeDir(null),220);
+  };
 
   const onTouchStart=e=>{touchStart.current={x:e.touches[0].clientX,y:e.touches[0].clientY};setSwipeDir(null);};
   const onTouchMove=e=>{
@@ -126,7 +137,7 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfi
   };
 
   return(
-    <aside onTouchStart={onTouchStart} onTouchMove={e=>{e.preventDefault();onTouchMove(e);}} onTouchEnd={onTouchEnd}
+    <aside onTouchStart={onTouchStart} onTouchMove={e=>{e.preventDefault();onTouchMove(e);}} onTouchEnd={onTouchEnd} onWheel={onWheel}
       style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden",position:"relative",touchAction:"none"}}>
       {swipeDir&&(
         <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:20,pointerEvents:"none"}}>
@@ -471,7 +482,7 @@ export default function App(){
           </div>
         </div>
 
-        <main style={{flex:1,overflowY:"auto",padding:mobile?12:20,paddingBottom:mobile?80:20}}>
+        <main style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",touchAction:"pan-y",padding:mobile?12:20,paddingBottom:mobile?80:20}}>
           {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} setView={setView} setActiveClient={setActiveClient}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} setView={setView} setActiveClient={setActiveClient}/>}
           {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient}/>}
