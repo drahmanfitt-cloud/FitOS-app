@@ -97,19 +97,31 @@ function FloorPlanEditor({stations,onUpdateStation}){
       </div>
 
       {/* Floor plan */}
-      <div style={{color:C.muted,fontSize:11,marginBottom:8}}>Drag stations to position them in the space</div>
-      <div ref={planRef} style={{position:"relative",width:"100%",paddingBottom:"60%",background:C.s2,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden",userSelect:"none",touchAction:"none"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <span style={{color:C.muted,fontSize:11}}>Drag stations to position them in the space</span>
+        <span style={{color:C.muted,fontSize:11,fontWeight:600}}>{stations.length} station{stations.length===1?"":"s"}</span>
+      </div>
+      <div ref={planRef} style={{position:"relative",width:"100%",paddingBottom:"56%",background:C.s2,borderRadius:12,border:`1px solid ${C.border}`,overflow:"hidden",userSelect:"none",touchAction:"none"}}>
         {/* Room outline */}
         <svg style={{position:"absolute",inset:0,width:"100%",height:"100%"}} viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d={getRoomPath()} fill={C.s3} stroke={C.border2} strokeWidth="0.5"/>
-          {/* Grid dots */}
-          {[20,40,60,80].map(x=>[20,40,60,80].map(y=>(
-            <circle key={`${x}-${y}`} cx={x} cy={y} r="0.4" fill={C.muted} opacity="0.4"/>
-          )))}
-          {/* Entrance marker */}
-          <text x="50" y="95" textAnchor="middle" fill={C.muted} fontSize="3" fontFamily="system-ui">ENTRANCE</text>
-          <line x1="40" y1="93" x2="60" y2="93" stroke={C.muted} strokeWidth="0.5"/>
+          <path d={getRoomPath()} fill={C.s3} stroke={C.border2} strokeWidth="0.6"/>
         </svg>
+        {/* Grid overlay (HTML so dots stay round) */}
+        <div style={{position:"absolute",inset:0,backgroundImage:`radial-gradient(${C.border2} 1px, transparent 1px)`,backgroundSize:"32px 32px",opacity:0.35,pointerEvents:"none"}}/>
+        {/* Entrance marker */}
+        <div style={{position:"absolute",bottom:6,left:"50%",transform:"translateX(-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:2,pointerEvents:"none"}}>
+          <div style={{width:44,height:3,borderRadius:2,background:C.muted,opacity:0.5}}/>
+          <span style={{color:C.muted,fontSize:9,fontWeight:700,letterSpacing:"0.08em"}}>ENTRANCE</span>
+        </div>
+
+        {/* Empty state */}
+        {stations.length===0&&(
+          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,pointerEvents:"none",padding:16,textAlign:"center"}}>
+            <div style={{fontSize:30,opacity:0.5}}>🗺</div>
+            <div style={{color:C.sub,fontSize:13,fontWeight:600}}>No stations to place yet</div>
+            <div style={{color:C.muted,fontSize:11,maxWidth:240}}>Add stations in the “Stations” tab, then drag them around the room here.</div>
+          </div>
+        )}
 
         {/* Station markers */}
         {stations.map((st,i)=>(
