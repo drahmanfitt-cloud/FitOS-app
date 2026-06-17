@@ -158,6 +158,18 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
   };
   const COLS=(i)=>[C.green,C.blue,C.purple,C.amber,C.red,C.teal][i%6];
 
+  // Stations with floor plan positions
+  const stationsWithPos=(fmt?.stations||[]).map((st,i)=>({
+    ...st,
+    x:st.x||[25,70,25,70,50][i%5],
+    y:st.y||[25,25,65,65,45][i%5],
+    sidesMode:st.sidesMode||"none",
+  }));
+
+  // Display modes
+  if(displayMode==="followalong") return <FollowAlongDisplay stations={classType==="yoga"?yogaPoses:stationsWithPos} classType={classType} onClose={()=>setDisplayMode(null)}/>;
+  if(displayMode==="rotation")    return <StationRotationDisplay stations={stationsWithPos} workSec={Number(fmt?.workSec)||40} restSec={Number(fmt?.restSec)||20} onClose={()=>setDisplayMode(null)}/>;
+
   return(
     <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16,minHeight:520}}>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
