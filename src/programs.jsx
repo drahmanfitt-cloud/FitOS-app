@@ -148,7 +148,12 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
     const f={id:uid(),name:"New Class Format",type:"circuit",description:"",totalDuration:45,workSec:40,restSec:20,rounds:3,stations:[],createdAt:now()};
     await onSave(f); setSelected(f.id);
   };
-  const upd=patch=>onUpdate(fmt.id,{...fmt,...patch});
+  const calcTotalMin=(f)=>{
+    const w=Number(f?.workSec)||0, r=Number(f?.restSec)||0, rounds=Number(f?.rounds)||1;
+    const per=(f?.stations||[]).reduce((s,st)=>s+(st.sidesMode==="both"?(2*w+(Number(st.switchSec)||0)+r):(w+r)),0);
+    return Math.round(per*rounds/60);
+  };
+  const upd=patch=>{ const merged={...fmt,...patch}; merged.totalDuration=calcTotalMin(merged); onUpdate(fmt.id,merged); };
   const addSt=name=>upd({stations:[...(fmt.stations||[]),{id:uid(),name,workSec:fmt.workSec,restSec:fmt.restSec,reps:"",notes:"",equipment:""}]});
   const updSt=(sid,patch)=>upd({stations:fmt.stations.map(s=>s.id===sid?{...s,...patch}:s)});
   const rmSt=sid=>upd({stations:fmt.stations.filter(s=>s.id!==sid)});
@@ -199,7 +204,12 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
               <Input label="Work (sec)" type="number" value={fmt.workSec} onChange={v=>upd({workSec:v})}/>
               <Input label="Rest (sec)" type="number" value={fmt.restSec} onChange={v=>upd({restSec:v})}/>
               <Input label="Rounds" type="number" value={fmt.rounds} onChange={v=>upd({rounds:v})}/>
-              <Input label="Total (min)" type="number" value={fmt.totalDuration} onChange={v=>upd({totalDuration:v})}/>
+              <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                <label style={{color:C.sub,fontSize:12,fontWeight:600}}>Total (min) <span style={{color:C.muted,fontWeight:500}}>· auto</span></label>
+                <div style={{background:C.s3,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.teal,fontSize:13,fontWeight:700}}>
+                  ~{calcTotalMin(fmt)} min
+                </div>
+              </div>
             </div>
             <Input label="Description / coach notes" value={fmt.description} onChange={v=>upd({description:v})} placeholder="Class flow, music cues…"/>
           </Card>
