@@ -436,6 +436,22 @@ export default function App(){
     setCatalogExercises(p=>[mapCatalog(r),...p]);
     toast("Exercise added to catalog ✓");
   };
+  const seedCatalogExercises=async lib=>{
+    const have=new Set((catalogExercises||[]).map(e=>e.name.toLowerCase().trim()));
+    const missing=lib.filter(e=>!have.has(e.name.toLowerCase().trim()));
+    if(!missing.length){toast("Catalog already has the full starter library ✓");return 0;}
+    const rows=missing.map(f=>({id:uid(),name:f.name,category:f.category||"Strength",muscles:f.muscles||[],equipment:f.equipment||"Barbell",difficulty:f.difficulty||"Intermediate",purpose:f.purpose||"",instructions:f.instructions||"",video_url:"",trainer_notes:"",tags:f.tags||[],photo_base64:""}));
+    try{
+      const inserted=await db.insertMany("fitos_catalog",rows);
+      setCatalogExercises(p=>[...inserted.map(mapCatalog),...p]);
+      toast(`Added ${inserted.length} exercises & stretches to catalog ✓`);
+      return inserted.length;
+    }catch(e){
+      console.error("seed catalog failed",e);
+      toast("Could not add starter library — make sure you're signed in");
+      return 0;
+    }
+  };
   const editCatalogExercise=async(id,f)=>{
     const patch={name:f.name,category:f.category,muscles:f.muscles||[],equipment:f.equipment,difficulty:f.difficulty,purpose:f.purpose||"",instructions:f.instructions||"",video_url:f.videoUrl||"",trainer_notes:f.trainerNotes||"",tags:f.tags||[],photo_base64:f.photoBase64||""};
     await db.update("fitos_catalog",id,patch);
@@ -501,7 +517,7 @@ export default function App(){
           {view==="sessions"&&<ErrorBoundary><SessionLogger clients={clients} sessions={sessions} onSave={addSession} activeClient={activeClient} programs={programs} initialDay={preloadDay}/></ErrorBoundary>}
           {view==="classes"&&<ClassesScreen clients={clients} classes={classes} onAdd={addClass} onEdit={editClass} onDelete={deleteClass} formats={formats} mobile={mobile}/>}
           {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass} mobile={mobile}/>}
-          {view==="catalog"&&<ExerciseCatalogScreen catalogExercises={catalogExercises} onAdd={addCatalogExercise} onEdit={editCatalogExercise} onDelete={deleteCatalogExercise} sessions={sessions} clients={clients}/>}
+          {view==="catalog"&&<ExerciseCatalogScreen catalogExercises={catalogExercises} onAdd={addCatalogExercise} onEdit={editCatalogExercise} onDelete={deleteCatalogExercise} onSeed={seedCatalogExercises} sessions={sessions} clients={clients}/>}
         </main>
       </div>
 

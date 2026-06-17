@@ -1,7 +1,8 @@
 // FitOS — Exercise Catalog
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { C, uid, now } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Modal, Confirm } from "./ui.jsx";
+import { SEED_LIBRARY } from "./seedLibrary.js";
 
 // EXERCISE CATALOG
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -354,8 +355,17 @@ function FilterEditor({label,color,options,onUpdate,onClose}){
   );
 }
 
-function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,sessions,clients}){
+function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,onSeed,sessions,clients}){
   const [search,setSearch]=useState("");
+  const [seeding,setSeeding]=useState(false);
+  const seedLock=useRef(false);
+  const handleSeed=async()=>{
+    if(seedLock.current)return;
+    seedLock.current=true;
+    setSeeding(true);
+    try{await onSeed?.(SEED_LIBRARY);}catch(e){console.error("seed catalog failed",e);}
+    finally{seedLock.current=false;setSeeding(false);}
+  };
   const [filterCat,setFilterCat]=useState("");
   const [filterMuscle,setFilterMuscle]=useState("");
   const [filterEquip,setFilterEquip]=useState("");
@@ -402,6 +412,7 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,sessions,
             <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search exercises…"
               style={{background:"none",border:"none",color:C.text,fontSize:14,flex:1,outline:"none",fontFamily:"inherit"}}/>
           </div>
+          <Btn variant="outline" color={C.teal} onClick={handleSeed} disabled={seeding}>{seeding?"Adding…":"📥 Starter library"}</Btn>
           <Btn onClick={()=>setModal("add")}>+ Add Exercise</Btn>
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",rowGap:10}}>
@@ -466,8 +477,13 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,sessions,
       {filtered.length===0?(
         <Card style={{textAlign:"center",padding:48}}>
           <div style={{fontSize:32,marginBottom:10}}>🏋️</div>
-          <div style={{color:C.sub,marginBottom:16}}>{search||filterCat||filterMuscle||filterEquip?"No exercises match your filters.":"Your catalog is empty. Add your first exercise."}</div>
-          {!search&&!filterCat&&!filterMuscle&&!filterEquip&&<Btn onClick={()=>setModal("add")}>+ Add First Exercise</Btn>}
+          <div style={{color:C.sub,marginBottom:16}}>{search||filterCat||filterMuscle||filterEquip?"No exercises match your filters.":"Your catalog is empty. Add your first exercise or load the starter library."}</div>
+          {!search&&!filterCat&&!filterMuscle&&!filterEquip&&(
+            <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+              <Btn variant="outline" color={C.teal} onClick={handleSeed} disabled={seeding}>{seeding?"Adding…":"📥 Load Starter Library"}</Btn>
+              <Btn onClick={()=>setModal("add")}>+ Add First Exercise</Btn>
+            </div>
+          )}
         </Card>
       ):(
         <div style={{display:"flex",flexDirection:"column",gap:10}}>

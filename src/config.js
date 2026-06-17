@@ -64,6 +64,16 @@ export const db = {
     const data = await r.json();
     return Array.isArray(data) ? data[0] : data;
   },
+  async insertMany(table, rows) {
+    if (!rows.length) return [];
+    const headers = await getAuthHeaders();
+    const trainerId = await getTrainerId();
+    const fullRows = (!SHARED_TABLES.includes(table) && trainerId)
+      ? rows.map(r => ({ ...r, trainer_id: trainerId })) : rows;
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method:"POST", headers, body:JSON.stringify(fullRows) });
+    if (!r.ok) throw new Error(`insertMany ${table}: ${await r.text()}`);
+    return r.json();
+  },
   async update(table, id, patch) {
     const headers = await getAuthHeaders();
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method:"PATCH", headers, body:JSON.stringify(patch) });
