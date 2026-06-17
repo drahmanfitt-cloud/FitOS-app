@@ -130,7 +130,7 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfi
       style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden",position:"relative",touchAction:"none"}}>
       {swipeDir&&(
         <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:20,pointerEvents:"none"}}>
-          <div style={{color:"#fff",fontSize:22,fontWeight:900}}>{swipeDir==="up"?"↑":swipeDir==="down"?"↓":swipeDir==="left"?"←":"→"}</div>
+          <div style={{color:"#fff",fontSize:22,fontWeight:900}}>{swipeDir==="up"?"↓":swipeDir==="down"?"↑":swipeDir==="left"?"→":"←"}</div>
         </div>
       )}
       <div style={{padding:"14px 10px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",gap:8,flexShrink:0}}>
