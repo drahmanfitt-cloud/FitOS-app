@@ -459,8 +459,10 @@ export default function App(){
   if (!profile)    return <ProfileSetup user={authUser} onComplete={p => { setProfile(p); }}/>;
 
   return(
-    <div style={{display:"flex",height:"100vh",background:C.bg,overflow:"hidden",fontFamily:"'Inter',system-ui,sans-serif"}}>
+    <div className="fitos-app" style={{display:"flex",background:C.bg,overflow:"hidden",fontFamily:"'Inter',system-ui,sans-serif"}}>
       <style>{`
+        html,body,#root{height:100%;margin:0;overscroll-behavior:none;}
+        .fitos-app{height:100vh;height:100dvh;}
         input[type=number]::-webkit-inner-spin-button{opacity:0.3}
         *{box-sizing:border-box;}
         input,select,button{font-family:inherit;}
