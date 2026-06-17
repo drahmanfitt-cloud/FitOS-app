@@ -17,8 +17,8 @@ export const Btn = ({children,onClick,variant="primary",color=C.green,disabled,s
   return <button disabled={disabled} onClick={onClick} style={{...s[variant],borderRadius:8,cursor:disabled?"not-allowed":"pointer",fontWeight:700,fontSize:12,padding:"8px 14px",display:"inline-flex",alignItems:"center",gap:5,opacity:disabled?0.5:1,...sx}}>{children}</button>;
 };
 
-export const Card = ({children,style:sx={}}) => (
-  <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:18,...sx}}>{children}</div>
+export const Card = ({children,style:sx={},...rest}) => (
+  <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:18,...sx}} {...rest}>{children}</div>
 );
 
 export const SL = ({children,style:sx={}}) => (
