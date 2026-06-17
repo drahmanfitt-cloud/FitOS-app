@@ -729,6 +729,8 @@ function YogaSectionBlock({section,poses}){
   );
 }
 
+function ClassFormatPreview(){ return null; }
+
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export { ROOM_SHAPES, STATION_COLORS, FloorPlanEditor, useBreathCue, PoseTimer, useSwipe, FollowAlongDisplay, StationRotationDisplay, YOGA_SECTIONS, YogaSectionBlock };
