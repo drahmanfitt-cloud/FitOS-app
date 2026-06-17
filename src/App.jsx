@@ -102,15 +102,18 @@ function BottomNav({active,setActive,counts}){
 function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfileClick}){
   const w=collapsed?56:200;
   const touchStart=useRef(null);
-  const wheelLock=useRef(false);
+  const wheelLock=useRef({locked:false,timer:null});
   const [swipeDir,setSwipeDir]=useState(null);
   const navIds=NAV.map(n=>n.id);
 
-  // Touchpad / mouse wheel — scroll vertically to cycle nav (mirrors swipe)
+  // Touchpad / mouse wheel — one step per scroll gesture (locked until events stop)
   const onWheel=e=>{
     if(Math.abs(e.deltaY)<6||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
-    if(wheelLock.current)return;
-    wheelLock.current=true;setTimeout(()=>{wheelLock.current=false;},350);
+    clearTimeout(wheelLock.current.timer);
+    const wasLocked=wheelLock.current.locked;
+    // keep locked while a continuous (inertial) gesture is still firing events
+    wheelLock.current={locked:true,timer:setTimeout(()=>{wheelLock.current={locked:false,timer:null};},200)};
+    if(wasLocked)return;
     const cur=navIds.indexOf(active);const total=navIds.length;const base=cur<0?0:cur;
     if(e.deltaY>0)setActive(navIds[(base+1)%total]);else setActive(navIds[(base-1+total)%total]);
     setSwipeDir(e.deltaY>0?"down":"up");setTimeout(()=>setSwipeDir(null),220);
