@@ -3,13 +3,18 @@ import React, { useState } from "react";
 import { C, uid, now, clamp, fmt, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
 import { WARMUP_CATS, WarmupItem, WarmupSubsection } from "./warmup.jsx";
-import { FloorPlanEditor, FollowAlongDisplay, StationRotationDisplay, YOGA_SECTIONS, YogaSectionBlock } from "./display.jsx";
+import { FloorPlanEditor, FollowAlongDisplay, StationRotationDisplay } from "./display.jsx";
 import { ExPicker } from "./catalog.jsx";
 
 // PROGRAMS HUB (inline — same as v3, but saving to Supabase)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const FORMAT_TYPES=[{value:"station",label:"Station Rotation"},{value:"circuit",label:"Circuit"},{value:"amrap",label:"AMRAP"},{value:"emom",label:"EMOM"},{value:"tabata",label:"Tabata"},{value:"custom",label:"Custom"}];
+const CLASS_TYPES=[
+  {id:"hiit",     toggle:"🏋️ HIIT",     color:C.green,  item:"Station",  items:"Stations / Exercises", empty:"No stations yet.",  lead:"Follow-Along",  timer:true},
+  {id:"yoga",     toggle:"🧘 Yoga",     color:C.purple, item:"Pose",     items:"Poses",                empty:"No poses yet.",     lead:"Lead Class",    timer:false},
+  {id:"mobility", toggle:"🤸 Mobility", color:C.teal,   item:"Movement", items:"Movements",            empty:"No movements yet.", lead:"Lead Movement", timer:false},
+];
 
 function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClient,mobile,catalog,onAddToCatalog}){
   const [selected,setSelected]=useState(null);
@@ -185,38 +190,44 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
   const [stPicker,setStPicker]=useState(false);
   const [loadModal,setLoadModal]=useState(false);
   const [displayMode,setDisplayMode]=useState(null); // null | "followalong" | "rotation"
-  const [classType,setClassType]=useState("hiit");   // "hiit" | "yoga"
+  const [classType,setClassType]=useState("hiit");   // "hiit" | "yoga" | "mobility"
   const [subTab,setSubTab]=useState("stations");      // "stations" | "floorplan"
-  const [yogaPoses,setYogaPoses]=useState([]);
   const fmt=formats.find(f=>f.id===selected);
+  const typeCfg=CLASS_TYPES.find(t=>t.id===classType)||CLASS_TYPES[0];
+  const allStations=fmt?.stations||[];
+  const typeStations=allStations.filter(s=>(s.classType||"hiit")===classType);
 
   const create=async()=>{
     const f={id:uid(),name:"New Class Format",type:"circuit",description:"",totalDuration:45,workSec:40,restSec:20,rounds:3,stations:[],createdAt:now()};
     await onSave(f); setSelected(f.id);
   };
-  const calcTotalMin=(f)=>{
+  const calcMin=(list,f)=>{
     const w=Number(f?.workSec)||0, r=Number(f?.restSec)||0, rounds=Number(f?.rounds)||1;
-    const per=(f?.stations||[]).reduce((s,st)=>s+(st.sidesMode==="both"?(2*w+(Number(st.switchSec)||0)+r):(w+r)),0);
+    const per=(list||[]).reduce((s,st)=>s+(st.sidesMode==="both"?(2*w+(Number(st.switchSec)||0)+r):(w+r)),0);
     return Math.round(per*rounds/60);
   };
-  const upd=patch=>{ const merged={...fmt,...patch}; merged.totalDuration=calcTotalMin(merged); onUpdate(fmt.id,merged); };
-  const addSt=name=>upd({stations:[...(fmt.stations||[]),{id:uid(),name,workSec:fmt.workSec,restSec:fmt.restSec,reps:"",notes:"",equipment:""}]});
-  const updSt=(sid,patch)=>upd({stations:fmt.stations.map(s=>s.id===sid?{...s,...patch}:s)});
-  const rmSt=sid=>upd({stations:fmt.stations.filter(s=>s.id!==sid)});
+  const calcTotalMin=(f)=>calcMin((f?.stations||[]).filter(s=>(s.classType||"hiit")===classType),f); // active type — live builder box
+  // Persisted duration is computed across all stations so it never flips based on which type tab is open.
+  const upd=patch=>{ const merged={...fmt,...patch}; merged.totalDuration=calcMin(merged.stations,merged); onUpdate(fmt.id,merged); };
+  const addSt=name=>upd({stations:[...allStations,{id:uid(),name,workSec:fmt.workSec,restSec:fmt.restSec,reps:"",notes:"",equipment:"",classType}]});
+  const updSt=(sid,patch)=>upd({stations:allStations.map(s=>s.id===sid?{...s,...patch}:s)});
+  const rmSt=sid=>upd({stations:allStations.filter(s=>s.id!==sid)});
   const mvSt=(sid,dir)=>{
-    const arr=[...fmt.stations]; const i=arr.findIndex(s=>s.id===sid); const ni=clamp(i+dir,0,arr.length-1);
-    if(ni===i)return; [arr[i],arr[ni]]=[arr[ni],arr[i]]; upd({stations:arr});
+    const ids=typeStations.map(s=>s.id); const pos=ids.indexOf(sid); const npos=clamp(pos+dir,0,ids.length-1);
+    if(npos===pos)return;
+    const full=[...allStations]; const i=full.findIndex(s=>s.id===sid); const j=full.findIndex(s=>s.id===ids[npos]);
+    [full[i],full[j]]=[full[j],full[i]]; upd({stations:full});
   };
   const COLS=(i)=>[C.green,C.blue,C.purple,C.amber,C.red,C.teal][i%6];
 
   // Stations — keep their saved floor-plan position (undefined = not yet placed)
-  const stationsWithPos=(fmt?.stations||[]).map(st=>({
+  const stationsWithPos=typeStations.map(st=>({
     ...st,
     sidesMode:st.sidesMode||"none",
   }));
 
   // Display modes
-  if(displayMode==="followalong") return <FollowAlongDisplay stations={classType==="yoga"?yogaPoses:stationsWithPos} classType={classType} onClose={()=>setDisplayMode(null)}/>;
+  if(displayMode==="followalong") return <FollowAlongDisplay stations={stationsWithPos} classType={classType} onClose={()=>setDisplayMode(null)}/>;
   if(displayMode==="rotation")    return <StationRotationDisplay stations={stationsWithPos} workSec={Number(fmt?.workSec)||40} restSec={Number(fmt?.restSec)||20} onClose={()=>setDisplayMode(null)}/>;
 
   return(
@@ -261,11 +272,11 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
             <Input label="Description / coach notes" value={fmt.description} onChange={v=>upd({description:v})} placeholder="Class flow, music cues…"/>
           </Card>
 
-          {fmt.stations?.length>0&&(
+          {typeStations.length>0&&(
             <div style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:12,padding:mobile?"11px 13px":"14px 16px"}}>
-              <SL>Station Overview · {fmt.stations.length} stations</SL>
+              <SL>{typeCfg.item} Overview · {typeStations.length}</SL>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {fmt.stations.map((st,i)=>(
+                {typeStations.map((st,i)=>(
                   <div key={st.id} style={{background:COLS(i)+"18",border:`1px solid ${COLS(i)}44`,borderRadius:9,padding:"8px 12px",minWidth:100,textAlign:"center"}}>
                     <div style={{color:COLS(i),fontSize:10,fontWeight:700,marginBottom:2}}>#{i+1}</div>
                     <div style={{color:C.text,fontSize:12,fontWeight:600}}>{st.name}</div>
@@ -279,18 +290,18 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
           {/* Class type + display mode buttons */}
           <div style={{background:C.s2,borderRadius:12,padding:mobile?"10px 12px":"12px 14px",border:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:mobile?8:10}}>
             <div style={{display:"flex",background:C.s3,borderRadius:8,padding:3}}>
-              {[["hiit","🏋️ HIIT / Station"],["yoga","🧘 Yoga / Stretch"]].map(([type,label])=>(
-                <button key={type} onClick={()=>setClassType(type)}
-                  style={{flex:1,padding:"7px",borderRadius:6,border:"none",cursor:"pointer",fontWeight:700,fontSize:12,background:classType===type?(type==="yoga"?C.purple:C.green):"transparent",color:classType===type?"#000":C.sub,transition:"all 0.15s"}}>
-                  {label}
+              {CLASS_TYPES.map(t=>(
+                <button key={t.id} onClick={()=>setClassType(t.id)}
+                  style={{flex:1,padding:"7px",borderRadius:6,border:"none",cursor:"pointer",fontWeight:700,fontSize:mobile?11:12,background:classType===t.id?t.color:"transparent",color:classType===t.id?"#000":C.sub,transition:"all 0.15s"}}>
+                  {t.toggle}
                 </button>
               ))}
             </div>
             <div style={{display:"flex",gap:8}}>
-              <Btn variant="ghost" color={classType==="yoga"?C.purple:C.blue} style={{flex:1,justifyContent:"center",padding:"7px",fontSize:11}} onClick={()=>setDisplayMode("followalong")}>
-                📖 {classType==="yoga"?"Lead Class":"Follow-Along"}
+              <Btn variant="ghost" color={typeCfg.color} style={{flex:1,justifyContent:"center",padding:"7px",fontSize:11}} onClick={()=>setDisplayMode("followalong")}>
+                📖 {typeCfg.lead}
               </Btn>
-              {classType==="hiit"&&<Btn variant="ghost" color={C.green} style={{flex:1,justifyContent:"center",padding:"7px",fontSize:11}} onClick={()=>setDisplayMode("rotation")}>
+              {typeCfg.timer&&<Btn variant="ghost" color={C.green} style={{flex:1,justifyContent:"center",padding:"7px",fontSize:11}} onClick={()=>setDisplayMode("rotation")}>
                 ▶ Station Timer
               </Btn>}
             </div>
@@ -309,11 +320,11 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
 
           {subTab==="stations"&&<Card style={{padding:mobile?13:18}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:mobile?10:14}}>
-              <SL>Stations / Exercises</SL>
-              <Btn variant="ghost" color={C.teal} style={{padding:"5px 12px",fontSize:11}} onClick={()=>setStPicker(true)}>+ Add Station</Btn>
+              <SL>{typeCfg.items}</SL>
+              <Btn variant="ghost" color={C.teal} style={{padding:"5px 12px",fontSize:11}} onClick={()=>setStPicker(true)}>+ Add {typeCfg.item}</Btn>
             </div>
-            {fmt.stations?.length===0&&<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"20px 0"}}>No stations yet.</div>}
-            {fmt.stations?.map((st,i)=>(
+            {typeStations.length===0&&<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"20px 0"}}>{typeCfg.empty}</div>}
+            {typeStations.map((st,i)=>(
               <div key={st.id} style={{background:C.s2,borderRadius:10,padding:mobile?"10px 11px":"12px 14px",marginBottom:mobile?8:10,border:`1px solid ${COLS(i)}33`}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:mobile?8:10}}>
                   <div style={{width:26,height:26,borderRadius:7,background:COLS(i)+"22",border:`1px solid ${COLS(i)}44`,display:"flex",alignItems:"center",justifyContent:"center",color:COLS(i),fontWeight:800,fontSize:12,flexShrink:0}}>{i+1}</div>
@@ -349,7 +360,7 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
             ))}
           </Card>}
 
-          {stPicker&&<Modal title="Add Station" onClose={()=>setStPicker(false)}><ExPicker onPick={name=>{addSt(name);setStPicker(false);}} onClose={()=>setStPicker(false)} catalog={catalog} onAddToCatalog={onAddToCatalog}/></Modal>}
+          {stPicker&&<Modal title={`Add ${typeCfg.item}`} onClose={()=>setStPicker(false)}><ExPicker onPick={name=>{addSt(name);setStPicker(false);}} onClose={()=>setStPicker(false)} catalog={catalog} onAddToCatalog={onAddToCatalog}/></Modal>}
           {loadModal&&(
             <Modal title={`Load "${fmt.name}" into a Class`} onClose={()=>setLoadModal(false)} wide>
               {classes.filter(c=>c.status==="scheduled").length===0?<div style={{color:C.muted,textAlign:"center",padding:24}}>No upcoming classes.</div>:(
