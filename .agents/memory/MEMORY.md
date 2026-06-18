@@ -1,0 +1,1 @@
+- [Cross-module helper import crashes](missing-imports-pattern.md) — FitOS recurring "Can't find variable: X" runtime crash; helper used but not imported/exported. After cross-module helper edits, verify export+import. HMR Fast Refresh warnings are benign.

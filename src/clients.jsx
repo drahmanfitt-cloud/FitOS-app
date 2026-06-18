@@ -1,6 +1,6 @@
 // FitOS — Clients screen
 import React, { useState } from "react";
-import { C, uid, now, fmtDate, TAG_COLORS } from "./config.js";
+import { C, uid, now, fmtDate, fmtTime, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
 
 function ClientForm({initial,onSave,onClose,mobile}){
