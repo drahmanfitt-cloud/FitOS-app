@@ -9,7 +9,7 @@ export const Avatar = ({name,size=36,color=C.purple}) => (
 );
 
 export const Pill = ({children,color=C.green,style:sx={}}) => (
-  <span style={{display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:"0.04em",padding:"3px 8px",borderRadius:20,background:color+"1A",color,border:`1px solid ${color}30`,whiteSpace:"nowrap",...sx}}>{children}</span>
+  <span className="fitos-pill" style={{"--pill-col":color,display:"inline-flex",alignItems:"center",fontSize:10,fontWeight:700,letterSpacing:"0.04em",padding:"3px 8px",borderRadius:20,background:color+"1A",color,border:`1px solid ${color}30`,whiteSpace:"nowrap",transition:"border-color 0.15s",...sx}}>{children}</span>
 );
 
 export const Btn = ({children,onClick,variant="primary",color=C.green,disabled,style:sx={}}) => {

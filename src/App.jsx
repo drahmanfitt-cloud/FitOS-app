@@ -442,6 +442,7 @@ export default function App(){
         .fitos-app{height:100vh;height:100dvh;}
         .fitos-nav-item:hover{border-color:var(--nav-col)!important;}
         .fitos-btn:not(:disabled):hover{border-color:var(--btn-col)!important;}
+        .fitos-pill:hover{border-color:var(--pill-col)!important;}
         input[type=number]::-webkit-inner-spin-button{opacity:0.3}
         *{box-sizing:border-box;}
         input,select,button{font-family:inherit;}
