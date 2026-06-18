@@ -837,7 +837,7 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
           <Select label="Client" value={clientId} onChange={v=>{setClientId(v);setExercises([]);setProgramDay("");}} required options={[{value:"",label:"— Select client —"},...(clients||[]).map(c=>({value:c.id,label:c.name}))]}/>
           <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
             <div style={{flex:1}}><Input label="Session name" value={name} onChange={setName} placeholder="e.g. Lower Body Power"/></div>
-            <button onClick={()=>setShowSettings(true)} style={{width:38,height:38,borderRadius:8,background:C.s2,border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:16,color:C.sub,flexShrink:0}}>⚙</button>
+            <button onClick={()=>setShowSettings(true)} className="fitos-btn" style={{"--btn-col":C.sub,width:38,height:38,borderRadius:8,background:C.s2,border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:16,color:C.sub,flexShrink:0,transition:"border-color 0.15s"}}>⚙</button>
           </div>
         </div>
         <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>

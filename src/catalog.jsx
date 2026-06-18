@@ -422,8 +422,8 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,onSeed,se
               <option value="">All categories</option>
               {catOpts.map(c=><option key={c}>{c}</option>)}
             </select>
-            <button onClick={()=>setEditingFilter(editingFilter==="cat"?null:"cat")} title="Edit categories"
-              style={{background:editingFilter==="cat"?C.blue+"22":C.s2,border:`1px solid ${editingFilter==="cat"?C.blue:C.border}`,borderRadius:6,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:editingFilter==="cat"?C.blue:C.muted,fontSize:13}}>⚙</button>
+            <button onClick={()=>setEditingFilter(editingFilter==="cat"?null:"cat")} title="Edit categories" className="fitos-btn"
+              style={{"--btn-col":C.blue,background:editingFilter==="cat"?C.blue+"22":C.s2,border:`1px solid ${editingFilter==="cat"?C.blue:C.border}`,borderRadius:6,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:editingFilter==="cat"?C.blue:C.muted,fontSize:13,transition:"border-color 0.15s"}}>⚙</button>
             {editingFilter==="cat"&&<FilterEditor label="Categories" color={C.blue} options={catOpts} onUpdate={arr=>{updateCat(arr);if(!arr.includes(filterCat))setFilterCat("");}} onClose={()=>setEditingFilter(null)}/>}
           </div>
 
@@ -434,8 +434,8 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,onSeed,se
               <option value="">All muscles</option>
               {muscleOpts.map(m=><option key={m}>{m}</option>)}
             </select>
-            <button onClick={()=>setEditingFilter(editingFilter==="muscle"?null:"muscle")} title="Edit muscle groups"
-              style={{background:editingFilter==="muscle"?C.purple+"22":C.s2,border:`1px solid ${editingFilter==="muscle"?C.purple:C.border}`,borderRadius:6,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:editingFilter==="muscle"?C.purple:C.muted,fontSize:13}}>⚙</button>
+            <button onClick={()=>setEditingFilter(editingFilter==="muscle"?null:"muscle")} title="Edit muscle groups" className="fitos-btn"
+              style={{"--btn-col":C.purple,background:editingFilter==="muscle"?C.purple+"22":C.s2,border:`1px solid ${editingFilter==="muscle"?C.purple:C.border}`,borderRadius:6,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:editingFilter==="muscle"?C.purple:C.muted,fontSize:13,transition:"border-color 0.15s"}}>⚙</button>
             {editingFilter==="muscle"&&<FilterEditor label="Muscle Groups" color={C.purple} options={muscleOpts} onUpdate={arr=>{updateMuscle(arr);if(!arr.includes(filterMuscle))setFilterMuscle("");}} onClose={()=>setEditingFilter(null)}/>}
           </div>
 
@@ -446,8 +446,8 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,onSeed,se
               <option value="">All equipment</option>
               {equipOpts.map(e=><option key={e}>{e}</option>)}
             </select>
-            <button onClick={()=>setEditingFilter(editingFilter==="equip"?null:"equip")} title="Edit equipment"
-              style={{background:editingFilter==="equip"?C.amber+"22":C.s2,border:`1px solid ${editingFilter==="equip"?C.amber:C.border}`,borderRadius:6,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:editingFilter==="equip"?C.amber:C.muted,fontSize:13}}>⚙</button>
+            <button onClick={()=>setEditingFilter(editingFilter==="equip"?null:"equip")} title="Edit equipment" className="fitos-btn"
+              style={{"--btn-col":C.amber,background:editingFilter==="equip"?C.amber+"22":C.s2,border:`1px solid ${editingFilter==="equip"?C.amber:C.border}`,borderRadius:6,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:editingFilter==="equip"?C.amber:C.muted,fontSize:13,transition:"border-color 0.15s"}}>⚙</button>
             {editingFilter==="equip"&&<FilterEditor label="Equipment" color={C.amber} options={equipOpts} onUpdate={arr=>{updateEquip(arr);if(!arr.includes(filterEquip))setFilterEquip("");}} onClose={()=>setEditingFilter(null)}/>}
           </div>
 
@@ -458,8 +458,8 @@ function ExerciseCatalogScreen({catalogExercises,onAdd,onEdit,onDelete,onSeed,se
               <option value="">All purposes</option>
               {purposeOpts.map(p=><option key={p}>{p}</option>)}
             </select>
-            <button onClick={()=>setEditingFilter(editingFilter==="purpose"?null:"purpose")} title="Edit purposes"
-              style={{background:editingFilter==="purpose"?C.green+"22":C.s2,border:`1px solid ${editingFilter==="purpose"?C.green:C.border}`,borderRadius:6,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:editingFilter==="purpose"?C.green:C.muted,fontSize:13}}>⚙</button>
+            <button onClick={()=>setEditingFilter(editingFilter==="purpose"?null:"purpose")} title="Edit purposes" className="fitos-btn"
+              style={{"--btn-col":C.green,background:editingFilter==="purpose"?C.green+"22":C.s2,border:`1px solid ${editingFilter==="purpose"?C.green:C.border}`,borderRadius:6,width:26,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:editingFilter==="purpose"?C.green:C.muted,fontSize:13,transition:"border-color 0.15s"}}>⚙</button>
             {editingFilter==="purpose"&&<FilterEditor label="Purposes" color={C.green} options={purposeOpts} onUpdate={arr=>{updatePurpose(arr);if(!arr.includes(filterPurpose))setFilterPurpose("");}} onClose={()=>setEditingFilter(null)}/>}
           </div>
 
