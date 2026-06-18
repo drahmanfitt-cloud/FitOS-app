@@ -126,7 +126,9 @@ function ClassesScreen({clients,classes,onAdd,onAddSeries,onEdit,onDelete,onDele
   const [confirm,setConfirm]=useState(null);
   const [confirmSeries,setConfirmSeries]=useState(null);
   const [fmtModal,setFmtModal]=useState(false);
+  const [showHistory,setShowHistory]=useState(false);
   const sorted=[...classes].sort((a,b)=>new Date(a.date+" "+a.time)-new Date(b.date+" "+b.time));
+  const visible=showHistory?sorted.filter(c=>c.status==="completed").reverse():sorted.filter(c=>c.status!=="completed");
   const sel=classes.find(c=>c.id===selected);
   const selFmt=sel?formats.find(f=>f.id===sel.formatId):null;
   const seriesCount=sel?.seriesId?classes.filter(c=>c.seriesId===sel.seriesId).length:0;
@@ -242,9 +244,12 @@ function ClassesScreen({clients,classes,onAdd,onAddSeries,onEdit,onDelete,onDele
   return(
     <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"280px 1fr",gap:16,minHeight:mobile?0:500}}>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
-        <Btn onClick={()=>setModal("add")}>+ New Class</Btn>
-        {sorted.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>📅</div><div style={{color:C.muted,fontSize:13}}>No classes yet.</div></Card>}
-        {sorted.map(c=>(
+        <div style={{display:"flex",gap:8}}>
+          <Btn style={{flex:1,justifyContent:"center"}} onClick={()=>setModal("add")}>+ New Class</Btn>
+          <Btn variant={showHistory?"ghost":"outline"} color={C.amber} onClick={()=>{setShowHistory(h=>!h);setSelected(null);}}>🕘 History</Btn>
+        </div>
+        {visible.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>{showHistory?"🕘":"📅"}</div><div style={{color:C.muted,fontSize:13}}>{showHistory?"No completed classes yet.":"No upcoming classes."}</div></Card>}
+        {visible.map(c=>(
           <div key={c.id} onClick={()=>setSelected(c.id)} style={{background:C.surface,border:`1px solid ${selected===c.id?C.green:C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${c.status==="completed"?C.muted:C.green}`}}>
             <div style={{display:"flex",justifyContent:"space-between"}}><div style={{color:C.text,fontWeight:700,fontSize:14,display:"flex",alignItems:"center",gap:5}}>{c.seriesId&&<span title="Recurring" style={{color:C.amber}}>↻</span>}{c.name}</div><Pill color={c.status==="completed"?C.muted:C.green}>{c.status}</Pill></div>
             <div style={{color:C.sub,fontSize:12,marginTop:4}}>{c.date} · {c.time} · {c.duration}min</div>

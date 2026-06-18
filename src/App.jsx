@@ -65,7 +65,7 @@ function BottomNav({active,setActive,counts}){
         </div>
       )}
       <nav onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-        style={{position:"fixed",bottom:0,left:0,right:0,height:62,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"stretch",zIndex:700,paddingBottom:"env(safe-area-inset-bottom)",touchAction:"pan-y"}}>
+        style={{position:"fixed",bottom:0,left:0,right:0,height:62,background:C.surface,border:`1px solid ${C.border}`,borderBottom:"none",borderRadius:"18px 18px 0 0",overflow:"hidden",display:"flex",alignItems:"stretch",zIndex:700,paddingBottom:"env(safe-area-inset-bottom)",touchAction:"pan-y"}}>
         {swipeDir&&(
           <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:5,pointerEvents:"none"}}>
             <div style={{color:"#fff",fontSize:22,fontWeight:900}}>{swipeDir==="left"?"→":"←"}</div>
@@ -104,7 +104,7 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfi
   const w=collapsed?56:200;
 
   return(
-    <aside style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden",position:"relative"}}>
+    <aside style={{width:w,minWidth:w,background:C.surface,border:`1px solid ${C.border}`,borderLeft:"none",borderRadius:"0 18px 18px 0",display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden",position:"relative"}}>
       <div style={{padding:"14px 10px",borderBottom:`1px solid ${C.border}`,display:"flex",flexDirection:collapsed?"column":"row",alignItems:"center",justifyContent:"center",gap:8,flexShrink:0,position:"relative"}}>
         <div style={{width:28,height:28,borderRadius:7,background:C.green,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
           <span style={{fontSize:14,fontWeight:900,color:"#000"}}>F</span>
