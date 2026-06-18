@@ -125,8 +125,8 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfi
           const isActive=active===item.id||(active==="client"&&item.id==="clients");
           const col=item.id==="programs"?C.purple:item.id==="catalog"?C.teal:C.green;
           return(
-            <button key={item.id} onClick={()=>setActive(item.id)} title={collapsed?item.label:undefined}
-              style={{display:"flex",alignItems:"center",gap:collapsed?0:9,padding:collapsed?"9px 0":"9px 10px",justifyContent:collapsed?"center":"flex-start",borderRadius:8,border:"none",cursor:"pointer",textAlign:"left",background:isActive?col+"18":"transparent",color:isActive?col:C.sub,fontWeight:isActive?700:500,fontSize:13,position:"relative",width:"100%",transition:"background 0.15s,color 0.15s"}}>
+            <button key={item.id} onClick={()=>setActive(item.id)} title={collapsed?item.label:undefined} className="fitos-nav-item"
+              style={{"--nav-col":col,display:"flex",alignItems:"center",gap:collapsed?0:9,padding:collapsed?"9px 0":"9px 10px",justifyContent:collapsed?"center":"flex-start",borderRadius:8,border:`1px solid ${isActive?col:"transparent"}`,cursor:"pointer",textAlign:"left",background:isActive?col+"18":"transparent",color:isActive?col:C.sub,fontWeight:isActive?700:500,fontSize:13,position:"relative",width:"100%",transition:"background 0.15s,color 0.15s,border-color 0.15s"}}>
               <span style={{fontSize:collapsed?18:14,flexShrink:0}}>{item.icon}</span>
               {!collapsed&&<span style={{flex:1,textAlign:"left"}}>{item.label}</span>}
               {!collapsed&&counts[item.id]>0&&<span style={{marginLeft:"auto",background:col+"22",color:col,fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:10}}>{counts[item.id]}</span>}
@@ -440,6 +440,7 @@ export default function App(){
       <style>{`
         html,body,#root{height:100%;margin:0;overscroll-behavior:none;}
         .fitos-app{height:100vh;height:100dvh;}
+        .fitos-nav-item:hover{border-color:var(--nav-col)!important;}
         input[type=number]::-webkit-inner-spin-button{opacity:0.3}
         *{box-sizing:border-box;}
         input,select,button{font-family:inherit;}
