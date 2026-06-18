@@ -73,7 +73,7 @@ function BottomNav({active,setActive,counts}){
         )}
         {visible.map(item=>{
           const isActive=active===item.id||(active==="client"&&item.id==="clients");
-          const col=item.id==="programs"?C.purple:item.id==="catalog"?C.teal:C.green;
+          const col={clients:C.blue,sessions:C.amber,classes:C.red,programs:C.purple,catalog:C.teal}[item.id]||C.green;
           const cur=navIds.indexOf(active);const total=navIds.length;
           const idx=navIds.indexOf(item.id);
           const dist=cur<0?1:Math.min((idx-cur+total)%total,(cur-idx+total)%total);
@@ -123,7 +123,7 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfi
       <nav style={{padding:"8px 6px",flex:1,display:"flex",flexDirection:"column",gap:2,overflowY:"hidden",justifyContent:"center"}}>
         {NAV.map(item=>{
           const isActive=active===item.id||(active==="client"&&item.id==="clients");
-          const col=item.id==="programs"?C.purple:item.id==="catalog"?C.teal:C.green;
+          const col={clients:C.blue,sessions:C.amber,classes:C.red,programs:C.purple,catalog:C.teal}[item.id]||C.green;
           return(
             <button key={item.id} onClick={()=>setActive(item.id)} title={collapsed?item.label:undefined} className="fitos-nav-item"
               style={{"--nav-col":col,display:"flex",alignItems:"center",gap:collapsed?0:9,padding:collapsed?"9px 0":"9px 10px",justifyContent:collapsed?"center":"flex-start",borderRadius:8,border:`1px solid ${isActive?col:"transparent"}`,cursor:"pointer",textAlign:"left",background:isActive?col+"18":"transparent",color:isActive?col:C.sub,fontWeight:isActive?700:500,fontSize:13,position:"relative",width:"100%",transition:"background 0.15s,color 0.15s,border-color 0.15s"}}>
