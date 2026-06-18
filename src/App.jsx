@@ -105,18 +105,18 @@ function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfi
 
   return(
     <aside style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden",position:"relative"}}>
-      <div style={{padding:"14px 10px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",gap:8,flexShrink:0}}>
+      <div style={{padding:"14px 10px",borderBottom:`1px solid ${C.border}`,display:"flex",flexDirection:collapsed?"column":"row",alignItems:"center",justifyContent:"center",gap:8,flexShrink:0,position:"relative"}}>
         <div style={{width:28,height:28,borderRadius:7,background:C.green,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
           <span style={{fontSize:14,fontWeight:900,color:"#000"}}>F</span>
         </div>
         {!collapsed&&(
-          <div style={{minWidth:0,flex:1}}>
+          <div style={{minWidth:0}}>
             <div style={{color:C.text,fontWeight:800,fontSize:14}}>FitOS</div>
             <div style={{color:C.muted,fontSize:10}}>Cloud ☁️</div>
           </div>
         )}
         <button onClick={()=>setCollapsed(c=>!c)} title={collapsed?"Expand":"Collapse"}
-          style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:14,padding:4,borderRadius:6,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          style={{...(collapsed?{position:"static"}:{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)"}),background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:14,padding:4,borderRadius:6,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
           {collapsed?"→":"←"}
         </button>
       </div>
