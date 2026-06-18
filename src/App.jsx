@@ -102,32 +102,9 @@ function BottomNav({active,setActive,counts}){
 
 function Sidebar({active,setActive,counts,collapsed,setCollapsed,profile,onProfileClick}){
   const w=collapsed?56:200;
-  const navIds=NAV.map(n=>n.id);
-  const sideRef=useRef(null);
-  const activeRef=useRef(active); activeRef.current=active;
-  const setActiveRef=useRef(setActive); setActiveRef.current=setActive;
-  const wheelLock=useRef({locked:false,timer:null});
-
-  // Scroll over the nav switches sections — panel itself stays fixed
-  useEffect(()=>{
-    const el=sideRef.current; if(!el) return;
-    const handler=e=>{
-      if(Math.abs(e.deltaY)<6||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
-      e.preventDefault();
-      if(wheelLock.current.locked)return;
-      wheelLock.current.locked=true;
-      clearTimeout(wheelLock.current.timer);
-      wheelLock.current.timer=setTimeout(()=>{wheelLock.current.locked=false;},250);
-      const cur=navIds.indexOf(activeRef.current);const total=navIds.length;const base=cur<0?0:cur;
-      const next=e.deltaY>0?navIds[(base+1)%total]:navIds[(base-1+total)%total];
-      setActiveRef.current(next);
-    };
-    el.addEventListener("wheel",handler,{passive:false});
-    return()=>el.removeEventListener("wheel",handler);
-  },[]);
 
   return(
-    <aside ref={sideRef} style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden",position:"relative"}}>
+    <aside style={{width:w,minWidth:w,background:C.surface,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",flexShrink:0,transition:"width 0.2s ease",overflow:"hidden",position:"relative"}}>
       <div style={{padding:"14px 10px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",gap:8,flexShrink:0}}>
         <div style={{width:28,height:28,borderRadius:7,background:C.green,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
           <span style={{fontSize:14,fontWeight:900,color:"#000"}}>F</span>
