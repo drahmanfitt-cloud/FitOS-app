@@ -183,6 +183,18 @@ export default function App(){
   const [preloadDay,setPreloadDay]=useState(null);
   const [catalogExercises,setCatalogExercises]=useState([]);
   const seededRef=useRef(false);
+  // Debounced DB writer: coalesce rapid edits (e.g. fast typing) into one PATCH per record.
+  const writeTimers=useRef({});
+  const queueWrite=(table,id,patch,delay=500)=>{
+    const key=`${table}:${id}`; const timers=writeTimers.current;
+    if(timers[key])clearTimeout(timers[key].t);
+    const merged={...(timers[key]?.patch||{}),...patch};
+    timers[key]={patch:merged,t:setTimeout(async()=>{
+      delete timers[key];
+      try{ await db.update(table,id,merged); }
+      catch(e){ console.error(e); toast("Couldn't save changes — check your connection","error"); }
+    },delay)};
+  };
   const [mobile,setMobile]=useState(typeof window!=="undefined"&&window.innerWidth<768);
 
   // ── Fetch trainer profile from DB
@@ -410,10 +422,9 @@ export default function App(){
     const r=await db.insert("fitos_programs",row);
     setPrograms(ps=>[mapProgram(r),...ps]); toast("Program created ✓");
   };
-  const updateProgram=async(id,p)=>{
-    const patch={name:p.name,description:p.description,weeks:Number(p.weeks),days_per_week:Number(p.daysPerWeek),days:p.days,warmup:p.warmup||[],assigned_clients:p.assignedClients};
-    await db.update("fitos_programs",id,patch);
-    setPrograms(ps=>ps.map(pr=>pr.id===id?{...pr,...p}:pr));
+  const updateProgram=(id,p)=>{
+    setPrograms(ps=>ps.map(pr=>pr.id===id?{...pr,...p}:pr));   // optimistic — keeps inputs responsive while typing
+    queueWrite("fitos_programs",id,{name:p.name,description:p.description,weeks:Number(p.weeks),days_per_week:Number(p.daysPerWeek),days:p.days,warmup:p.warmup||[],assigned_clients:p.assignedClients});
   };
   const deleteProgram=async id=>{
     await db.delete("fitos_programs",id);
@@ -426,10 +437,9 @@ export default function App(){
     const r=await db.insert("fitos_formats",row);
     setFormats(fs=>[mapFormat(r),...fs]); toast("Format created ✓");
   };
-  const updateFormat=async(id,f)=>{
-    const patch={name:f.name,type:f.type,description:f.description,total_duration:Number(f.totalDuration),work_sec:Number(f.workSec),rest_sec:Number(f.restSec),rounds:Number(f.rounds),stations:f.stations};
-    await db.update("fitos_formats",id,patch);
-    setFormats(fs=>fs.map(fmt=>fmt.id===id?{...fmt,...f}:fmt));
+  const updateFormat=(id,f)=>{
+    setFormats(fs=>fs.map(fmt=>fmt.id===id?{...fmt,...f}:fmt));   // optimistic — keeps inputs responsive while typing
+    queueWrite("fitos_formats",id,{name:f.name,type:f.type,description:f.description,total_duration:Number(f.totalDuration),work_sec:Number(f.workSec),rest_sec:Number(f.restSec),rounds:Number(f.rounds),stations:f.stations});
   };
   const deleteFormat=async id=>{
     await db.delete("fitos_formats",id);
