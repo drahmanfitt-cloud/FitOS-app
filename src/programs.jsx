@@ -76,9 +76,9 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
       {(prog.days||[]).map(day=>(
         <Card key={day.id} style={{borderColor:C.purple+"33"}}>
           <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:14}}>
-            <input value={day.label} onChange={e=>updDay(day.id,{label:e.target.value})} style={{background:"none",border:"none",color:C.text,fontWeight:700,fontSize:15,outline:"none",fontFamily:"inherit",flex:1,padding:0}}/>
-            <input value={day.focus} onChange={e=>updDay(day.id,{focus:e.target.value})} placeholder="Focus (Push, Lower…)" style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",color:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",width:mobile?100:160}}/>
-            <button onClick={()=>rmDay(day.id)} style={{background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer",lineHeight:1}}>×</button>
+            <input value={day.label} onChange={e=>updDay(day.id,{label:e.target.value})} style={{background:"none",border:"none",color:C.text,fontWeight:700,fontSize:15,outline:"none",fontFamily:"inherit",flex:1,minWidth:0,padding:0}}/>
+            <input value={day.focus} onChange={e=>updDay(day.id,{focus:e.target.value})} placeholder="Focus (Push, Lower…)" style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",color:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",width:mobile?100:160,flexShrink:0,minWidth:0}}/>
+            <button onClick={()=>rmDay(day.id)} style={{background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer",lineHeight:1,flexShrink:0,padding:"0 2px"}}>×</button>
           </div>
           <div style={{background:C.s2,borderRadius:10,padding:"12px 14px",marginBottom:14,border:`1px solid ${C.purple}33`}}>
             <ProgramWarmupTab warmup={day.warmup||[]} setWarmup={w=>updDay(day.id,{warmup:w})}/>
