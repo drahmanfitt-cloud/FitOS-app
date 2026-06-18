@@ -456,6 +456,8 @@ export default function App(){
         .fitos-btn:not(:disabled):hover{border-color:var(--btn-col)!important;}
         .fitos-pill:hover{border-color:var(--pill-col)!important;}
         input[type=number]::-webkit-inner-spin-button{opacity:0.3}
+        input[type=date]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;}
+        input[type=date]::-webkit-date-and-time-value{text-align:left;}
         *{box-sizing:border-box;}
         input,select,button{font-family:inherit;}
         input,select,textarea{font-size:16px!important;}
