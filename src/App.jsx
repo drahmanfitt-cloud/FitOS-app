@@ -333,10 +333,38 @@ export default function App(){
   };
 
   // ── Class CRUD
+  const buildClassRow=(f,seriesId=null)=>({id:uid(),name:f.name,date:f.date,time:f.time,duration:Number(f.duration),capacity:Number(f.capacity),location:f.location||"",notes:f.notes||"",focus:f.focus||"",series_id:seriesId,status:"scheduled",bookings:[]});
+  const stripClassExtras=({focus,series_id,...rest})=>rest; // drop columns that may not exist pre-migration
+  const isMissingColErr=e=>/column|does not exist|schema cache|PGRST204/i.test(e?.message||"");
   const addClass=async f=>{
-    const row={id:uid(),name:f.name,date:f.date,time:f.time,duration:Number(f.duration),capacity:Number(f.capacity),location:f.location,notes:f.notes,status:"scheduled",bookings:[]};
-    const r=await db.insert("fitos_classes",row);
-    setClasses(p=>[mapClass(r),...p]); toast("Class scheduled ✓");
+    const row=buildClassRow(f);
+    try{
+      const r=await db.insert("fitos_classes",row);
+      setClasses(p=>[mapClass(r),...p]); toast("Class scheduled ✓");
+    }catch(e){
+      if(!isMissingColErr(e)){console.error(e);toast("Could not schedule class","error");return;}
+      try{
+        const r=await db.insert("fitos_classes",stripClassExtras(row));
+        setClasses(p=>[mapClass({...r,focus:row.focus,series_id:row.series_id}),...p]);
+        toast("Class scheduled — run the migration to save focus","error");
+      }catch(e2){console.error(e2);toast("Could not schedule class","error");}
+    }
+  };
+  const addClassSeries=async list=>{
+    if(!list?.length)return;
+    const seriesId=uid();
+    const rows=list.map(f=>buildClassRow(f,seriesId));
+    try{
+      const r=await db.insertMany("fitos_classes",rows);
+      setClasses(p=>[...r.map(mapClass),...p]); toast(`Scheduled ${r.length} classes ✓`);
+    }catch(e){
+      if(!isMissingColErr(e)){console.error(e);toast("Could not schedule classes","error");return;}
+      try{
+        const r=await db.insertMany("fitos_classes",rows.map(stripClassExtras));
+        const mapped=r.map((row,i)=>mapClass({...row,focus:rows[i]?.focus,series_id:seriesId}));
+        setClasses(p=>[...mapped,...p]); toast(`Scheduled ${r.length} classes — run the migration to save focus`,"error");
+      }catch(e2){console.error(e2);toast("Could not schedule classes","error");}
+    }
   };
   const editClass=async(id,patch)=>{
     const dbPatch={};
@@ -347,16 +375,33 @@ export default function App(){
     if(patch.capacity!==undefined)dbPatch.capacity=Number(patch.capacity);
     if(patch.location!==undefined)dbPatch.location=patch.location;
     if(patch.notes!==undefined)dbPatch.notes=patch.notes;
+    if(patch.focus!==undefined)dbPatch.focus=patch.focus;
     if(patch.status!==undefined)dbPatch.status=patch.status;
     if(patch.bookings!==undefined)dbPatch.bookings=patch.bookings;
     if(patch.format_id!==undefined){dbPatch.format_id=patch.format_id;dbPatch.format_name=patch.format_name;}
-    await db.update("fitos_classes",id,dbPatch);
-    setClasses(p=>p.map(c=>c.id!==id?c:{...c,...patch,formatId:patch.format_id??c.formatId,formatName:patch.format_name??c.formatName}));
-    toast("Class updated ✓");
+    const apply=()=>setClasses(p=>p.map(c=>c.id!==id?c:{...c,...patch,formatId:patch.format_id??c.formatId,formatName:patch.format_name??c.formatName}));
+    try{
+      await db.update("fitos_classes",id,dbPatch);
+      apply(); toast("Class updated ✓");
+    }catch(e){
+      if(isMissingColErr(e)){
+        const {focus,...safe}=dbPatch;
+        try{await db.update("fitos_classes",id,safe);apply();toast("Updated — run the migration to save focus","error");return;}catch(e2){console.error(e2);}
+      }
+      console.error(e);toast("Could not update class","error");
+    }
   };
   const deleteClass=async id=>{
     await db.delete("fitos_classes",id);
     setClasses(p=>p.filter(c=>c.id!==id)); toast("Class deleted","error");
+  };
+  const deleteClassSeries=async seriesId=>{
+    const ids=classes.filter(c=>c.seriesId===seriesId).map(c=>c.id);
+    const ok=[];
+    for(const id of ids){try{await db.delete("fitos_classes",id);ok.push(id);}catch(e){console.error(e);}}
+    setClasses(p=>p.filter(c=>!ok.includes(c.id)));
+    if(ok.length===ids.length)toast(`Deleted ${ok.length} classes`,"error");
+    else toast(`Deleted ${ok.length}/${ids.length} — some could not be removed`,"error");
   };
 
   // ── Program CRUD
@@ -495,7 +540,7 @@ export default function App(){
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient} onLogDay={day=>{setPreloadDay(day);setView("sessions");}} onUpdateGoals={updateClientGoals} onUpdateBodyweight={updateClientBodyweight}/>}
           {view==="sessions"&&<ErrorBoundary><SessionLogger clients={clients} sessions={sessions} onSave={addSession} activeClient={activeClient} programs={programs} initialDay={preloadDay} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/></ErrorBoundary>}
-          {view==="classes"&&<ClassesScreen clients={clients} classes={classes} onAdd={addClass} onEdit={editClass} onDelete={deleteClass} formats={formats} mobile={mobile}/>}
+          {view==="classes"&&<ClassesScreen clients={clients} classes={classes} onAdd={addClass} onAddSeries={addClassSeries} onEdit={editClass} onDelete={deleteClass} onDeleteSeries={deleteClassSeries} formats={formats} mobile={mobile}/>}
           {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass} mobile={mobile} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/>}
           {view==="catalog"&&<ExerciseCatalogScreen catalogExercises={catalogExercises} onAdd={addCatalogExercise} onEdit={editCatalogExercise} onDelete={deleteCatalogExercise} onSeed={seedCatalogExercises} sessions={sessions} clients={clients}/>}
         </main>

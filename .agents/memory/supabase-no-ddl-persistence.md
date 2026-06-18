@@ -15,3 +15,8 @@ FitOS connects to a shared Supabase with the **anon key only** — the agent can
 **Why:** No service-role/DDL access from the dev environment, and the DB is shared production — writing test data or schema from here is not allowed. This pattern keeps the app crash-free pre-migration and self-heals once the user applies the SQL.
 
 **How to apply:** Use whenever a task introduces a new persisted client/session/etc. field. Column names in `db.update` must be snake_case DB names (e.g. `bodyweight_log`), while app state uses camelCase (`bodyweightLog`).
+
+## Known fields added via this pattern
+- `fitos_clients`: `goals` jsonb, `bodyweight_log` jsonb.
+- `fitos_classes`: `focus` text (per-class focus label), `series_id` text (groups recurring occurrences). Recurring classes are stored as one row per occurrence (no recurrence-rule column); `series_id` ties them together. Migration: `alter table fitos_classes add column if not exists focus text, add column if not exists series_id text;`
+- Note: unlike `update`, an `insert`/`insertMany` with an unknown column fails the whole write — so insert handlers must catch the missing-column error and retry with the extra columns stripped (see addClass/addClassSeries in App.jsx).
