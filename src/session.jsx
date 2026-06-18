@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { C, uid, now, fmtDate, fmt } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, NumInput } from "./ui.jsx";
-import { DEFAULT_SETTINGS, ResistanceToggle, Toggle } from "./clients.jsx";
+import { DEFAULT_SETTINGS, ResistanceToggle, Toggle, modeFor } from "./clients.jsx";
 import { ExPicker } from "./catalog.jsx";
 
 // SETTINGS PANEL

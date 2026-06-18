@@ -235,4 +235,4 @@ function ResistanceToggle({value,onChange}){
 }
 
 
-export { ClientForm, ClientsScreen, ClientProfile, DEFAULT_SETTINGS, ResistanceToggle, Toggle, NumInput };
+export { ClientForm, ClientsScreen, ClientProfile, DEFAULT_SETTINGS, ResistanceToggle, Toggle, NumInput, modeFor };
