@@ -652,12 +652,12 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
       ):(
         <>
           <div style={{display:"grid",gridTemplateColumns:hasLoad?`24px 1fr 60px 54px 96px 34px 22px`:`24px 1fr 60px 96px 34px 22px`,gap:6,padding:"0 0 6px",borderBottom:`1px solid ${C.border}`}}>
-            <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>#</div>
-            <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Prev</div>
-            {hasLoad&&<div style={{color:m.color,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>{m.label} ({settings.weightUnit})</div>}
-            <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Reps</div>
-            <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Notes</div>
-            <div style={{color:C.muted,fontSize:10,fontWeight:700}}>✓</div>
+            <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",textAlign:"center"}}>#</div>
+            <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",textAlign:"center"}}>Prev</div>
+            {hasLoad&&<div style={{color:m.color,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",textAlign:"center"}}>{settings.weightUnit}</div>}
+            <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",textAlign:"center"}}>Reps</div>
+            <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",textAlign:"center"}}>Notes</div>
+            <div style={{color:C.muted,fontSize:10,fontWeight:700,textAlign:"center"}}>✓</div>
             <div/>
           </div>
           {ex.sets.map((s,si)=>{
@@ -665,8 +665,8 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
             const prevText=prevSet?(hasLoad?`${prevSet.load||"–"}×${prevSet.reps||"–"}`:`${prevSet.reps||"–"}`):"—";
             return(
             <div key={s.id} style={{display:"grid",gridTemplateColumns:hasLoad?`24px 1fr 60px 54px 96px 34px 22px`:`24px 1fr 60px 96px 34px 22px`,gap:6,padding:"7px 0",borderBottom:`1px solid ${C.border}`,alignItems:"center",background:s.pr&&s.done?C.amber+"08":"transparent"}}>
-              <span style={{color:C.muted,fontSize:13,fontWeight:700}}>{si+1}</span>
-              <span title={prevText} style={{color:C.muted,fontSize:11,opacity:0.65,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{prevText}</span>
+              <span style={{color:C.muted,fontSize:13,fontWeight:700,textAlign:"center"}}>{si+1}</span>
+              <span title={prevText} style={{color:C.muted,fontSize:11,opacity:0.65,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textAlign:"center"}}>{prevText}</span>
               {hasLoad&&<input type="number" value={s.load||""} placeholder="0" onChange={e=>{updateSet(ex.id,s.id,"load",e.target.value);if(s.done)checkPR(ex.id,s.id,e.target.value,s.reps);}}
                 style={{background:C.s2,border:`1px solid ${m.color}44`,borderRadius:7,padding:"6px 5px",color:m.color,fontSize:13,outline:"none",fontFamily:"inherit",width:"100%",fontWeight:700,textAlign:"center"}}/>}
               <input value={s.reps||""} placeholder="0" onChange={e=>{updateSet(ex.id,s.id,"reps",e.target.value);if(s.done)checkPR(ex.id,s.id,s.load,e.target.value);}}
