@@ -646,6 +646,11 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
               </div>
             ))}
           </div>
+          <button onClick={()=>updateEx(ex.id,{sides:!ex.sides})}
+            style={{alignSelf:"flex-start",display:"flex",alignItems:"center",gap:7,padding:"6px 12px",borderRadius:999,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,background:ex.sides?C.amber+"1E":C.s3,border:`1px solid ${ex.sides?C.amber:C.border}`,color:ex.sides?C.amber:C.sub}}>
+            <span style={{width:14,height:14,borderRadius:4,flexShrink:0,border:`2px solid ${ex.sides?C.amber:C.muted}`,background:ex.sides?C.amber:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#000",lineHeight:1}}>{ex.sides?"✓":""}</span>
+            Unilateral (per side)
+          </button>
           <div>
             <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Notes / cues</div>
             <input value={ex.notes||""} onChange={e=>updateEx(ex.id,{notes:e.target.value})} placeholder="Form tips…"
