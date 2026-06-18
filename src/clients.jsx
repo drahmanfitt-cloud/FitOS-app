@@ -177,6 +177,10 @@ function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient,
   const firstTs=clientSessions.length?new Date(clientSessions[clientSessions.length-1].startedAt).getTime():null;
   const weeksActive=firstTs?Math.max(1,(Date.now()-firstTs)/WEEK):1;
   const perWeek=clientSessions.length?(clientSessions.length/weeksActive):0;
+  // Program adherence: planned sessions (weeks × days/wk) vs sessions logged against a program day
+  const programmedTotal=prog?(Number(prog.weeks)||0)*(Number(prog.daysPerWeek)||0):0;
+  const programLogged=clientSessions.filter(s=>s.programDay).length;
+  const adherence=programmedTotal?clamp(programLogged/programmedTotal,0,1)*100:0;
 
   // ── Goals ──
   const goals=client.goals||[];
@@ -219,6 +223,17 @@ function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient,
           <div style={{color:C.muted,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Consistency</div>
           <div style={{color:C.amber,fontWeight:800,fontSize:22}}>{perWeek.toFixed(1)}<span style={{fontSize:12,color:C.muted,fontWeight:600}}> /wk</span></div>
           <div style={{color:C.sub,fontSize:11,marginTop:2}}>{streak>0?`🔥 ${streak} wk streak`:"No active streak"}</div>
+          {prog?(
+            <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
+              <div style={{color:C.text,fontSize:12,fontWeight:600}}>{programLogged}<span style={{color:C.muted,fontWeight:400}}> / {programmedTotal} programmed</span></div>
+              <div style={{height:6,borderRadius:99,background:C.s2,overflow:"hidden",margin:"5px 0 3px"}}>
+                <div style={{height:"100%",width:`${adherence}%`,background:C.amber,borderRadius:99,transition:"width 0.3s"}}/>
+              </div>
+              <div style={{color:C.muted,fontSize:10}}>{Math.round(adherence)}% logged</div>
+            </div>
+          ):(
+            <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${C.border}`,color:C.muted,fontSize:10}}>No program assigned</div>
+          )}
         </Card>
         <Card style={{textAlign:"center",padding:16}}>
           <div style={{color:C.muted,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Activity</div>
