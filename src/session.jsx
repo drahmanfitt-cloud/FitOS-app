@@ -266,7 +266,7 @@ function WarmupTimerRing({item,onDone,autoStart,onRestStart,warmupRestSec}){
   });
   useEffect(()=>{if(item.holdSec>0&&autoStart)start(item.holdSec);},[]);
   const pct=item.holdSec>0?seconds/item.holdSec*100:0;
-  const color=item.category==="stretching"?C.purple:C.teal;
+  const color=item.category==="stretching"?C.purple:item.category==="foam-rolling"?C.blue:C.teal;
   if(phase==="done")return(<div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:C.green+"18",borderRadius:8,border:`1px solid ${C.green}33`}}><span style={{color:C.green,fontSize:16}}>✓</span><span style={{color:C.green,fontWeight:700,fontSize:13}}>Complete!{warmupRestSec?" Rest starting…":""}</span></div>);
   return(
     <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:color+"0E",borderRadius:10,border:`1px solid ${color}33`}}>
@@ -297,7 +297,7 @@ function WarmupTimerRing({item,onDone,autoStart,onRestStart,warmupRestSec}){
 function WarmupItem({item,onUpdate,onRemove,settings,onRestStart}){
   const [timerActive,setTimerActive]=useState(false);
   const [done,setDone]=useState(false);
-  const color=item.category==="stretching"?C.purple:C.teal;
+  const color=item.category==="stretching"?C.purple:item.category==="foam-rolling"?C.blue:C.teal;
   const mode=modeFor(item.resistanceMode);
   const unit=settings.weightUnit;
   return(
@@ -370,8 +370,8 @@ function WarmupItem({item,onUpdate,onRemove,settings,onRestStart}){
             <div>
               <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Category</div>
               <div style={{display:"flex",gap:6}}>
-                {["stretching","mobility"].map(cat=>(
-                  <button key={cat} onClick={()=>onUpdate({category:cat})} style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${item.category===cat?(cat==="stretching"?C.purple:C.teal):C.border}`,background:item.category===cat?(cat==="stretching"?C.purple+"18":C.teal+"18"):"transparent",color:item.category===cat?(cat==="stretching"?C.purple:C.teal):C.muted,fontSize:11,fontWeight:600,cursor:"pointer",textTransform:"capitalize"}}>{cat}</button>
+                {[["stretching","Stretch",C.purple],["mobility","Mobility",C.teal],["foam-rolling","Foam Roll",C.blue]].map(([cat,lbl,col])=>(
+                  <button key={cat} onClick={()=>onUpdate({category:cat,purpose:""})} style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${item.category===cat?col:C.border}`,background:item.category===cat?col+"18":"transparent",color:item.category===cat?col:C.muted,fontSize:11,fontWeight:600,cursor:"pointer"}}>{lbl}</button>
                 ))}
               </div>
             </div>
@@ -397,6 +397,7 @@ const WARMUP_PURPOSES=[
   {value:"all",       label:"All",           color:C.sub},
   {value:"stretching",label:"Stretch",       color:C.purple},
   {value:"mobility",  label:"Mobility",      color:C.teal},
+  {value:"foam-rolling",label:"Foam Roll",   color:C.blue},
   {value:"sport-specific",label:"Sport Specific",color:C.amber},
 ];
 function WarmupPurposeFilter({warmup,updateItem}){
@@ -493,7 +494,8 @@ function WarmupSubsection({label,color,icon,items,onAdd,onRemoveAll,renderItem})
 
 function WarmupSection({warmup,setWarmup,settings,onRestStart}){
   const [open,setOpen]=useState(false);
-  const addItem=cat=>setWarmup(w=>[...w,{id:uid(),name:`New ${cat==='sport-specific'?'Sport Specific':cat}`,category:cat==='sport-specific'?'mobility':cat,purpose:cat==='sport-specific'?'sport-specific':'',holdSec:settings.defaultWarmupHoldSec,reps:settings.defaultWarmupReps,resistanceMode:settings.defaultWarmupResistance,resistanceVal:"",sides:false,description:"",expanded:true}]);
+  const NEW_NAMES={stretching:"Stretch",mobility:"Mobility","foam-rolling":"Foam Rolling","sport-specific":"Sport Specific"};
+  const addItem=cat=>setWarmup(w=>[...w,{id:uid(),name:`New ${NEW_NAMES[cat]||cat}`,category:cat==='sport-specific'?'mobility':cat,purpose:cat==='sport-specific'?'sport-specific':'',holdSec:settings.defaultWarmupHoldSec,reps:settings.defaultWarmupReps,resistanceMode:settings.defaultWarmupResistance,resistanceVal:"",sides:false,description:"",expanded:true}]);
   const updateItem=(id,patch)=>setWarmup(w=>w.map(i=>i.id===id?{...i,...patch}:i));
   const removeItem=id=>setWarmup(w=>w.filter(i=>i.id!==id));
   const stretches=warmup.filter(i=>i.category==="stretching");
@@ -505,7 +507,7 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
         <div style={{width:32,height:32,borderRadius:8,background:C.purple+"18",border:`1px solid ${C.purple}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🧘</div>
         <div style={{flex:1}}>
           <div style={{color:C.text,fontWeight:700,fontSize:14}}>Warmup</div>
-          <div style={{color:C.muted,fontSize:11,marginTop:1}}>{warmup.length===0?"No exercises added yet":`${stretches.length} stretches · ${mobility.length} mobility · ${warmup.filter(i=>i.purpose==="sport-specific").length} sport · ~${Math.round(totalSec/60)} min`}</div>
+          <div style={{color:C.muted,fontSize:11,marginTop:1}}>{warmup.length===0?"No exercises added yet":`${stretches.length} stretch · ${mobility.filter(i=>i.purpose!=="sport-specific").length} mobility · ${warmup.filter(i=>i.category==="foam-rolling").length} foam · ${warmup.filter(i=>i.purpose==="sport-specific").length} sport · ~${Math.round(totalSec/60)} min`}</div>
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
           {warmup.length>0&&<Pill color={C.purple}>{warmup.length} exercises</Pill>}
@@ -541,6 +543,17 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
           />
           )}
 
+          {/* ── Foam Rolling subsection ── */}
+          {warmup.filter(i=>i.category==="foam-rolling").length>0&&(
+          <WarmupSubsection
+            label="Foam Rolling" color={C.blue} icon="🌀"
+            items={warmup.filter(i=>i.category==="foam-rolling")}
+            onAdd={()=>addItem("foam-rolling")}
+            onRemoveAll={(id,mode)=>{if(mode==="last")removeItem(id);else setWarmup(w=>w.filter(i=>i.category!=="foam-rolling"));}}
+            renderItem={item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>}
+          />
+          )}
+
           {/* ── Sport Specific subsection ── */}
           {warmup.filter(i=>i.purpose==="sport-specific").length>0&&(
           <WarmupSubsection
@@ -558,6 +571,7 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
           <div style={{display:"flex",gap:8,marginTop:16,paddingTop:14,borderTop:`1px solid ${C.border}`,flexWrap:"wrap"}}>
             <Btn variant="ghost" color={C.purple} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem("stretching")}>+ Stretch</Btn>
             <Btn variant="ghost" color={C.teal} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem("mobility")}>+ Mobility</Btn>
+            <Btn variant="ghost" color={C.blue} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem("foam-rolling")}>+ Foam Roll</Btn>
             <Btn variant="ghost" color={C.amber} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem("sport-specific")}>+ Sport Specific</Btn>
             <Btn variant="ghost" color={C.sub} style={{padding:"6px 12px",fontSize:11}} onClick={()=>setWarmup(DEFAULT_STRETCHES_FACTORY())}>Load defaults</Btn>
           </div>

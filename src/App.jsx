@@ -185,14 +185,24 @@ export default function App(){
   const seededRef=useRef(false);
   // Debounced DB writer: coalesce rapid edits (e.g. fast typing) into one PATCH per record.
   const writeTimers=useRef({});
-  const queueWrite=(table,id,patch,delay=500)=>{
+  const queueWrite=(table,id,patch,opts={})=>{
+    const {delay=500,optionalKeys=[],degradeMsg}=opts;
     const key=`${table}:${id}`; const timers=writeTimers.current;
     if(timers[key])clearTimeout(timers[key].t);
     const merged={...(timers[key]?.patch||{}),...patch};
     timers[key]={patch:merged,t:setTimeout(async()=>{
       delete timers[key];
       try{ await db.update(table,id,merged); }
-      catch(e){ console.error(e); toast("Couldn't save changes — check your connection","error"); }
+      catch(e){
+        // Graceful-degrade: if a not-yet-migrated column is rejected, strip it and retry
+        // so the rest of the record still saves. Local state already has the value.
+        if(optionalKeys.length&&isMissingColErr(e)){
+          const safe={...merged}; optionalKeys.forEach(k=>delete safe[k]);
+          try{ await db.update(table,id,safe); if(degradeMsg)toast(degradeMsg,"error"); return; }
+          catch(e2){ console.error(e2); }
+        }
+        console.error(e); toast("Couldn't save changes — check your connection","error");
+      }
     },delay)};
   };
   const [mobile,setMobile]=useState(typeof window!=="undefined"&&window.innerWidth<768);
@@ -439,7 +449,7 @@ export default function App(){
   };
   const updateFormat=(id,f)=>{
     setFormats(fs=>fs.map(fmt=>fmt.id===id?{...fmt,...f}:fmt));   // optimistic — keeps inputs responsive while typing
-    queueWrite("fitos_formats",id,{name:f.name,type:f.type,description:f.description,total_duration:Number(f.totalDuration),work_sec:Number(f.workSec),rest_sec:Number(f.restSec),rounds:Number(f.rounds),stations:f.stations});
+    queueWrite("fitos_formats",id,{name:f.name,type:f.type,description:f.description,total_duration:Number(f.totalDuration),work_sec:Number(f.workSec),rest_sec:Number(f.restSec),rounds:Number(f.rounds),stations:f.stations,warmup:f.warmup||[]},{optionalKeys:["warmup"],degradeMsg:"Warmup saved locally — add a 'warmup' column to fitos_formats to keep it"});
   };
   const deleteFormat=async id=>{
     await db.delete("fitos_formats",id);

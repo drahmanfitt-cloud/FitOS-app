@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { C, uid, now, clamp, fmt, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
-import { WARMUP_CATS, WarmupItem, WarmupSubsection } from "./warmup.jsx";
+import { WARMUP_CATS, WarmupItem, WarmupSubsection, WarmupPlanner } from "./warmup.jsx";
 import { FloorPlanEditor, FollowAlongDisplay, StationRotationDisplay } from "./display.jsx";
 import { ExPicker } from "./catalog.jsx";
 
@@ -306,6 +306,9 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
               </Btn>}
             </div>
           </div>
+
+          {/* Warmup & mobility planner — foam rolling, stretching, mobility, sport prep */}
+          <WarmupPlanner warmup={fmt.warmup||[]} setWarmup={w=>upd({warmup:w})}/>
 
           {/* Sub tabs: Stations / Floor Plan */}
           <div style={{display:"flex",gap:2,borderBottom:`1px solid ${C.border}`}}>

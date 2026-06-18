@@ -7,9 +7,10 @@ import { Pill, Btn, Card, SL } from "./ui.jsx";
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const WARMUP_CATS = [
-  {id:"stretching", label:"Stretching", color:C.purple, icon:"🧘"},
-  {id:"mobility",   label:"Mobility",   color:C.teal,   icon:"🔄"},
-  {id:"sport",      label:"Sport Specific", color:C.amber, icon:"⚡"},
+  {id:"stretching",   label:"Stretching",     color:C.purple, icon:"🧘"},
+  {id:"mobility",     label:"Mobility",       color:C.teal,   icon:"🔄"},
+  {id:"foam-rolling", label:"Foam Rolling",   color:C.blue,   icon:"🌀"},
+  {id:"sport",        label:"Sport Specific", color:C.amber,  icon:"⚡"},
 ];
 
 const RESISTANCE_MODES = [
@@ -195,4 +196,47 @@ function ProgramBuilderPreview(){
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export { WARMUP_CATS, RESISTANCE_MODES, WarmupItem, WarmupSubsection };
+// ── Reusable warmup planner panel (used in class formats, above stations) ─────
+// Planning-only: define foam rolling / stretching / mobility / sport-specific prep.
+// Mirrors the Log Session warmup panel but without live timers.
+function WarmupPlanner({warmup,setWarmup,title="Warmup & Mobility",defaultOpen=true}){
+  const [open,setOpen]=useState(defaultOpen);
+  const w=warmup||[];
+  const addItem=cat=>setWarmup([...w,{id:uid(),name:`New ${cat.label}`,category:cat.id,holdSec:30,reps:"",resistanceMode:"bodyweight",sidesMode:"none",notes:""}]);
+  const updateItem=(id,patch)=>setWarmup(w.map(i=>i.id===id?{...i,...patch}:i));
+  const removeItem=id=>setWarmup(w.filter(i=>i.id!==id));
+  const totalSec=w.reduce((a,i)=>a+(i.sidesMode==="both"?(i.holdSec||0)*2:(i.holdSec||0)),0);
+  const summary=WARMUP_CATS.map(c=>{const n=w.filter(i=>i.category===c.id).length;return n?`${n} ${c.label.toLowerCase()}`:null;}).filter(Boolean).join(" · ");
+  return(
+    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",padding:"13px 16px",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+        <div style={{width:32,height:32,borderRadius:8,background:C.purple+"18",border:`1px solid ${C.purple}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🧘</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{color:C.text,fontWeight:700,fontSize:14}}>{title}</div>
+          <div style={{color:C.muted,fontSize:11,marginTop:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{w.length===0?"Plan foam rolling, stretching & mobility":`${summary} · ~${Math.round(totalSec/60)} min`}</div>
+        </div>
+        <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
+          {w.length>0&&<Pill color={C.purple}>{w.length} item{w.length!==1?"s":""}</Pill>}
+          <span style={{color:C.muted,fontSize:13}}>{open?"▲":"▼"}</span>
+        </div>
+      </button>
+      {open&&(
+        <div style={{borderTop:`1px solid ${C.border}`,padding:"14px 16px"}}>
+          {WARMUP_CATS.map(cat=>{
+            const items=w.filter(i=>i.category===cat.id);
+            if(items.length===0)return null;
+            return <WarmupSubsection key={cat.id} cat={cat} items={items} onAdd={()=>addItem(cat)} onUpdate={updateItem} onRemove={removeItem}/>;
+          })}
+          {w.length===0&&<div style={{textAlign:"center",padding:"14px 0 18px",color:C.muted,fontSize:13}}>Add foam rolling, stretching, mobility, or sport-specific prep below.</div>}
+          <div style={{display:"flex",gap:8,marginTop:w.length?12:0,paddingTop:w.length?12:0,borderTop:w.length?`1px solid ${C.border}`:"none",flexWrap:"wrap"}}>
+            {WARMUP_CATS.map(cat=>(
+              <Btn key={cat.id} variant="ghost" color={cat.color} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem(cat)}>+ {cat.label}</Btn>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export { WARMUP_CATS, RESISTANCE_MODES, WarmupItem, WarmupSubsection, WarmupPlanner };
