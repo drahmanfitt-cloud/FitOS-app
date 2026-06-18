@@ -8,10 +8,13 @@ import { SEED_LIBRARY } from "./seedLibrary.js";
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const MUSCLE_GROUPS=["Chest","Back","Shoulders","Biceps","Triceps","Forearms","Quads","Hamstrings","Glutes","Calves","Core","Full Body"];
-const EQUIPMENT_LIST=["Barbell","Dumbbell","Cable","Machine","Bodyweight","Kettlebell","Resistance Band","Box","TRX","Medicine Ball","Other"];
+const EQUIPMENT_LIST=["Barbell","Dumbbell","Cable","Machine","Bodyweight","Kettlebell","Resistance Band","Box","TRX","Medicine Ball","Foam Roller","Other"];
 const CATEGORIES=["Strength","Hypertrophy","Cardio","Mobility","Plyometric","Olympic","Rehabilitation","Core"];
-const PURPOSE_TYPES=["Stretch","Mobility","Sport Specific","General","Warm Up","Cool Down","Injury Prevention","Recovery"];
-const PURPOSE_COLORS={"Stretch":C.purple,"Mobility":C.teal,"Sport Specific":C.amber,"General":C.sub,"Warm Up":C.green,"Cool Down":C.blue,"Injury Prevention":C.red,"Recovery":C.purple};
+const PURPOSE_TYPES=["Stretch","Mobility","Foam Rolling","Sport Specific","General","Warm Up","Cool Down","Injury Prevention","Recovery"];
+const PURPOSE_COLORS={"Stretch":C.purple,"Mobility":C.teal,"Foam Rolling":C.blue,"Sport Specific":C.amber,"General":C.sub,"Warm Up":C.green,"Cool Down":C.blue,"Injury Prevention":C.red,"Recovery":C.purple};
+// Warm-up movements get a colored dot on the catalog card, keyed by purpose.
+// Colors mirror the WarmupPicker categories (stretching/mobility/foam-rolling/sport).
+const WARMUP_DOT_PURPOSES={"Stretch":C.purple,"Mobility":C.teal,"Foam Rolling":C.blue,"Sport Specific":C.amber};
 const DIFFICULTY=["Beginner","Intermediate","Advanced","Elite"];
 
 // Leaderboard metric definitions
@@ -216,12 +219,14 @@ function ExerciseCard({ex,onEdit,onDelete,sessions,clients}){
   const [showLB,setShowLB]=useState(false);
   const [lbMetric,setLbMetric]=useState(LB_METRICS[0]);
   const lbData=showLB?computeLeaderboard(ex.name,sessions,clients):[];
+  const warmupDot=WARMUP_DOT_PURPOSES[ex.purpose];
 
   const DIFF_COLORS={Beginner:C.green,Intermediate:C.blue,Advanced:C.amber,Elite:C.red};
   const CAT_COLORS={Strength:C.blue,Hypertrophy:C.purple,Cardio:C.green,Mobility:C.teal,Plyometric:C.amber,Olympic:C.amber,Rehabilitation:C.sub,Core:C.teal};
 
   return(
-    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden",position:"relative"}}>
+      {warmupDot&&<div title={`Warm-up: ${ex.purpose}`} style={{position:"absolute",top:"50%",right:10,transform:"translateY(-50%)",width:12,height:12,borderRadius:"50%",background:warmupDot,boxShadow:`0 0 0 4px ${warmupDot}22`,zIndex:2,pointerEvents:"none"}}/>}
       {/* Photo + header */}
       <div style={{display:"flex",gap:0}}>
         {ex.photoBase64?(

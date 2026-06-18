@@ -2,6 +2,7 @@
 // Used by the "Starter library" button on the Exercise Catalog screen.
 // Each entry maps to the fitos_catalog schema (see mapCatalog in config.js).
 // ─────────────────────────────────────────────────────────────────────────────
+import { WARMUP_LIBRARY } from "./warmup.jsx";
 
 export const SEED_LIBRARY = [
   // ── STRENGTH / LOWER ──────────────────────────────────────────────────────
@@ -117,3 +118,31 @@ export const SEED_LIBRARY = [
   {name:"Arm Swings",category:"Mobility",muscles:["Shoulders","Chest"],equipment:"Bodyweight",difficulty:"Beginner",purpose:"Sport Specific",instructions:"Swing the arms across the body and open wide, then add vertical swings, to warm the shoulders for overhead and throwing actions. 20-30s.",tags:["Warm Up","Swimming","Throwing"]},
   {name:"Med Ball Rotational Throw",category:"Plyometric",muscles:["Core","Shoulders","Full Body"],equipment:"Medicine Ball",difficulty:"Intermediate",purpose:"Sport Specific",instructions:"Side-on to a wall, rotate the hips and explosively throw the ball into the wall, catch and reset. Primes rotational power. 2x6 each side.",tags:["Warm Up","Golf","Tennis","Baseball","Rotational"]},
 ];
+
+// ── WARM-UP MOVEMENTS ─────────────────────────────────────────────────────────
+// Pulled from the shared WarmupPicker library (src/warmup.jsx) so the exact same
+// stretching / mobility / foam-rolling / sport movements also live in the catalog,
+// each carrying a `purpose` whose color drives the dot on the catalog card.
+const WARMUP_GROUPS=[
+  {key:"stretching",   category:"Mobility",       purpose:"Stretch",        equipment:"Bodyweight",  instr:"Ease into the stretch and hold 20-30s, breathing steadily — never bounce."},
+  {key:"mobility",     category:"Mobility",       purpose:"Mobility",       equipment:"Bodyweight",  instr:"Move smoothly through a full, controlled range of motion for 8-12 reps to prep the joints."},
+  {key:"foam-rolling", category:"Rehabilitation", purpose:"Foam Rolling",   equipment:"Foam Roller", instr:"Slowly roll the area, pausing 20-30s on tender spots — keep breathing and avoid rolling directly over joints."},
+  {key:"sport",        category:"Plyometric",     purpose:"Sport Specific", equipment:"Bodyweight",  instr:"Dynamic prep drill — start easy and build intensity to prime the body for sport."},
+];
+
+export const WARMUP_SEED = WARMUP_GROUPS.flatMap(g=>
+  (WARMUP_LIBRARY[g.key]||[]).map(n=>({
+    name: g.key==="foam-rolling" ? `${n} Foam Roll` : n,
+    category: g.category,
+    muscles: [],
+    equipment: g.equipment,
+    difficulty: "Beginner",
+    purpose: g.purpose,
+    instructions: g.instr,
+  }))
+);
+
+// Fold any warm-up movements not already present into the starter library so a
+// fresh catalog gets them too (dedupe by name to avoid intra-library duplicates).
+const _seedNames=new Set(SEED_LIBRARY.map(e=>e.name.toLowerCase().trim()));
+SEED_LIBRARY.push(...WARMUP_SEED.filter(e=>!_seedNames.has(e.name.toLowerCase().trim())));

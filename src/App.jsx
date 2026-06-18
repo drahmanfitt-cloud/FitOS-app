@@ -10,7 +10,7 @@ import { Dashboard } from "./dashboard.jsx";
 import { ExerciseCatalogScreen } from "./catalog.jsx";
 import { AuthScreen } from "./auth.jsx";
 import { ProfileSetup, ProfileEditor } from "./profile.jsx";
-import { SEED_LIBRARY } from "./seedLibrary.js";
+import { SEED_LIBRARY, WARMUP_SEED } from "./seedLibrary.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -183,6 +183,7 @@ export default function App(){
   const [preloadDay,setPreloadDay]=useState(null);
   const [catalogExercises,setCatalogExercises]=useState([]);
   const seededRef=useRef(false);
+  const warmupSeededRef=useRef(false);
   // Debounced DB writer: coalesce rapid edits (e.g. fast typing) into one PATCH per record.
   const writeTimers=useRef({});
   const queueWrite=(table,id,patch,opts={})=>{
@@ -280,10 +281,26 @@ export default function App(){
           const rows=SEED_LIBRARY.map(x=>({id:uid(),name:x.name,category:x.category||"Strength",muscles:x.muscles||[],equipment:x.equipment||"Barbell",difficulty:x.difficulty||"Intermediate",purpose:x.purpose||"",instructions:x.instructions||"",video_url:"",trainer_notes:"",tags:x.tags||[],photo_base64:""}));
           const inserted=await db.insertMany("fitos_catalog",rows);
           setCatalogExercises(inserted.map(mapCatalog));
+          try{localStorage.setItem("fitos_warmup_seeded","1");}catch{}
         }catch(seedErr){
           console.warn("Catalog auto-preload skipped:", seedErr.message);
           seededRef.current=false;
         }
+      } else if(cat.length>0 && !warmupSeededRef.current){
+        // One-time top-up: add warm-up movements missing from an existing catalog.
+        warmupSeededRef.current=true;
+        try{
+          if(!localStorage.getItem("fitos_warmup_seeded")){
+            const have=new Set(cat.map(r=>(r.name||"").toLowerCase().trim()));
+            const missing=WARMUP_SEED.filter(x=>!have.has(x.name.toLowerCase().trim()));
+            if(missing.length){
+              const rows=missing.map(x=>({id:uid(),name:x.name,category:x.category||"Mobility",muscles:x.muscles||[],equipment:x.equipment||"Bodyweight",difficulty:x.difficulty||"Beginner",purpose:x.purpose||"",instructions:x.instructions||"",video_url:"",trainer_notes:"",tags:x.tags||[],photo_base64:""}));
+              const inserted=await db.insertMany("fitos_catalog",rows);
+              setCatalogExercises(p=>[...inserted.map(mapCatalog),...p]);
+            }
+            localStorage.setItem("fitos_warmup_seeded","1");
+          }
+        }catch(e){console.warn("Warm-up catalog top-up skipped:",e.message);warmupSeededRef.current=false;}
       }
     } catch(e) {
       console.warn("Could not load from Supabase:", e.message);
