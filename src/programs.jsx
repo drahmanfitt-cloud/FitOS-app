@@ -179,7 +179,7 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
   );
 }
 
-function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateClass,catalog,onAddToCatalog}){
+function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateClass,catalog,onAddToCatalog,mobile}){
   const [selected,setSelected]=useState(null);
   const [confirm,setConfirm]=useState(null);
   const [stPicker,setStPicker]=useState(false);
@@ -220,8 +220,8 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
   if(displayMode==="rotation")    return <StationRotationDisplay stations={stationsWithPos} workSec={Number(fmt?.workSec)||40} restSec={Number(fmt?.restSec)||20} onClose={()=>setDisplayMode(null)}/>;
 
   return(
-    <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16,minHeight:520}}>
-      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+    <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"240px 1fr",gap:16,minHeight:mobile?0:520}}>
+      {(!mobile||!fmt)&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
         <Btn color={C.teal} onClick={create}>+ New Class Format</Btn>
         {formats.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>🏋️</div><div style={{color:C.muted,fontSize:13}}>No formats yet.</div></Card>}
         {formats.map(f=>(
@@ -230,23 +230,24 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
             <div style={{color:C.muted,fontSize:11,marginTop:3}}>{FORMAT_TYPES.find(t=>t.value===f.type)?.label} · {f.stations?.length||0} stations · {f.totalDuration}min</div>
           </div>
         ))}
-      </div>
+      </div>}
 
-      {!fmt?<Card style={{display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center",color:C.muted}}><div style={{fontSize:36,marginBottom:10}}>🏋️</div>Select or create a format</div></Card>:(
+      {mobile&&!fmt?null:!fmt?<Card style={{display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center",color:C.muted}}><div style={{fontSize:36,marginBottom:10}}>🏋️</div>Select or create a format</div></Card>:(
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          {mobile&&<Btn variant="outline" style={{alignSelf:"flex-start",padding:"6px 12px",fontSize:12}} onClick={()=>setSelected(null)}>← All Formats</Btn>}
           <Card>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
               <SL>Format Settings</SL>
-              <div style={{display:"flex",gap:8}}>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
                 <Btn variant="ghost" color={C.teal} style={{padding:"5px 10px",fontSize:11}} onClick={()=>setLoadModal(true)}>📅 Load into Class</Btn>
                 <Btn variant="danger" style={{padding:"5px 10px",fontSize:11}} onClick={()=>setConfirm(fmt.id)}>Delete</Btn>
               </div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12,marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"2fr 1fr",gap:12,marginBottom:12}}>
               <Input label="Format name" value={fmt.name} onChange={v=>upd({name:v})} required/>
               <Select label="Type" value={fmt.type} onChange={v=>upd({type:v})} options={FORMAT_TYPES}/>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:12,marginBottom:12}}>
               <Input label="Work (sec)" type="number" value={fmt.workSec} onChange={v=>upd({workSec:v})}/>
               <Input label="Rest (sec)" type="number" value={fmt.restSec} onChange={v=>upd({restSec:v})}/>
               <Input label="Rounds" type="number" value={fmt.rounds} onChange={v=>upd({rounds:v})}/>
@@ -417,7 +418,7 @@ function ProgramsHub({programs,onSaveProgram,onUpdateProgram,onDeleteProgram,for
         ))}
       </div>
       {tab==="programs"&&<ProgramBuilder programs={programs} onSave={onSaveProgram} onUpdate={onUpdateProgram} onDelete={onDeleteProgram} clients={clients} onUpdateClient={onUpdateClient} mobile={mobile} catalog={catalog} onAddToCatalog={onAddToCatalog}/>}
-      {tab==="formats"&&<ClassFormatBuilder formats={formats} onSave={onSaveFormat} onUpdate={onUpdateFormat} onDelete={onDeleteFormat} classes={classes} onUpdateClass={onUpdateClass} catalog={catalog} onAddToCatalog={onAddToCatalog}/>}
+      {tab==="formats"&&<ClassFormatBuilder formats={formats} onSave={onSaveFormat} onUpdate={onUpdateFormat} onDelete={onDeleteFormat} classes={classes} onUpdateClass={onUpdateClass} catalog={catalog} onAddToCatalog={onAddToCatalog} mobile={mobile}/>}
     </div>
   );
 }
