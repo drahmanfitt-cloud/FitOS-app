@@ -1,6 +1,6 @@
 // FitOS — Clients screen
 import React, { useState } from "react";
-import { C, uid, now, fmtDate, fmtTime, TAG_COLORS } from "./config.js";
+import { C, uid, now, fmtDate, fmtTime, clamp, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
 
 function ClientForm({initial,onSave,onClose,mobile}){
@@ -113,10 +113,83 @@ function ClientsScreen({clients,onAdd,onEdit,onDelete,programs,setView,setActive
   );
 }
 
-function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient,onLogDay}){
+const GOAL_COLORS=[C.green,C.blue,C.purple,C.amber,C.teal,C.red];
+
+function GoalEditor({initial,onSave,onClose}){
+  const [f,setF]=useState(initial||{label:"",unit:"kg",current:"",target:"",color:C.green});
+  const set=k=>v=>setF(p=>({...p,[k]:v}));
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <Input label="Goal" value={f.label} onChange={set("label")} placeholder="e.g. Squat 1RM, Lose weight" required/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+        <Input label="Current" value={f.current} onChange={set("current")} type="number" placeholder="0"/>
+        <Input label="Target" value={f.target} onChange={set("target")} type="number" placeholder="0"/>
+        <Input label="Unit" value={f.unit} onChange={set("unit")} placeholder="kg"/>
+      </div>
+      <div>
+        <label style={{color:C.sub,fontSize:12,fontWeight:600}}>Color</label>
+        <div style={{display:"flex",gap:8,marginTop:6}}>
+          {GOAL_COLORS.map(col=>(
+            <button key={col} onClick={()=>set("color")(col)}
+              style={{width:30,height:30,borderRadius:8,background:col,cursor:"pointer",border:f.color===col?`2px solid ${C.text}`:"2px solid transparent"}}/>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:4}}>
+        <Btn variant="ghost" color={C.sub} onClick={onClose}>Cancel</Btn>
+        <Btn onClick={()=>{if(!f.label.trim())return;onSave({id:f.id||uid(),label:f.label.trim(),unit:(f.unit||"").trim(),current:Number(f.current)||0,target:Number(f.target)||0,color:f.color||C.green});}}>Save Goal</Btn>
+      </div>
+    </div>
+  );
+}
+
+function Sparkline({data,color,height=48}){
+  if(!data||data.length<2)return null;
+  const W=300;
+  const vals=data.map(d=>Number(d.weight)||0);
+  const min=Math.min(...vals),max=Math.max(...vals),span=(max-min)||1;
+  const pts=data.map((d,i)=>{
+    const x=(i/(data.length-1))*W;
+    const y=height-4-((Number(d.weight)-min)/span)*(height-8);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return(
+    <svg width="100%" viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" style={{display:"block",overflow:"visible"}}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient,onLogDay,onUpdateGoals,onUpdateBodyweight}){
   const [modal,setModal]=useState(null);
+  const [goalModal,setGoalModal]=useState(null);
+  const [wDate,setWDate]=useState(()=>new Date().toISOString().slice(0,10));
+  const [wVal,setWVal]=useState("");
   const prog=programs.find(p=>p.id===client.programId);
   const clientSessions=sessions.filter(s=>s.clientId===client.id).sort((a,b)=>new Date(b.startedAt)-new Date(a.startedAt));
+
+  // ── Derived metrics ──
+  const totalReps=clientSessions.reduce((a,s)=>a+(s.exercises||[]).reduce((ea,e)=>ea+(e.sets||[]).reduce((sa,st)=>sa+(Number(st.reps)||0),0),0),0);
+  const WEEK=6048e5; // 7 days in ms
+  const weekOf=ts=>{const d=new Date(ts);d.setHours(0,0,0,0);const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return d.getTime();};
+  const weekSet=new Set(clientSessions.map(s=>weekOf(s.startedAt)));
+  let streak=0,cur=weekOf(Date.now());while(weekSet.has(cur)){streak++;cur-=WEEK;}
+  const firstTs=clientSessions.length?new Date(clientSessions[clientSessions.length-1].startedAt).getTime():null;
+  const weeksActive=firstTs?Math.max(1,(Date.now()-firstTs)/WEEK):1;
+  const perWeek=clientSessions.length?(clientSessions.length/weeksActive):0;
+
+  // ── Goals ──
+  const goals=client.goals||[];
+  const saveGoal=g=>{const next=goals.some(x=>x.id===g.id)?goals.map(x=>x.id===g.id?g:x):[...goals,g];onUpdateGoals(client.id,next);setGoalModal(null);};
+  const removeGoal=gid=>onUpdateGoals(client.id,goals.filter(x=>x.id!==gid));
+
+  // ── Bodyweight ──
+  const bw=[...(client.bodyweightLog||[])].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const latestBw=bw[bw.length-1],prevBw=bw[bw.length-2];
+  const bwChange=latestBw&&prevBw?(latestBw.weight-prevBw.weight):null;
+  const addWeight=()=>{if(wVal===""||isNaN(Number(wVal)))return;const entry={id:uid(),date:wDate,weight:Number(wVal)};const next=[...(client.bodyweightLog||[]).filter(e=>e.date!==wDate),entry];onUpdateBodyweight(client.id,next);setWVal("");};
+  const removeWeight=eid=>onUpdateBodyweight(client.id,(client.bodyweightLog||[]).filter(e=>e.id!==eid));
+
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
       <Card style={{display:"flex",alignItems:"flex-start",gap:16}}>
@@ -137,10 +210,87 @@ function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient,
         </div>
       </Card>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
-        {[{label:"Sessions",val:clientSessions.length,color:C.green},{label:"Last Session",val:clientSessions[0]?fmtDate(clientSessions[0].startedAt):"Never",color:C.blue},{label:"Client Since",val:fmtDate(client.createdAt),color:C.sub}].map(s=>(
-          <Card key={s.label} style={{textAlign:"center",padding:16}}><div style={{color:C.muted,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>{s.label}</div><div style={{color:s.color,fontWeight:800,fontSize:22}}>{s.val}</div></Card>
-        ))}
+        <Card style={{textAlign:"center",padding:16}}>
+          <div style={{color:C.muted,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Sessions</div>
+          <div style={{color:C.green,fontWeight:800,fontSize:22}}>{clientSessions.length}</div>
+          <div style={{color:C.sub,fontSize:11,marginTop:2}}>{totalReps.toLocaleString()} reps logged</div>
+        </Card>
+        <Card style={{textAlign:"center",padding:16}}>
+          <div style={{color:C.muted,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Consistency</div>
+          <div style={{color:C.amber,fontWeight:800,fontSize:22}}>{perWeek.toFixed(1)}<span style={{fontSize:12,color:C.muted,fontWeight:600}}> /wk</span></div>
+          <div style={{color:C.sub,fontSize:11,marginTop:2}}>{streak>0?`🔥 ${streak} wk streak`:"No active streak"}</div>
+        </Card>
+        <Card style={{textAlign:"center",padding:16}}>
+          <div style={{color:C.muted,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Activity</div>
+          <div style={{color:C.blue,fontWeight:800,fontSize:15}}>{clientSessions[0]?fmtDate(clientSessions[0].startedAt):"Never"}</div>
+          <div style={{color:C.sub,fontSize:11,marginTop:3}}>Client since {fmtDate(client.createdAt)}</div>
+        </Card>
       </div>
+
+      {/* ── Goals ── */}
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:goals.length?14:0}}>
+          <SL style={{marginBottom:0}}>Goals</SL>
+          <Btn variant="ghost" color={C.green} style={{padding:"5px 10px",fontSize:12}} onClick={()=>setGoalModal({})}>+ Add Goal</Btn>
+        </div>
+        {goals.length===0?(
+          <div style={{textAlign:"center",padding:"14px 0",color:C.muted,fontSize:13}}>No goals yet — set a target to track progress.</div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {goals.map(g=>{
+              const pct=g.target?clamp(g.current/g.target,0,1)*100:0;
+              return(
+                <div key={g.id}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:5,gap:8}}>
+                    <span style={{color:C.text,fontWeight:600,fontSize:13}}>{g.label}</span>
+                    <span style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+                      <span style={{color:g.color,fontWeight:700,fontSize:13}}>{g.current}<span style={{color:C.muted,fontWeight:400}}> / {g.target}{g.unit?` ${g.unit}`:""}</span></span>
+                      <span onClick={()=>setGoalModal(g)} title="Edit" style={{color:C.muted,cursor:"pointer",fontSize:12}}>✎</span>
+                      <span onClick={()=>removeGoal(g.id)} title="Remove" style={{color:C.muted,cursor:"pointer",fontSize:15}}>×</span>
+                    </span>
+                  </div>
+                  <div style={{height:8,borderRadius:99,background:C.s2,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:`${pct}%`,background:g.color,borderRadius:99,transition:"width 0.3s"}}/>
+                  </div>
+                  <div style={{color:C.muted,fontSize:10,marginTop:3}}>{Math.round(pct)}%</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {/* ── Bodyweight ── */}
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <SL style={{marginBottom:0}}>Bodyweight</SL>
+          {latestBw&&(
+            <span style={{display:"flex",alignItems:"baseline",gap:8}}>
+              <span style={{color:C.teal,fontWeight:800,fontSize:20}}>{latestBw.weight}<span style={{fontSize:12,color:C.muted,fontWeight:600}}> kg</span></span>
+              {bwChange!=null&&bwChange!==0&&<span style={{color:bwChange<0?C.green:C.amber,fontSize:12,fontWeight:700}}>{bwChange<0?"▼":"▲"} {Math.abs(bwChange).toFixed(1)}</span>}
+            </span>
+          )}
+        </div>
+        {bw.length>=2&&<div style={{marginBottom:14}}><Sparkline data={bw} color={C.teal}/></div>}
+        <div style={{display:"flex",gap:8,alignItems:"flex-end",marginBottom:bw.length?14:0}}>
+          <div style={{width:160}}><Input label="Date" value={wDate} onChange={setWDate} type="date"/></div>
+          <div style={{flex:1}}><Input label="Weight (kg)" value={wVal} onChange={setWVal} type="number" placeholder="e.g. 72.5"/></div>
+          <Btn color={C.teal} onClick={addWeight}>Log</Btn>
+        </div>
+        {bw.length>0&&(
+          <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:170,overflowY:"auto"}}>
+            {[...bw].reverse().map(e=>(
+              <div key={e.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",background:C.s2,borderRadius:8,border:`1px solid ${C.border}`}}>
+                <span style={{color:C.sub,fontSize:12}}>{fmtDate(e.date)}</span>
+                <span style={{display:"flex",alignItems:"center",gap:12}}>
+                  <span style={{color:C.text,fontWeight:600,fontSize:13}}>{e.weight} kg</span>
+                  <span onClick={()=>removeWeight(e.id)} title="Remove" style={{color:C.muted,cursor:"pointer",fontSize:15}}>×</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
       {prog&&(
         <Card style={{borderColor:C.purple+"44"}}>
           <SL>Assigned Program — {prog.name}</SL>
@@ -182,6 +332,7 @@ function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient,
         )}
       </Card>
       {modal==="edit"&&<Modal title="Edit Client" onClose={()=>setModal(null)} wide><ClientForm initial={client} onSave={async f=>{await onEdit(client.id,f);setActiveClient(p=>({...p,...f}));setModal(null);}} onClose={()=>setModal(null)}/></Modal>}
+      {goalModal&&<Modal title={goalModal.id?"Edit Goal":"New Goal"} onClose={()=>setGoalModal(null)}><GoalEditor initial={goalModal.id?goalModal:null} onSave={saveGoal} onClose={()=>setGoalModal(null)}/></Modal>}
     </div>
   );
 }

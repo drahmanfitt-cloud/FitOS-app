@@ -309,6 +309,18 @@ export default function App(){
     await db.update("fitos_clients",id,patch);
     setClients(p=>p.map(c=>c.id===id?{...c,programId:patch.program_id}:c));
   };
+  const updateClientGoals=async(id,goals)=>{
+    setClients(p=>p.map(c=>c.id===id?{...c,goals}:c));
+    setActiveClient(p=>p&&p.id===id?{...p,goals}:p);
+    try{ await db.update("fitos_clients",id,{goals}); }
+    catch(e){ toast("Couldn't save goals — add the 'goals' column in Supabase","error"); }
+  };
+  const updateClientBodyweight=async(id,bodyweightLog)=>{
+    setClients(p=>p.map(c=>c.id===id?{...c,bodyweightLog}:c));
+    setActiveClient(p=>p&&p.id===id?{...p,bodyweightLog}:p);
+    try{ await db.update("fitos_clients",id,{bodyweight_log:bodyweightLog}); }
+    catch(e){ toast("Couldn't save weight — add the 'bodyweight_log' column in Supabase","error"); }
+  };
 
   // ── Session CRUD
   const addSession=async s=>{
@@ -479,7 +491,7 @@ export default function App(){
         <main style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"none",touchAction:"auto",padding:mobile?12:20,paddingBottom:mobile?80:20}}>
           {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
-          {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient} onLogDay={day=>{setPreloadDay(day);setView("sessions");}}/>}
+          {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient} onLogDay={day=>{setPreloadDay(day);setView("sessions");}} onUpdateGoals={updateClientGoals} onUpdateBodyweight={updateClientBodyweight}/>}
           {view==="sessions"&&<ErrorBoundary><SessionLogger clients={clients} sessions={sessions} onSave={addSession} activeClient={activeClient} programs={programs} initialDay={preloadDay} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/></ErrorBoundary>}
           {view==="classes"&&<ClassesScreen clients={clients} classes={classes} onAdd={addClass} onEdit={editClass} onDelete={deleteClass} formats={formats} mobile={mobile}/>}
           {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass} mobile={mobile} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/>}
