@@ -227,8 +227,8 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
   }));
 
   // Display modes
-  if(displayMode==="followalong") return <FollowAlongDisplay stations={stationsWithPos} classType={classType} onClose={()=>setDisplayMode(null)}/>;
-  if(displayMode==="rotation")    return <StationRotationDisplay stations={stationsWithPos} workSec={Number(fmt?.workSec)||40} restSec={Number(fmt?.restSec)||20} onClose={()=>setDisplayMode(null)}/>;
+  if(displayMode==="followalong") return <FollowAlongDisplay stations={stationsWithPos} classType={classType} mobile={mobile} onClose={()=>setDisplayMode(null)}/>;
+  if(displayMode==="rotation")    return <StationRotationDisplay stations={stationsWithPos} workSec={Number(fmt?.workSec)||40} restSec={Number(fmt?.restSec)||20} mobile={mobile} onClose={()=>setDisplayMode(null)}/>;
 
   return(
     <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"240px 1fr",gap:16,minHeight:mobile?0:520}}>

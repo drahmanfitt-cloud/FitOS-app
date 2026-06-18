@@ -379,7 +379,7 @@ function useSwipe(onSwipeLeft, onSwipeRight, threshold=60){
 }
 
 // ── Follow-Along Display Mode (Standard + Yoga/Stretch) ───────────────────────
-function FollowAlongDisplay({stations,classType,onClose}){
+function FollowAlongDisplay({stations,classType,mobile,onClose}){
   const [idx,setIdx]=useState(0);
   const [poseTimerActive,setPoseTimerActive]=useState(false);
   const [poseDone,setPoseDone]=useState({});
@@ -518,7 +518,7 @@ function FollowAlongDisplay({stations,classType,onClose}){
       </div>
 
       {/* Controls */}
-      <div style={{padding:"16px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(255,255,255,0.02)",borderTop:"1px solid rgba(255,255,255,0.06)"}}>
+      <div style={{padding:"16px 24px",paddingBottom:mobile?"calc(env(safe-area-inset-bottom) + 86px)":"16px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(255,255,255,0.02)",borderTop:"1px solid rgba(255,255,255,0.06)"}}>
         <button onClick={goPrev} disabled={idx===0}
           style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:10,padding:"11px 22px",color:"#fff",fontSize:15,cursor:"pointer",opacity:idx===0?0.25:1,fontFamily:"inherit",fontWeight:600}}>
           ← Back
@@ -547,7 +547,7 @@ function FollowAlongDisplay({stations,classType,onClose}){
 }
 
 // ── Station Rotation Display Mode ─────────────────────────────────────────────
-function StationRotationDisplay({stations,workSec=40,restSec=20,onClose}){
+function StationRotationDisplay({stations,workSec=40,restSec=20,mobile,onClose}){
   const [phase,setPhase]=useState("work");
   const [stationIdx,setStationIdx]=useState(0);
   const [side,setSide]=useState("left");
@@ -721,7 +721,7 @@ function StationRotationDisplay({stations,workSec=40,restSec=20,onClose}){
               </div>
             )}
           </div>
-          <div style={{padding:24,display:"flex",justifyContent:"center",gap:16,borderTop:"1px solid rgba(255,255,255,0.08)"}}>
+          <div style={{padding:24,paddingBottom:mobile?"calc(env(safe-area-inset-bottom) + 86px)":24,display:"flex",justifyContent:"center",gap:16,borderTop:"1px solid rgba(255,255,255,0.08)"}}>
             <button onClick={()=>setRunning(r=>!r)} disabled={isSwitching}
               style={{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:10,padding:"12px 28px",color:"#fff",fontSize:16,cursor:"pointer",fontFamily:"inherit",fontWeight:600,opacity:isSwitching?0.4:1}}>
               {running&&!isSwitching?"⏸ Pause":"▶ Resume"}
