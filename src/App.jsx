@@ -350,9 +350,8 @@ export default function App(){
       }catch(e2){console.error(e2);toast("Could not schedule class","error");}
     }
   };
-  const addClassSeries=async list=>{
+  const addClassSeries=async(list,seriesId=uid())=>{
     if(!list?.length)return;
-    const seriesId=uid();
     const rows=list.map(f=>buildClassRow(f,seriesId));
     try{
       const r=await db.insertMany("fitos_classes",rows);
@@ -376,19 +375,20 @@ export default function App(){
     if(patch.location!==undefined)dbPatch.location=patch.location;
     if(patch.notes!==undefined)dbPatch.notes=patch.notes;
     if(patch.focus!==undefined)dbPatch.focus=patch.focus;
+    if(patch.series_id!==undefined)dbPatch.series_id=patch.series_id;
     if(patch.status!==undefined)dbPatch.status=patch.status;
     if(patch.bookings!==undefined)dbPatch.bookings=patch.bookings;
     if(patch.format_id!==undefined){dbPatch.format_id=patch.format_id;dbPatch.format_name=patch.format_name;}
-    const apply=()=>setClasses(p=>p.map(c=>c.id!==id?c:{...c,...patch,formatId:patch.format_id??c.formatId,formatName:patch.format_name??c.formatName}));
+    const apply=()=>setClasses(p=>p.map(c=>c.id!==id?c:{...c,...patch,formatId:patch.format_id??c.formatId,formatName:patch.format_name??c.formatName,seriesId:patch.series_id!==undefined?patch.series_id:c.seriesId}));
     try{
       await db.update("fitos_classes",id,dbPatch);
-      apply(); toast("Class updated ✓");
+      apply(); toast("Class updated ✓"); return true;
     }catch(e){
       if(isMissingColErr(e)){
-        const {focus,...safe}=dbPatch;
-        try{await db.update("fitos_classes",id,safe);apply();toast("Updated — run the migration to save focus","error");return;}catch(e2){console.error(e2);}
+        const {focus,series_id,...safe}=dbPatch;
+        try{await db.update("fitos_classes",id,safe);apply();toast("Updated — run the migration to save focus","error");return true;}catch(e2){console.error(e2);}
       }
-      console.error(e);toast("Could not update class","error");
+      console.error(e);toast("Could not update class","error"); return false;
     }
   };
   const deleteClass=async id=>{

@@ -23,7 +23,7 @@ function FocusPicker({value,onChange}){
   );
 }
 
-function ClassForm({initial,onSave,onSaveSeries,onClose}){
+function ClassForm({initial,onSubmit,onClose}){
   const EMPTY={name:"",date:"",time:"",duration:45,capacity:12,location:"",notes:"",focus:""};
   const editing=!!initial;
   const [f,setF]=useState(initial?{...EMPTY,...initial}:EMPTY);
@@ -47,11 +47,11 @@ function ClassForm({initial,onSave,onSaveSeries,onClose}){
     return out.sort((a,b)=>a.date.localeCompare(b.date));
   };
 
-  const weeklyMode=!editing&&rec.mode==="weekly";
+  const weeklyMode=rec.mode==="weekly";
   const recurring=weeklyMode&&rec.days.length>0;
   const count=recurring?buildOccurrences().length:0;
   const valid=f.name.trim()&&f.date&&f.time&&(!weeklyMode||count>0);
-  const save=()=>{ if(!valid)return; if(recurring)onSaveSeries(buildOccurrences()); else if(!weeklyMode)onSave(f); };
+  const save=()=>{ if(!valid)return; if(recurring)onSubmit({mode:"series",occurrences:buildOccurrences(),base:f}); else onSubmit({mode:"single",base:f}); };
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -66,13 +66,14 @@ function ClassForm({initial,onSave,onSaveSeries,onClose}){
       <Input label="Location" value={f.location} onChange={set("location")}/>
       <Input label="Notes" value={f.notes} onChange={set("notes")}/>
 
-      {!editing&&(
+      {(
         <div style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:12,padding:14,display:"flex",flexDirection:"column",gap:12}}>
           <div style={{display:"flex",gap:8}}>
-            {[{k:"once",l:"One-off"},{k:"weekly",l:"↻ Repeat weekly"}].map(m=>(
+            {[{k:"once",l:editing?"Don't repeat":"One-off"},{k:"weekly",l:"↻ Repeat weekly"}].map(m=>(
               <button key={m.k} type="button" onClick={()=>setRec(p=>({...p,mode:m.k}))} style={{flex:1,padding:"8px 10px",borderRadius:8,border:`1px solid ${rec.mode===m.k?C.teal:C.border}`,background:rec.mode===m.k?C.teal+"1f":"transparent",color:rec.mode===m.k?C.teal:C.sub,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{m.l}</button>
             ))}
           </div>
+          {editing&&rec.mode==="weekly"&&<div style={{color:C.muted,fontSize:11,lineHeight:1.5}}>This class becomes the start of the series; the extra dates are added as new linked classes.</div>}
           {rec.mode==="weekly"&&(
             <>
               <div>
@@ -113,7 +114,7 @@ function ClassForm({initial,onSave,onSaveSeries,onClose}){
         {recurring&&<span style={{color:C.muted,fontSize:12,marginRight:"auto"}}>{count} class{count===1?"":"es"} will be created</span>}
         {weeklyMode&&!rec.days.length&&<span style={{color:C.amber,fontSize:12,marginRight:"auto"}}>Pick at least one weekday</span>}
         <Btn variant="outline" onClick={onClose}>Cancel</Btn>
-        <Btn disabled={!valid} onClick={save}>{editing?"Save Class":recurring?`Schedule ${count} Classes`:"Save Class"}</Btn>
+        <Btn disabled={!valid} onClick={save}>{recurring?(editing?`Save + Schedule ${count}`:`Schedule ${count} Classes`):"Save Class"}</Btn>
       </div>
     </div>
   );
@@ -142,6 +143,26 @@ function ClassesScreen({clients,classes,onAdd,onAddSeries,onEdit,onDelete,onDele
     if(!sel)return;
     const bookings=sel.bookings.map(b=>b.clientId!==clientId?b:{...b,attendance:b.attendance===status?null:status});
     await onEdit(sel.id,{bookings});
+  };
+  const submitClass=async payload=>{
+    const isAdd=modal==="add";
+    if(payload.mode==="single"){
+      if(isAdd)await onAdd(payload.base); else await onEdit(modal.cls.id,payload.base);
+    }else{ // series
+      if(isAdd){ await onAddSeries(payload.occurrences); }
+      else{
+        const ex=modal.cls; const start=payload.base.date;
+        const extra=payload.occurrences.filter(o=>o.date!==start);
+        if(!extra.length){ await onEdit(ex.id,payload.base); }
+        else{
+          const seriesId=uid();
+          const startOcc=payload.occurrences.find(o=>o.date===start);
+          const ok=await onEdit(ex.id,{...payload.base,focus:startOcc?startOcc.focus:payload.base.focus,series_id:seriesId});
+          if(ok)await onAddSeries(extra,seriesId);
+        }
+      }
+    }
+    setModal(null);
   };
 
   // On mobile: show list OR detail, not side-by-side
@@ -211,7 +232,7 @@ function ClassesScreen({clients,classes,onAdd,onAddSeries,onEdit,onDelete,onDele
           )}
         </Card>
         {fmtModal&&<Modal title="Attach Format" onClose={()=>setFmtModal(false)} wide>{formats.length===0?<div style={{color:C.muted,textAlign:"center",padding:24}}>No formats yet.</div>:<div style={{display:"flex",flexDirection:"column",gap:8}}>{formats.map(f=><div key={f.id} style={{background:C.s2,borderRadius:10,padding:"12px 14px",border:`1px solid ${sel.formatId===f.id?C.teal+"55":C.border}`,cursor:"pointer"}} onClick={async()=>{await onEdit(sel.id,{format_id:f.id,format_name:f.name});setFmtModal(false);}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{color:C.text,fontWeight:700,fontSize:14}}>{f.name}</div><div style={{color:C.muted,fontSize:11}}>{f.stations?.length||0} stations · {f.totalDuration}min</div></div>{sel.formatId===f.id&&<Pill color={C.teal}>Attached</Pill>}</div></div>)}</div>}</Modal>}
-        {(modal==="add"||modal?.cls)&&<Modal title={modal==="add"?"New Class":"Edit Class"} onClose={()=>setModal(null)} wide><ClassForm initial={modal?.cls} onSave={async f=>{if(modal==="add")await onAdd(f);else await onEdit(modal.cls.id,f);setModal(null);}} onSaveSeries={async list=>{await onAddSeries(list);setModal(null);}} onClose={()=>setModal(null)}/></Modal>}
+        {(modal==="add"||modal?.cls)&&<Modal title={modal==="add"?"New Class":"Edit Class"} onClose={()=>setModal(null)} wide><ClassForm initial={modal?.cls} onSubmit={submitClass} onClose={()=>setModal(null)}/></Modal>}
         {confirm&&<Confirm msg="Delete this class?" onConfirm={async()=>{await onDelete(confirm);if(selected===confirm)setSelected(null);setConfirm(null);}} onCancel={()=>setConfirm(null)}/>}
         {confirmSeries&&<Confirm msg={`Delete all ${seriesCount} classes in this recurring series?`} onConfirm={async()=>{await onDeleteSeries(confirmSeries);setSelected(null);setConfirmSeries(null);}} onCancel={()=>setConfirmSeries(null)}/>}
       </div>
@@ -317,7 +338,7 @@ function ClassesScreen({clients,classes,onAdd,onAddSeries,onEdit,onDelete,onDele
           )}
         </Modal>
       )}
-      {(modal==="add"||modal?.cls)&&<Modal title={modal==="add"?"New Class":"Edit Class"} onClose={()=>setModal(null)} wide><ClassForm initial={modal?.cls} onSave={async f=>{if(modal==="add")await onAdd(f);else await onEdit(modal.cls.id,f);setModal(null);}} onSaveSeries={async list=>{await onAddSeries(list);setModal(null);}} onClose={()=>setModal(null)}/></Modal>}
+      {(modal==="add"||modal?.cls)&&<Modal title={modal==="add"?"New Class":"Edit Class"} onClose={()=>setModal(null)} wide><ClassForm initial={modal?.cls} onSubmit={submitClass} onClose={()=>setModal(null)}/></Modal>}
       {confirm&&<Confirm msg="Delete this class?" onConfirm={async()=>{await onDelete(confirm);if(selected===confirm)setSelected(null);setConfirm(null);}} onCancel={()=>setConfirm(null)}/>}
       {confirmSeries&&<Confirm msg={`Delete all ${seriesCount} classes in this recurring series?`} onConfirm={async()=>{await onDeleteSeries(confirmSeries);setSelected(null);setConfirmSeries(null);}} onCancel={()=>setConfirmSeries(null)}/>}
     </div>

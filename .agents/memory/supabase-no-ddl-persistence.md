@@ -19,4 +19,6 @@ FitOS connects to a shared Supabase with the **anon key only** — the agent can
 ## Known fields added via this pattern
 - `fitos_clients`: `goals` jsonb, `bodyweight_log` jsonb.
 - `fitos_classes`: `focus` text (per-class focus label), `series_id` text (groups recurring occurrences). Recurring classes are stored as one row per occurrence (no recurrence-rule column); `series_id` ties them together. Migration: `alter table fitos_classes add column if not exists focus text, add column if not exists series_id text;`
-- Note: unlike `update`, an `insert`/`insertMany` with an unknown column fails the whole write — so insert handlers must catch the missing-column error and retry with the extra columns stripped (see addClass/addClassSeries in App.jsx).
+
+## Insert vs update on a missing column (key gotcha)
+Unlike `update` (which can silently degrade), an **`insert`/`insertMany` with an unknown column fails the entire write**. So insert handlers must catch the missing-column error and retry with the extra columns stripped, then toast the user to run the migration. Reason: PostgREST rejects the whole payload, so without the retry the core record (e.g. a class) would never be created pre-migration.
