@@ -518,7 +518,7 @@ export default function App(){
       {!mobile&&<Sidebar active={view} setActive={navigate} counts={counts} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} profile={profile} onProfileClick={()=>setShowProfileEditor(true)}/>}
 
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
-        <div style={{height:54,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:mobile?"0 14px":"0 22px",background:C.bg,flexShrink:0}}>
+        <div style={{height:54,...(mobile?{background:C.surface,border:`1px solid ${C.border}`,borderTop:"none",borderRadius:"0 0 18px 18px"}:{borderBottom:`1px solid ${C.border}`,background:C.bg}),display:"flex",alignItems:"center",justifyContent:"space-between",padding:mobile?"0 14px":"0 22px",flexShrink:0}}>
           <div style={{minWidth:0,flex:1}}>
             <div style={{color:C.text,fontWeight:700,fontSize:mobile?15:16,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{TITLES[view]}</div>
             {!mobile&&<div style={{color:C.muted,fontSize:11}}>{SUBS[view]}</div>}
