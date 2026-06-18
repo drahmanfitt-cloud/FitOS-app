@@ -297,10 +297,8 @@ function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient,
           </div>
         )}
         <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:bw.length?14:0}}>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12}}>
-            <Input label="Date" value={wDate} onChange={setWDate} type="date"/>
-            <Input label="Weight (kg)" value={wVal} onChange={setWVal} type="number" placeholder="72.5"/>
-          </div>
+          <Input label="Date" value={wDate} onChange={setWDate} type="date"/>
+          <Input label="Weight (kg)" value={wVal} onChange={setWVal} type="number" placeholder="72.5"/>
           <Btn color={C.teal} onClick={addWeight} style={{width:"100%",justifyContent:"center"}}>Log Weight</Btn>
         </div>
         {bw.length>0&&(
