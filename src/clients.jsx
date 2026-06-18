@@ -213,31 +213,31 @@ function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient,
           <Btn onClick={()=>setView("sessions")}>+ Log Session</Btn>
         </div>
       </Card>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,alignItems:"start"}}>
-        <Card style={{textAlign:"center",padding:"11px 10px"}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>
+        <Card style={{padding:"12px 8px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",gap:2}}>
           <div style={{color:C.muted,fontSize:10,textTransform:"uppercase",letterSpacing:"0.05em"}}>Sessions</div>
-          <div style={{color:C.green,fontWeight:800,fontSize:19,lineHeight:1.2}}>{clientSessions.length}</div>
+          <div style={{color:C.green,fontWeight:800,fontSize:20,lineHeight:1.1}}>{clientSessions.length}</div>
           <div style={{color:C.sub,fontSize:10}}>{totalReps.toLocaleString()} reps</div>
         </Card>
-        <Card style={{textAlign:"center",padding:"11px 10px"}}>
+        <Card style={{padding:"12px 8px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",gap:2}}>
           <div style={{color:C.muted,fontSize:10,textTransform:"uppercase",letterSpacing:"0.05em"}}>Consistency</div>
-          <div style={{color:C.amber,fontWeight:800,fontSize:19,lineHeight:1.2}}>{perWeek.toFixed(1)}<span style={{fontSize:11,color:C.muted,fontWeight:600}}>/wk</span></div>
+          <div style={{color:C.amber,fontWeight:800,fontSize:20,lineHeight:1.1}}>{perWeek.toFixed(1)}<span style={{fontSize:11,color:C.muted,fontWeight:600}}>/wk</span></div>
           <div style={{color:C.sub,fontSize:10}}>{streak>0?`🔥 ${streak} wk`:"No streak"}</div>
           {prog?(
-            <div style={{marginTop:7,paddingTop:7,borderTop:`1px solid ${C.border}`}}>
-              <div style={{color:C.text,fontSize:11,fontWeight:600}}>{programLogged}<span style={{color:C.muted,fontWeight:400}}>/{programmedTotal} <span style={{fontSize:9}}>prog</span></span></div>
+            <div style={{width:"100%",marginTop:6,paddingTop:6,borderTop:`1px solid ${C.border}`}}>
+              <div style={{color:C.text,fontSize:11,fontWeight:600}}>{programLogged}<span style={{color:C.muted,fontWeight:400}}>/{programmedTotal} prog</span></div>
               <div style={{height:5,borderRadius:99,background:C.s2,overflow:"hidden",margin:"4px 0 2px"}}>
                 <div style={{height:"100%",width:`${adherence}%`,background:C.amber,borderRadius:99,transition:"width 0.3s"}}/>
               </div>
               <div style={{color:C.muted,fontSize:9}}>{Math.round(adherence)}% logged</div>
             </div>
           ):(
-            <div style={{marginTop:7,paddingTop:7,borderTop:`1px solid ${C.border}`,color:C.muted,fontSize:9}}>No program</div>
+            <div style={{width:"100%",marginTop:6,paddingTop:6,borderTop:`1px solid ${C.border}`,color:C.muted,fontSize:9}}>No program</div>
           )}
         </Card>
-        <Card style={{textAlign:"center",padding:"11px 10px"}}>
+        <Card style={{padding:"12px 8px",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",textAlign:"center",gap:2}}>
           <div style={{color:C.muted,fontSize:10,textTransform:"uppercase",letterSpacing:"0.05em"}}>Activity</div>
-          <div style={{color:C.blue,fontWeight:800,fontSize:14,lineHeight:1.3}}>{clientSessions[0]?fmtDate(clientSessions[0].startedAt):"Never"}</div>
+          <div style={{color:C.blue,fontWeight:800,fontSize:13,lineHeight:1.25}}>{clientSessions[0]?fmtDate(clientSessions[0].startedAt):"Never"}</div>
           <div style={{color:C.sub,fontSize:10}}>since {fmtDate(client.createdAt)}</div>
         </Card>
       </div>
@@ -298,7 +298,7 @@ function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient,
         )}
         <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap",marginBottom:bw.length?14:0}}>
           <div style={{width:150}}><Input label="Date" value={wDate} onChange={setWDate} type="date"/></div>
-          <div style={{flex:1,minWidth:120}}><Input label="Weight (kg)" value={wVal} onChange={setWVal} type="number" placeholder="e.g. 72.5"/></div>
+          <div style={{width:130}}><Input label="Weight (kg)" value={wVal} onChange={setWVal} type="number" placeholder="72.5"/></div>
           <Btn color={C.teal} onClick={addWeight}>Log</Btn>
         </div>
         {bw.length>0&&(
