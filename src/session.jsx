@@ -520,6 +520,7 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
           )}
 
           {/* ── Stretching subsection ── */}
+          {stretches.length>0&&(
           <WarmupSubsection
             label="Stretching" color={C.purple} icon="🧘"
             items={stretches}
@@ -527,8 +528,10 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
             onRemoveAll={(id,mode)=>{if(mode==="last")removeItem(id);else setWarmup(w=>w.filter(i=>i.category!=="stretching"));}}
             renderItem={item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>}
           />
+          )}
 
           {/* ── Mobility subsection ── */}
+          {mobility.filter(i=>i.purpose!=="sport-specific").length>0&&(
           <WarmupSubsection
             label="Mobility" color={C.teal} icon="🔄"
             items={mobility.filter(i=>i.purpose!=="sport-specific")}
@@ -536,8 +539,10 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
             onRemoveAll={(id,mode)=>{if(mode==="last")removeItem(id);else setWarmup(w=>w.filter(i=>!(i.category==="mobility"&&i.purpose!=="sport-specific")));}}
             renderItem={item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>}
           />
+          )}
 
           {/* ── Sport Specific subsection ── */}
+          {warmup.filter(i=>i.purpose==="sport-specific").length>0&&(
           <WarmupSubsection
             label="Sport Specific" color={C.amber} icon="⚡"
             items={warmup.filter(i=>i.purpose==="sport-specific")}
@@ -545,6 +550,7 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
             onRemoveAll={(id,mode)=>{if(mode==="last")removeItem(id);else setWarmup(w=>w.filter(i=>i.purpose!=="sport-specific"));}}
             renderItem={item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>}
           />
+          )}
 
           {warmup.length===0&&<div style={{textAlign:"center",padding:"20px 0",color:C.muted,fontSize:13}}>Tap a section below to add exercises.</div>}
 
