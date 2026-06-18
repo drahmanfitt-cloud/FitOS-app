@@ -434,7 +434,11 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
       <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:isYoga?"24px 40px":"40px",textAlign:"center",gap:isYoga?16:20}}>
         {!isYoga&&<div style={{color:C.muted,fontSize:13,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase"}}>Exercise {idx+1} of {stations.length}</div>}
 
-        <div style={{fontSize:isYoga?64:80}}>{current?.icon||"🧘"}</div>
+        {current?.icon?(
+          <div style={{fontSize:isYoga?64:80}}>{current.icon}</div>
+        ):isYoga?(
+          <div style={{fontSize:64}}>🧘</div>
+        ):null}
 
         <div style={{color:"#fff",fontWeight:900,fontSize:isYoga?40:48,lineHeight:1.1,maxWidth:600}}>
           {current?.name}
