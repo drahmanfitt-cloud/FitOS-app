@@ -233,21 +233,21 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
       </div>}
 
       {mobile&&!fmt?null:!fmt?<Card style={{display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center",color:C.muted}}><div style={{fontSize:36,marginBottom:10}}>🏋️</div>Select or create a format</div></Card>:(
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{display:"flex",flexDirection:"column",gap:mobile?10:14}}>
           {mobile&&<Btn variant="outline" style={{alignSelf:"flex-start",padding:"6px 12px",fontSize:12}} onClick={()=>setSelected(null)}>← All Formats</Btn>}
-          <Card>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+          <Card style={{padding:mobile?13:18}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:mobile?10:14}}>
               <SL>Format Settings</SL>
               <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
                 <Btn variant="ghost" color={C.teal} style={{padding:"5px 10px",fontSize:11}} onClick={()=>setLoadModal(true)}>📅 Load into Class</Btn>
                 <Btn variant="danger" style={{padding:"5px 10px",fontSize:11}} onClick={()=>setConfirm(fmt.id)}>Delete</Btn>
               </div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"2fr 1fr",gap:12,marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"2fr 1fr",gap:mobile?10:12,marginBottom:mobile?10:12}}>
               <Input label="Format name" value={fmt.name} onChange={v=>upd({name:v})} required/>
               <Select label="Type" value={fmt.type} onChange={v=>upd({type:v})} options={FORMAT_TYPES}/>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:mobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:12,marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:mobile?10:12,marginBottom:mobile?10:12}}>
               <Input label="Work (sec)" type="number" value={fmt.workSec} onChange={v=>upd({workSec:v})}/>
               <Input label="Rest (sec)" type="number" value={fmt.restSec} onChange={v=>upd({restSec:v})}/>
               <Input label="Rounds" type="number" value={fmt.rounds} onChange={v=>upd({rounds:v})}/>
@@ -262,7 +262,7 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
           </Card>
 
           {fmt.stations?.length>0&&(
-            <div style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px"}}>
+            <div style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:12,padding:mobile?"11px 13px":"14px 16px"}}>
               <SL>Station Overview · {fmt.stations.length} stations</SL>
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 {fmt.stations.map((st,i)=>(
@@ -277,7 +277,7 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
           )}
 
           {/* Class type + display mode buttons */}
-          <div style={{background:C.s2,borderRadius:12,padding:"12px 14px",border:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{background:C.s2,borderRadius:12,padding:mobile?"10px 12px":"12px 14px",border:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:mobile?8:10}}>
             <div style={{display:"flex",background:C.s3,borderRadius:8,padding:3}}>
               {[["hiit","🏋️ HIIT / Station"],["yoga","🧘 Yoga / Stretch"]].map(([type,label])=>(
                 <button key={type} onClick={()=>setClassType(type)}
@@ -307,15 +307,15 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
 
           {subTab==="floorplan"&&<FloorPlanEditor stations={stationsWithPos} onUpdateStation={(id,patch)=>updSt(id,patch)}/>}
 
-          {subTab==="stations"&&<Card>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          {subTab==="stations"&&<Card style={{padding:mobile?13:18}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:mobile?10:14}}>
               <SL>Stations / Exercises</SL>
               <Btn variant="ghost" color={C.teal} style={{padding:"5px 12px",fontSize:11}} onClick={()=>setStPicker(true)}>+ Add Station</Btn>
             </div>
             {fmt.stations?.length===0&&<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"20px 0"}}>No stations yet.</div>}
             {fmt.stations?.map((st,i)=>(
-              <div key={st.id} style={{background:C.s2,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${COLS(i)}33`}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <div key={st.id} style={{background:C.s2,borderRadius:10,padding:mobile?"10px 11px":"12px 14px",marginBottom:mobile?8:10,border:`1px solid ${COLS(i)}33`}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:mobile?8:10}}>
                   <div style={{width:26,height:26,borderRadius:7,background:COLS(i)+"22",border:`1px solid ${COLS(i)}44`,display:"flex",alignItems:"center",justifyContent:"center",color:COLS(i),fontWeight:800,fontSize:12,flexShrink:0}}>{i+1}</div>
                   <input value={st.name} onChange={e=>updSt(st.id,{name:e.target.value})} style={{flex:1,background:"none",border:"none",color:C.text,fontWeight:700,fontSize:14,outline:"none",fontFamily:"inherit",padding:0}}/>
                   <div style={{display:"flex",gap:4}}>
@@ -324,7 +324,7 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
                     <button onClick={()=>rmSt(st.id)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16,lineHeight:1}}>×</button>
                   </div>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"80px 80px 80px 1fr 1fr",gap:8}}>
+                <div style={{display:"grid",gridTemplateColumns:mobile?"repeat(3,1fr)":"80px 80px 80px 1fr 1fr",gap:8}}>
                   {[{l:"Work (s)",f:"workSec",t:"number"},{l:"Rest (s)",f:"restSec",t:"number"},{l:"Reps",f:"reps",t:"text"},{l:"Equipment",f:"equipment",t:"text"},{l:"Coach cue",f:"notes",t:"text"}].map(fi=>(
                     <div key={fi.f}><div style={{color:C.muted,fontSize:10,marginBottom:3}}>{fi.l}</div><input type={fi.t} value={st[fi.f]} onChange={e=>updSt(st.id,{[fi.f]:e.target.value})} style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:fi.f==="workSec"?COLS(i):C.text,fontWeight:fi.f==="workSec"?700:400,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
                   ))}
