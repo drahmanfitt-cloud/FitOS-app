@@ -651,21 +651,26 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
         <div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"10px 0"}}>No sets — <span onClick={()=>addSet(ex.id)} style={{color:C.green,cursor:"pointer"}}>add first set</span></div>
       ):(
         <>
-          <div style={{display:"grid",gridTemplateColumns:hasLoad?`28px 1fr 1fr 1fr 36px 24px`:`28px 1fr 1fr 36px 24px`,gap:6,padding:"0 0 6px",borderBottom:`1px solid ${C.border}`}}>
+          <div style={{display:"grid",gridTemplateColumns:hasLoad?`24px 56px 58px 52px 1fr 34px 22px`:`24px 48px 58px 1fr 34px 22px`,gap:6,padding:"0 0 6px",borderBottom:`1px solid ${C.border}`}}>
             <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>#</div>
-            {hasLoad&&<div style={{color:m.color,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>{m.label} ({settings.weightUnit})</div>}
+            <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Prev</div>
+            {hasLoad&&<div style={{color:m.color,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>{m.label}</div>}
             <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Reps</div>
             <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Notes</div>
             <div style={{color:C.muted,fontSize:10,fontWeight:700}}>✓</div>
             <div/>
           </div>
-          {ex.sets.map((s,si)=>(
-            <div key={s.id} style={{display:"grid",gridTemplateColumns:hasLoad?`28px 1fr 1fr 1fr 36px 24px`:`28px 1fr 1fr 36px 24px`,gap:6,padding:"7px 0",borderBottom:`1px solid ${C.border}`,alignItems:"center",background:s.pr&&s.done?C.amber+"08":"transparent"}}>
+          {ex.sets.map((s,si)=>{
+            const prevSet=si>0?ex.sets[si-1]:null;
+            const prevText=prevSet?(hasLoad?`${prevSet.load||"–"}×${prevSet.reps||"–"}`:`${prevSet.reps||"–"}`):"—";
+            return(
+            <div key={s.id} style={{display:"grid",gridTemplateColumns:hasLoad?`24px 56px 58px 52px 1fr 34px 22px`:`24px 48px 58px 1fr 34px 22px`,gap:6,padding:"7px 0",borderBottom:`1px solid ${C.border}`,alignItems:"center",background:s.pr&&s.done?C.amber+"08":"transparent"}}>
               <span style={{color:C.muted,fontSize:13,fontWeight:700}}>{si+1}</span>
+              <span title={prevText} style={{color:C.muted,fontSize:11,opacity:0.65,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{prevText}</span>
               {hasLoad&&<input type="number" value={s.load||""} placeholder="0" onChange={e=>{updateSet(ex.id,s.id,"load",e.target.value);if(s.done)checkPR(ex.id,s.id,e.target.value,s.reps);}}
-                style={{background:C.s2,border:`1px solid ${m.color}44`,borderRadius:7,padding:"6px 8px",color:m.color,fontSize:13,outline:"none",fontFamily:"inherit",width:"100%",fontWeight:700}}/>}
+                style={{background:C.s2,border:`1px solid ${m.color}44`,borderRadius:7,padding:"6px 5px",color:m.color,fontSize:13,outline:"none",fontFamily:"inherit",width:"100%",fontWeight:700,textAlign:"center"}}/>}
               <input value={s.reps||""} placeholder="0" onChange={e=>{updateSet(ex.id,s.id,"reps",e.target.value);if(s.done)checkPR(ex.id,s.id,s.load,e.target.value);}}
-                style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"6px 8px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit",width:"100%"}}/>
+                style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"6px 5px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit",width:"100%",textAlign:"center"}}/>
               <input value={s.setNotes||""} placeholder="—" onChange={e=>updateSet(ex.id,s.id,"setNotes",e.target.value)}
                 style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"6px 8px",color:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",width:"100%"}}/>
               <div onClick={()=>{
@@ -676,7 +681,8 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
               <div onClick={()=>removeSet(ex.id,s.id)} style={{color:C.muted,cursor:"pointer",fontSize:16,textAlign:"center"}}>×</div>
               {s.pr&&s.done&&<div style={{gridColumn:"1/-1"}}><Pill color={C.amber}>🏆 New PR!</Pill></div>}
             </div>
-          ))}
+            );
+          })}
         </>
       )}
     </Card>
@@ -744,7 +750,11 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
   // Pre-load a program day when navigated from client profile
   useEffect(()=>{if(initialDay)loadFromDay(initialDay);},[]);
 
-  const addSet=exId=>setExercises(p=>p.map(e=>e.id===exId?{...e,sets:[...e.sets,{id:uid(),load:"",reps:"",setNotes:"",done:false,pr:false}]}:e));
+  const addSet=exId=>setExercises(p=>p.map(e=>{
+    if(e.id!==exId)return e;
+    const last=e.sets[e.sets.length-1];
+    return {...e,sets:[...e.sets,{id:uid(),load:last?last.load:"",reps:last?last.reps:"",setNotes:"",done:false,pr:false}]};
+  }));
   const updateSet=(exId,sid,field,val)=>setExercises(p=>p.map(e=>e.id!==exId?e:{...e,sets:e.sets.map(s=>s.id!==sid?s:{...s,[field]:val})}));
   const removeSet=(exId,sid)=>setExercises(p=>p.map(e=>e.id!==exId?e:{...e,sets:e.sets.filter(s=>s.id!==sid)}));
   const removeEx=exId=>setExercises(p=>p.filter(e=>e.id!==exId));
