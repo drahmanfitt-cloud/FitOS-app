@@ -651,10 +651,10 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
         <div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"10px 0"}}>No sets — <span onClick={()=>addSet(ex.id)} style={{color:C.green,cursor:"pointer"}}>add first set</span></div>
       ):(
         <>
-          <div style={{display:"grid",gridTemplateColumns:hasLoad?`24px 56px 58px 52px 1fr 34px 22px`:`24px 48px 58px 1fr 34px 22px`,gap:6,padding:"0 0 6px",borderBottom:`1px solid ${C.border}`}}>
+          <div style={{display:"grid",gridTemplateColumns:hasLoad?`24px 1fr 60px 54px 96px 34px 22px`:`24px 1fr 60px 96px 34px 22px`,gap:6,padding:"0 0 6px",borderBottom:`1px solid ${C.border}`}}>
             <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>#</div>
             <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Prev</div>
-            {hasLoad&&<div style={{color:m.color,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>{m.label}</div>}
+            {hasLoad&&<div style={{color:m.color,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>{m.label} ({settings.weightUnit})</div>}
             <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Reps</div>
             <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>Notes</div>
             <div style={{color:C.muted,fontSize:10,fontWeight:700}}>✓</div>
@@ -664,7 +664,7 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
             const prevSet=si>0?ex.sets[si-1]:null;
             const prevText=prevSet?(hasLoad?`${prevSet.load||"–"}×${prevSet.reps||"–"}`:`${prevSet.reps||"–"}`):"—";
             return(
-            <div key={s.id} style={{display:"grid",gridTemplateColumns:hasLoad?`24px 56px 58px 52px 1fr 34px 22px`:`24px 48px 58px 1fr 34px 22px`,gap:6,padding:"7px 0",borderBottom:`1px solid ${C.border}`,alignItems:"center",background:s.pr&&s.done?C.amber+"08":"transparent"}}>
+            <div key={s.id} style={{display:"grid",gridTemplateColumns:hasLoad?`24px 1fr 60px 54px 96px 34px 22px`:`24px 1fr 60px 96px 34px 22px`,gap:6,padding:"7px 0",borderBottom:`1px solid ${C.border}`,alignItems:"center",background:s.pr&&s.done?C.amber+"08":"transparent"}}>
               <span style={{color:C.muted,fontSize:13,fontWeight:700}}>{si+1}</span>
               <span title={prevText} style={{color:C.muted,fontSize:11,opacity:0.65,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{prevText}</span>
               {hasLoad&&<input type="number" value={s.load||""} placeholder="0" onChange={e=>{updateSet(ex.id,s.id,"load",e.target.value);if(s.done)checkPR(ex.id,s.id,e.target.value,s.reps);}}
