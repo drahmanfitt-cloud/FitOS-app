@@ -13,8 +13,9 @@ export const Pill = ({children,color=C.green,style:sx={}}) => (
 );
 
 export const Btn = ({children,onClick,variant="primary",color=C.green,disabled,style:sx={}}) => {
-  const s={primary:{background:disabled?C.muted:color,color:"#000",border:"none"},ghost:{background:color+"15",color,border:`1px solid ${color}30`},outline:{background:"transparent",color:C.sub,border:`1px solid ${C.border}`},danger:{background:C.red+"18",color:C.red,border:`1px solid ${C.red}40`}};
-  return <button disabled={disabled} onClick={onClick} style={{...s[variant],borderRadius:8,cursor:disabled?"not-allowed":"pointer",fontWeight:700,fontSize:12,padding:"8px 14px",display:"inline-flex",alignItems:"center",gap:5,opacity:disabled?0.5:1,...sx}}>{children}</button>;
+  const s={primary:{background:disabled?C.muted:color,color:"#000",border:"1px solid transparent"},ghost:{background:color+"15",color,border:`1px solid ${color}30`},outline:{background:"transparent",color:C.sub,border:`1px solid ${C.border}`},danger:{background:C.red+"18",color:C.red,border:`1px solid ${C.red}40`}};
+  const hoverCol={primary:color,ghost:color,outline:C.sub,danger:C.red}[variant];
+  return <button disabled={disabled} onClick={onClick} className="fitos-btn" style={{"--btn-col":hoverCol,...s[variant],borderRadius:8,cursor:disabled?"not-allowed":"pointer",fontWeight:700,fontSize:12,padding:"8px 14px",display:"inline-flex",alignItems:"center",gap:5,opacity:disabled?0.5:1,transition:"background 0.15s,color 0.15s,border-color 0.15s",...sx}}>{children}</button>;
 };
 
 export const NumInput = ({value,onChange,min,max,width=56}) => (
