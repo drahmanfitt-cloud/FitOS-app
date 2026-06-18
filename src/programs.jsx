@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { C, uid, now, clamp, fmt, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
-import { WARMUP_CATS, WarmupItem, WarmupSubsection, WarmupPlanner } from "./warmup.jsx";
+import { WARMUP_CATS, WarmupItem, WarmupSubsection, WarmupPlanner, WarmupPicker } from "./warmup.jsx";
 import { FloorPlanEditor, FollowAlongDisplay, StationRotationDisplay } from "./display.jsx";
 import { ExPicker } from "./catalog.jsx";
 
@@ -391,7 +391,8 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
 // ── Warmup tab embedded inside a program ─────────────────────────────────────
 function ProgramWarmupTab({warmup,setWarmup}){
   const w=warmup||[];
-  const addItem=cat=>setWarmup([...w,{id:uid(),name:`New ${cat.label}`,category:cat.id,holdSec:30,reps:"",resistanceMode:"bodyweight",sidesMode:"none",sides:false,notes:""}]);
+  const [pickCat,setPickCat]=useState(null);
+  const addItem=(cat,name)=>setWarmup([...w,{id:uid(),name:name||`New ${cat.label}`,category:cat.id,holdSec:30,reps:"",resistanceMode:"bodyweight",sidesMode:"none",sides:false,notes:""}]);
   const updateItem=(id,patch)=>setWarmup(w.map(i=>i.id===id?{...i,...patch}:i));
   const removeItem=id=>setWarmup(w.filter(i=>i.id!==id));
   const totalMin=Math.round(w.reduce((a,i)=>a+(i.sidesMode==="both"?(i.holdSec||0)*2:(i.holdSec||0)),0)/60);
@@ -404,7 +405,7 @@ function ProgramWarmupTab({warmup,setWarmup}){
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {WARMUP_CATS.map(cat=>(
-            <button key={cat.id} onClick={()=>addItem(cat)} style={{padding:"5px 10px",borderRadius:7,fontSize:11,fontWeight:700,cursor:"pointer",border:`1px solid ${cat.color}44`,background:cat.color+"18",color:cat.color}}>
+            <button key={cat.id} onClick={()=>setPickCat(cat)} style={{padding:"5px 10px",borderRadius:7,fontSize:11,fontWeight:700,cursor:"pointer",border:`1px solid ${cat.color}44`,background:cat.color+"18",color:cat.color}}>
               + {cat.label.split(" ")[0]}
             </button>
           ))}
@@ -413,11 +414,12 @@ function ProgramWarmupTab({warmup,setWarmup}){
       {WARMUP_CATS.map(cat=>(
         <WarmupSubsection key={cat.id} cat={cat}
           items={w.filter(i=>i.category===cat.id)}
-          onAdd={()=>addItem(cat)}
+          onAdd={()=>setPickCat(cat)}
           onUpdate={updateItem}
           onRemove={removeItem}/>
       ))}
       {w.length===0&&<div style={{textAlign:"center",padding:"32px 0",color:C.muted,fontSize:13}}>Plan your warmup — add stretching, mobility, and sport-specific exercises.</div>}
+      {pickCat&&<Modal title={`Add ${pickCat.label}`} onClose={()=>setPickCat(null)}><WarmupPicker catId={pickCat.id} color={pickCat.color} onPick={name=>{addItem(pickCat,name);setPickCat(null);}} onClose={()=>setPickCat(null)}/></Modal>}
     </div>
   );
 }

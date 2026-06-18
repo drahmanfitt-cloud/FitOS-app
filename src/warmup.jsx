@@ -1,7 +1,7 @@
 // FitOS — Warmup components
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { C, uid, fmt } from "./config.js";
-import { Pill, Btn, Card, SL } from "./ui.jsx";
+import { Pill, Btn, Card, SL, Modal } from "./ui.jsx";
 
 // WARMUP + FLOOR PLAN + CLASS DISPLAY MODES (from preview)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -19,6 +19,39 @@ const RESISTANCE_MODES = [
   {value:"resisted",  label:"Resisted",  color:C.amber},
   {value:"assisted",  label:"Assisted",  color:C.purple},
 ];
+
+// Built-in warmup movement library, keyed by category. Searched by WarmupPicker;
+// any name not in the list can still be added as a custom entry.
+const WARMUP_LIBRARY = {
+  stretching:["Hamstring Stretch","Hip Flexor Stretch","Quad Stretch","Standing Calf Stretch","Chest Doorway Stretch","Cross-Body Shoulder Stretch","Overhead Triceps Stretch","Seated Forward Fold","Butterfly Stretch","Pigeon Pose","Child's Pose","Cobra Stretch","Couch Stretch","Lat Stretch","Neck Side Stretch","Figure-4 Glute Stretch","90/90 Hip Stretch","World's Greatest Stretch","Frog Stretch","Thread the Needle"],
+  mobility:["Cat-Cow","Hip Circles","Arm Circles","Leg Swings","Ankle Circles","Thoracic Rotation","Shoulder Dislocates","Spider-Man Lunge","Inchworm","Scapular Push-Up","Wrist Circles","Neck Rolls","Hip Airplane","Deep Squat Hold","Bird Dog","Dead Bug","Glute Bridge","Fire Hydrant","Walking Knee Hug","Open the Gate"],
+  "foam-rolling":["Quads","IT Band","Calves","Hamstrings","Glutes","Upper Back (T-Spine)","Lats","Adductors","Peroneals","Tibialis Anterior","Piriformis","Pecs","Plantar Fascia (Ball)","Forearms","Thoracic Spine"],
+  sport:["Band Pull-Apart","A-Skips","B-Skips","High Knees","Butt Kicks","Carioca","Bounding","Pogo Hops","Lateral Shuffle","Sprint Build-Up","Med Ball Slam","Box Jump","Broad Jump","Jump Rope","Power Skip","Plyo Lunge"],
+};
+
+// Lookup picker for warmup movements — mirrors the exercise ExPicker:
+// search the category's library, or type a custom name. catId may be a
+// WARMUP_CATS id (stretching/mobility/foam-rolling/sport) or "sport-specific".
+function WarmupPicker({catId,color=C.purple,onPick,onClose}){
+  const [q,setQ]=useState("");
+  const key=catId==="sport-specific"?"sport":catId;
+  const list=WARMUP_LIBRARY[key]||[];
+  const hits=list.filter(e=>e.toLowerCase().includes(q.toLowerCase()));
+  const exists=q&&list.some(n=>n.toLowerCase()===q.toLowerCase().trim());
+  const choose=name=>{onPick(name);onClose?.();};
+  const chooseCustom=()=>{const clean=q.trim();if(!clean)return;onPick(clean);onClose?.();};
+  return(
+    <div>
+      <input autoFocus value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&q.trim()){if(exists){choose(hits[0]);}else chooseCustom();}}} placeholder="Search or type custom name…"
+        style={{width:"100%",background:C.s2,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit",marginBottom:10}}/>
+      <div style={{maxHeight:260,overflowY:"auto",display:"flex",flexDirection:"column",gap:2}}>
+        {q&&!exists&&<div onClick={chooseCustom} style={{padding:"8px 10px",borderRadius:7,cursor:"pointer",color:C.text,fontSize:13,display:"flex",gap:8,alignItems:"center"}}><Pill color={color}>custom</Pill>{q}</div>}
+        {hits.map(e=><div key={e} onClick={()=>choose(e)} style={{padding:"8px 10px",borderRadius:7,cursor:"pointer",color:C.text,fontSize:13}} onMouseEnter={el=>el.currentTarget.style.background=C.s2} onMouseLeave={el=>el.currentTarget.style.background="transparent"}>{e}</div>)}
+        {hits.length===0&&!q&&<div style={{padding:"10px",color:C.muted,fontSize:12,textAlign:"center"}}>Type to search the library…</div>}
+      </div>
+    </div>
+  );
+}
 
 function WarmupItem({item,onUpdate,onRemove}){
   const [expanded,setExpanded]=useState(false);
@@ -201,8 +234,9 @@ function ProgramBuilderPreview(){
 // Mirrors the Log Session warmup panel but without live timers.
 function WarmupPlanner({warmup,setWarmup,title="Warmup & Mobility",defaultOpen=true}){
   const [open,setOpen]=useState(defaultOpen);
+  const [pickCat,setPickCat]=useState(null);
   const w=warmup||[];
-  const addItem=cat=>setWarmup([...w,{id:uid(),name:`New ${cat.label}`,category:cat.id,holdSec:30,reps:"",resistanceMode:"bodyweight",sidesMode:"none",notes:""}]);
+  const addItem=(cat,name)=>setWarmup([...w,{id:uid(),name:name||`New ${cat.label}`,category:cat.id,holdSec:30,reps:"",resistanceMode:"bodyweight",sidesMode:"none",notes:""}]);
   const updateItem=(id,patch)=>setWarmup(w.map(i=>i.id===id?{...i,...patch}:i));
   const removeItem=id=>setWarmup(w.filter(i=>i.id!==id));
   const totalSec=w.reduce((a,i)=>a+(i.sidesMode==="both"?(i.holdSec||0)*2:(i.holdSec||0)),0);
@@ -225,18 +259,19 @@ function WarmupPlanner({warmup,setWarmup,title="Warmup & Mobility",defaultOpen=t
           {WARMUP_CATS.map(cat=>{
             const items=w.filter(i=>i.category===cat.id);
             if(items.length===0)return null;
-            return <WarmupSubsection key={cat.id} cat={cat} items={items} onAdd={()=>addItem(cat)} onUpdate={updateItem} onRemove={removeItem}/>;
+            return <WarmupSubsection key={cat.id} cat={cat} items={items} onAdd={()=>setPickCat(cat)} onUpdate={updateItem} onRemove={removeItem}/>;
           })}
           {w.length===0&&<div style={{textAlign:"center",padding:"14px 0 18px",color:C.muted,fontSize:13}}>Add foam rolling, stretching, mobility, or sport-specific prep below.</div>}
           <div style={{display:"flex",gap:8,marginTop:w.length?12:0,paddingTop:w.length?12:0,borderTop:w.length?`1px solid ${C.border}`:"none",flexWrap:"wrap"}}>
             {WARMUP_CATS.map(cat=>(
-              <Btn key={cat.id} variant="ghost" color={cat.color} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem(cat)}>+ {cat.label}</Btn>
+              <Btn key={cat.id} variant="ghost" color={cat.color} style={{padding:"6px 12px",fontSize:11}} onClick={()=>setPickCat(cat)}>+ {cat.label}</Btn>
             ))}
           </div>
         </div>
       )}
+      {pickCat&&<Modal title={`Add ${pickCat.label}`} onClose={()=>setPickCat(null)}><WarmupPicker catId={pickCat.id} color={pickCat.color} onPick={name=>{addItem(pickCat,name);setPickCat(null);}} onClose={()=>setPickCat(null)}/></Modal>}
     </div>
   );
 }
 
-export { WARMUP_CATS, RESISTANCE_MODES, WarmupItem, WarmupSubsection, WarmupPlanner };
+export { WARMUP_CATS, RESISTANCE_MODES, WARMUP_LIBRARY, WarmupItem, WarmupSubsection, WarmupPlanner, WarmupPicker };

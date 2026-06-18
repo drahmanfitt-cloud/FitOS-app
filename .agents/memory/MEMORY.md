@@ -1,3 +1,4 @@
 - [Cross-module helper import crashes](missing-imports-pattern.md) — FitOS recurring "Can't find variable: X" runtime crash; helper used but not imported/exported. After cross-module helper edits, verify export+import. HMR Fast Refresh warnings are benign.
 - [Supabase no-DDL persistence](supabase-no-ddl-persistence.md) — anon-key only, can't ALTER TABLE; map missing cols to defaults, write optimistically with try/catch + toast, hand user the SQL to add columns.
 - [ClassFormat per-type station lists](classformat-per-type-stations.md) — hiit/yoga/mobility each keep own list by tagging each station w/ classType in existing stations jsonb (no migration); persisted totalDuration must span ALL stations, not active type.
+- [Warmup editing surfaces](warmup-editing-surfaces.md) — 3 real warmup editors (session/format/program) use WarmupPicker+WARMUP_LIBRARY lookup; warmup.jsx ProgramWarmupTab/ProgramBuilderPreview are dead preview code.

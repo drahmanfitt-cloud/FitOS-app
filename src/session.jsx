@@ -4,6 +4,7 @@ import { C, uid, now, fmtDate, fmt } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, NumInput } from "./ui.jsx";
 import { DEFAULT_SETTINGS, ResistanceToggle, Toggle, modeFor } from "./clients.jsx";
 import { ExPicker } from "./catalog.jsx";
+import { WarmupPicker } from "./warmup.jsx";
 
 // SETTINGS PANEL
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -494,8 +495,10 @@ function WarmupSubsection({label,color,icon,items,onAdd,onRemoveAll,renderItem})
 
 function WarmupSection({warmup,setWarmup,settings,onRestStart}){
   const [open,setOpen]=useState(false);
+  const [pickCat,setPickCat]=useState(null);
   const NEW_NAMES={stretching:"Stretch",mobility:"Mobility","foam-rolling":"Foam Rolling","sport-specific":"Sport Specific"};
-  const addItem=cat=>setWarmup(w=>[...w,{id:uid(),name:`New ${NEW_NAMES[cat]||cat}`,category:cat==='sport-specific'?'mobility':cat,purpose:cat==='sport-specific'?'sport-specific':'',holdSec:settings.defaultWarmupHoldSec,reps:settings.defaultWarmupReps,resistanceMode:settings.defaultWarmupResistance,resistanceVal:"",sides:false,description:"",expanded:true}]);
+  const CAT_COLORS={stretching:C.purple,mobility:C.teal,"foam-rolling":C.blue,"sport-specific":C.amber};
+  const addItem=(cat,name)=>setWarmup(w=>[...w,{id:uid(),name:name||`New ${NEW_NAMES[cat]||cat}`,category:cat==='sport-specific'?'mobility':cat,purpose:cat==='sport-specific'?'sport-specific':'',holdSec:settings.defaultWarmupHoldSec,reps:settings.defaultWarmupReps,resistanceMode:settings.defaultWarmupResistance,resistanceVal:"",sides:false,description:"",expanded:true}]);
   const updateItem=(id,patch)=>setWarmup(w=>w.map(i=>i.id===id?{...i,...patch}:i));
   const removeItem=id=>setWarmup(w=>w.filter(i=>i.id!==id));
   const stretches=warmup.filter(i=>i.category==="stretching");
@@ -526,7 +529,7 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
           <WarmupSubsection
             label="Stretching" color={C.purple} icon="🧘"
             items={stretches}
-            onAdd={()=>addItem("stretching")}
+            onAdd={()=>setPickCat("stretching")}
             onRemoveAll={(id,mode)=>{if(mode==="last")removeItem(id);else setWarmup(w=>w.filter(i=>i.category!=="stretching"));}}
             renderItem={item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>}
           />
@@ -537,7 +540,7 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
           <WarmupSubsection
             label="Mobility" color={C.teal} icon="🔄"
             items={mobility.filter(i=>i.purpose!=="sport-specific")}
-            onAdd={()=>addItem("mobility")}
+            onAdd={()=>setPickCat("mobility")}
             onRemoveAll={(id,mode)=>{if(mode==="last")removeItem(id);else setWarmup(w=>w.filter(i=>!(i.category==="mobility"&&i.purpose!=="sport-specific")));}}
             renderItem={item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>}
           />
@@ -548,7 +551,7 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
           <WarmupSubsection
             label="Foam Rolling" color={C.blue} icon="🌀"
             items={warmup.filter(i=>i.category==="foam-rolling")}
-            onAdd={()=>addItem("foam-rolling")}
+            onAdd={()=>setPickCat("foam-rolling")}
             onRemoveAll={(id,mode)=>{if(mode==="last")removeItem(id);else setWarmup(w=>w.filter(i=>i.category!=="foam-rolling"));}}
             renderItem={item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>}
           />
@@ -559,7 +562,7 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
           <WarmupSubsection
             label="Sport Specific" color={C.amber} icon="⚡"
             items={warmup.filter(i=>i.purpose==="sport-specific")}
-            onAdd={()=>addItem("sport-specific")}
+            onAdd={()=>setPickCat("sport-specific")}
             onRemoveAll={(id,mode)=>{if(mode==="last")removeItem(id);else setWarmup(w=>w.filter(i=>i.purpose!=="sport-specific"));}}
             renderItem={item=><WarmupItem key={item.id} item={item} onUpdate={p=>updateItem(item.id,p)} onRemove={()=>removeItem(item.id)} settings={settings} onRestStart={onRestStart}/>}
           />
@@ -569,14 +572,15 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
 
           {/* ── Bottom add bar ── */}
           <div style={{display:"flex",gap:8,marginTop:16,paddingTop:14,borderTop:`1px solid ${C.border}`,flexWrap:"wrap"}}>
-            <Btn variant="ghost" color={C.purple} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem("stretching")}>+ Stretch</Btn>
-            <Btn variant="ghost" color={C.teal} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem("mobility")}>+ Mobility</Btn>
-            <Btn variant="ghost" color={C.blue} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem("foam-rolling")}>+ Foam Roll</Btn>
-            <Btn variant="ghost" color={C.amber} style={{padding:"6px 12px",fontSize:11}} onClick={()=>addItem("sport-specific")}>+ Sport Specific</Btn>
+            <Btn variant="ghost" color={C.purple} style={{padding:"6px 12px",fontSize:11}} onClick={()=>setPickCat("stretching")}>+ Stretch</Btn>
+            <Btn variant="ghost" color={C.teal} style={{padding:"6px 12px",fontSize:11}} onClick={()=>setPickCat("mobility")}>+ Mobility</Btn>
+            <Btn variant="ghost" color={C.blue} style={{padding:"6px 12px",fontSize:11}} onClick={()=>setPickCat("foam-rolling")}>+ Foam Roll</Btn>
+            <Btn variant="ghost" color={C.amber} style={{padding:"6px 12px",fontSize:11}} onClick={()=>setPickCat("sport-specific")}>+ Sport Specific</Btn>
             <Btn variant="ghost" color={C.sub} style={{padding:"6px 12px",fontSize:11}} onClick={()=>setWarmup(DEFAULT_STRETCHES_FACTORY())}>Load defaults</Btn>
           </div>
         </div>
       )}
+      {pickCat&&<Modal title={`Add ${NEW_NAMES[pickCat]||pickCat}`} onClose={()=>setPickCat(null)}><WarmupPicker catId={pickCat} color={CAT_COLORS[pickCat]} onPick={name=>{addItem(pickCat,name);setPickCat(null);}} onClose={()=>setPickCat(null)}/></Modal>}
     </div>
   );
 }
