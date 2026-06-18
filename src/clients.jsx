@@ -143,19 +143,19 @@ function GoalEditor({initial,onSave,onClose}){
   );
 }
 
-function Sparkline({data,color,height=48}){
+function Sparkline({data,color,height=56}){
   if(!data||data.length<2)return null;
-  const W=300;
+  const W=300,PAD=6;
   const vals=data.map(d=>Number(d.weight)||0);
   const min=Math.min(...vals),max=Math.max(...vals),span=(max-min)||1;
-  const pts=data.map((d,i)=>{
-    const x=(i/(data.length-1))*W;
-    const y=height-4-((Number(d.weight)-min)/span)*(height-8);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
+  const X=i=>PAD+(i/(data.length-1))*(W-PAD*2);
+  const Y=v=>PAD+(1-(v-min)/span)*(height-PAD*2);
+  const line=data.map((d,i)=>`${X(i).toFixed(1)},${Y(Number(d.weight)).toFixed(1)}`).join(" ");
+  const area=`${PAD.toFixed(1)},${(height-PAD).toFixed(1)} ${line} ${(W-PAD).toFixed(1)},${(height-PAD).toFixed(1)}`;
   return(
-    <svg width="100%" viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" style={{display:"block",overflow:"visible"}}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+    <svg width="100%" viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" style={{display:"block"}}>
+      <polygon points={area} fill={color} opacity="0.13"/>
+      <polyline points={line} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
     </svg>
   );
 }
@@ -213,32 +213,32 @@ function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient,
           <Btn onClick={()=>setView("sessions")}>+ Log Session</Btn>
         </div>
       </Card>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
-        <Card style={{textAlign:"center",padding:16}}>
-          <div style={{color:C.muted,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Sessions</div>
-          <div style={{color:C.green,fontWeight:800,fontSize:22}}>{clientSessions.length}</div>
-          <div style={{color:C.sub,fontSize:11,marginTop:2}}>{totalReps.toLocaleString()} reps logged</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,alignItems:"start"}}>
+        <Card style={{textAlign:"center",padding:"11px 10px"}}>
+          <div style={{color:C.muted,fontSize:10,textTransform:"uppercase",letterSpacing:"0.05em"}}>Sessions</div>
+          <div style={{color:C.green,fontWeight:800,fontSize:19,lineHeight:1.2}}>{clientSessions.length}</div>
+          <div style={{color:C.sub,fontSize:10}}>{totalReps.toLocaleString()} reps</div>
         </Card>
-        <Card style={{textAlign:"center",padding:16}}>
-          <div style={{color:C.muted,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Consistency</div>
-          <div style={{color:C.amber,fontWeight:800,fontSize:22}}>{perWeek.toFixed(1)}<span style={{fontSize:12,color:C.muted,fontWeight:600}}> /wk</span></div>
-          <div style={{color:C.sub,fontSize:11,marginTop:2}}>{streak>0?`🔥 ${streak} wk streak`:"No active streak"}</div>
+        <Card style={{textAlign:"center",padding:"11px 10px"}}>
+          <div style={{color:C.muted,fontSize:10,textTransform:"uppercase",letterSpacing:"0.05em"}}>Consistency</div>
+          <div style={{color:C.amber,fontWeight:800,fontSize:19,lineHeight:1.2}}>{perWeek.toFixed(1)}<span style={{fontSize:11,color:C.muted,fontWeight:600}}>/wk</span></div>
+          <div style={{color:C.sub,fontSize:10}}>{streak>0?`🔥 ${streak} wk`:"No streak"}</div>
           {prog?(
-            <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
-              <div style={{color:C.text,fontSize:12,fontWeight:600}}>{programLogged}<span style={{color:C.muted,fontWeight:400}}> / {programmedTotal} programmed</span></div>
-              <div style={{height:6,borderRadius:99,background:C.s2,overflow:"hidden",margin:"5px 0 3px"}}>
+            <div style={{marginTop:7,paddingTop:7,borderTop:`1px solid ${C.border}`}}>
+              <div style={{color:C.text,fontSize:11,fontWeight:600}}>{programLogged}<span style={{color:C.muted,fontWeight:400}}>/{programmedTotal} <span style={{fontSize:9}}>prog</span></span></div>
+              <div style={{height:5,borderRadius:99,background:C.s2,overflow:"hidden",margin:"4px 0 2px"}}>
                 <div style={{height:"100%",width:`${adherence}%`,background:C.amber,borderRadius:99,transition:"width 0.3s"}}/>
               </div>
-              <div style={{color:C.muted,fontSize:10}}>{Math.round(adherence)}% logged</div>
+              <div style={{color:C.muted,fontSize:9}}>{Math.round(adherence)}% logged</div>
             </div>
           ):(
-            <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${C.border}`,color:C.muted,fontSize:10}}>No program assigned</div>
+            <div style={{marginTop:7,paddingTop:7,borderTop:`1px solid ${C.border}`,color:C.muted,fontSize:9}}>No program</div>
           )}
         </Card>
-        <Card style={{textAlign:"center",padding:16}}>
-          <div style={{color:C.muted,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Activity</div>
-          <div style={{color:C.blue,fontWeight:800,fontSize:15}}>{clientSessions[0]?fmtDate(clientSessions[0].startedAt):"Never"}</div>
-          <div style={{color:C.sub,fontSize:11,marginTop:3}}>Client since {fmtDate(client.createdAt)}</div>
+        <Card style={{textAlign:"center",padding:"11px 10px"}}>
+          <div style={{color:C.muted,fontSize:10,textTransform:"uppercase",letterSpacing:"0.05em"}}>Activity</div>
+          <div style={{color:C.blue,fontWeight:800,fontSize:14,lineHeight:1.3}}>{clientSessions[0]?fmtDate(clientSessions[0].startedAt):"Never"}</div>
+          <div style={{color:C.sub,fontSize:10}}>since {fmtDate(client.createdAt)}</div>
         </Card>
       </div>
 
@@ -286,10 +286,19 @@ function ClientProfile({client,sessions,programs,onEdit,setView,setActiveClient,
             </span>
           )}
         </div>
-        {bw.length>=2&&<div style={{marginBottom:14}}><Sparkline data={bw} color={C.teal}/></div>}
-        <div style={{display:"flex",gap:8,alignItems:"flex-end",marginBottom:bw.length?14:0}}>
-          <div style={{width:160}}><Input label="Date" value={wDate} onChange={setWDate} type="date"/></div>
-          <div style={{flex:1}}><Input label="Weight (kg)" value={wVal} onChange={setWVal} type="number" placeholder="e.g. 72.5"/></div>
+        {bw.length>=2&&(
+          <div style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 12px 8px",marginBottom:14}}>
+            <Sparkline data={bw} color={C.teal}/>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:6,color:C.muted,fontSize:10}}>
+              <span>{fmtDate(bw[0].date)}</span>
+              <span>range {Math.min(...bw.map(e=>e.weight))}–{Math.max(...bw.map(e=>e.weight))} kg</span>
+              <span>{fmtDate(bw[bw.length-1].date)}</span>
+            </div>
+          </div>
+        )}
+        <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap",marginBottom:bw.length?14:0}}>
+          <div style={{width:150}}><Input label="Date" value={wDate} onChange={setWDate} type="date"/></div>
+          <div style={{flex:1,minWidth:120}}><Input label="Weight (kg)" value={wVal} onChange={setWVal} type="number" placeholder="e.g. 72.5"/></div>
           <Btn color={C.teal} onClick={addWeight}>Log</Btn>
         </div>
         {bw.length>0&&(
