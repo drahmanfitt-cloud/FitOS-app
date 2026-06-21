@@ -65,6 +65,24 @@ create policy "catalog_authenticated" on fitos_catalog
   for all using (auth.uid() is not null) with check (auth.uid() is not null);
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- 8. Reusable Workouts (standalone, droppable into programs / loadable into sessions)
+create table if not exists fitos_workouts (
+  id text primary key,
+  name text not null,
+  focus text default '',
+  warmup jsonb default '[]',
+  exercises jsonb default '[]',
+  trainer_id uuid references auth.users(id),
+  created_at timestamptz default now()
+);
+
+alter table fitos_workouts add column if not exists trainer_id uuid references auth.users(id);
+alter table fitos_workouts enable row level security;
+drop policy if exists "public_all" on fitos_workouts;
+create policy "trainer_own" on fitos_workouts
+  for all using (auth.uid() = trainer_id) with check (auth.uid() = trainer_id);
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- GOOGLE OAUTH (manual step — do this in the Supabase Dashboard):
 -- Authentication → Providers → Google → Enable
 -- Paste in your Google OAuth Client ID and Secret

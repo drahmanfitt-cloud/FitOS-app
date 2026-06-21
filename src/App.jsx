@@ -1,6 +1,6 @@
 // FitOS — Root App
 import React, { useState, useEffect, useRef } from "react";
-import { C, uid, now, fmtDate, db, supabase, mapClient, mapSession, mapClass, mapProgram, mapFormat, mapCatalog, TAG_COLORS } from "./config.js";
+import { C, uid, now, fmtDate, db, supabase, mapClient, mapSession, mapClass, mapProgram, mapFormat, mapWorkout, mapCatalog, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Modal, useToast, Toast, ErrorBoundary } from "./ui.jsx";
 import { ClientsScreen, ClientProfile } from "./clients.jsx";
 import { SessionLogger } from "./session.jsx";
@@ -177,6 +177,7 @@ export default function App(){
   const [classes,setClasses]=useState([]);
   const [programs,setPrograms]=useState([]);
   const [formats,setFormats]=useState([]);
+  const [workouts,setWorkouts]=useState([]);
   const [activeClient,setActiveClient]=useState(null);
   const [toasts,toast]=useToast();
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
@@ -274,6 +275,9 @@ export default function App(){
       setPrograms(p.map(mapProgram));
       setFormats(f.map(mapFormat));
       setCatalogExercises(cat.map(mapCatalog));
+      // Workouts load separately so a missing fitos_workouts table (migration not run yet) never breaks the rest.
+      try{ const wk=await db.select("fitos_workouts"); setWorkouts(wk.map(mapWorkout)); }
+      catch(wErr){ console.warn("Workouts table not ready (run the migration):", wErr.message); }
       // Auto-preload the shared catalog the first time it's empty
       if(cat.length===0 && !seededRef.current){
         seededRef.current=true;
@@ -314,11 +318,12 @@ export default function App(){
     ]);
     setClients(c.map(mapClient));setSessions(s.map(mapSession));setClasses(cl.map(mapClass));
     setPrograms(p.map(mapProgram));setFormats(f.map(mapFormat));
+    try{ const wk=await db.select("fitos_workouts"); setWorkouts(wk.map(mapWorkout)); }catch(wErr){ console.warn("Workouts table not ready:", wErr.message); }
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setClients([]);setSessions([]);setClasses([]);setPrograms([]);setFormats([]);setCatalogExercises([]);
+    setClients([]);setSessions([]);setClasses([]);setPrograms([]);setFormats([]);setWorkouts([]);setCatalogExercises([]);
     setView("dashboard");setActiveClient(null);setShowProfileEditor(false);
   };
 
@@ -473,6 +478,26 @@ export default function App(){
     setFormats(fs=>fs.filter(f=>f.id!==id)); toast("Format deleted","error");
   };
 
+  // ── Workout CRUD (standalone reusable workouts)
+  const addWorkout=async w=>{
+    const row={id:w.id,name:w.name,focus:w.focus||"",warmup:w.warmup||[],exercises:w.exercises||[]};
+    try{
+      const r=await db.insert("fitos_workouts",row);
+      setWorkouts(ws=>[mapWorkout(r),...ws]); toast("Workout created ✓");
+    }catch(e){
+      console.error("add workout failed",e);
+      toast("Couldn't save workout — run the migration in supabase_setup.sql","error");
+    }
+  };
+  const updateWorkout=(id,w)=>{
+    setWorkouts(ws=>ws.map(wk=>wk.id===id?{...wk,...w}:wk));   // optimistic
+    queueWrite("fitos_workouts",id,{name:w.name,focus:w.focus||"",warmup:w.warmup||[],exercises:w.exercises||[]});
+  };
+  const deleteWorkout=async id=>{
+    await db.delete("fitos_workouts",id);
+    setWorkouts(ws=>ws.filter(w=>w.id!==id)); toast("Workout deleted","error");
+  };
+
   // ── Catalog CRUD
   const addCatalogExercise=async f=>{
     const row={id:uid(),name:f.name,category:f.category,muscles:f.muscles||[],equipment:f.equipment,difficulty:f.difficulty,purpose:f.purpose||"",instructions:f.instructions||"",video_url:f.videoUrl||"",trainer_notes:f.trainerNotes||"",tags:f.tags||[],photo_base64:f.photoBase64||""};
@@ -576,9 +601,9 @@ export default function App(){
           {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient} onLogDay={day=>{setPreloadDay(day);setView("sessions");}} onUpdateGoals={updateClientGoals} onUpdateBodyweight={updateClientBodyweight}/>}
-          {view==="sessions"&&<ErrorBoundary><SessionLogger clients={clients} sessions={sessions} onSave={addSession} activeClient={activeClient} programs={programs} initialDay={preloadDay} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/></ErrorBoundary>}
+          {view==="sessions"&&<ErrorBoundary><SessionLogger clients={clients} sessions={sessions} onSave={addSession} activeClient={activeClient} programs={programs} workouts={workouts} initialDay={preloadDay} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/></ErrorBoundary>}
           {view==="classes"&&<ClassesScreen clients={clients} classes={classes} onAdd={addClass} onAddSeries={addClassSeries} onEdit={editClass} onDelete={deleteClass} onDeleteSeries={deleteClassSeries} formats={formats} mobile={mobile}/>}
-          {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass} mobile={mobile} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/>}
+          {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} workouts={workouts} onSaveWorkout={addWorkout} onUpdateWorkout={updateWorkout} onDeleteWorkout={deleteWorkout} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass} mobile={mobile} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/>}
           {view==="catalog"&&<ExerciseCatalogScreen catalogExercises={catalogExercises} onAdd={addCatalogExercise} onEdit={editCatalogExercise} onDelete={deleteCatalogExercise} onSeed={seedCatalogExercises} sessions={sessions} clients={clients}/>}
         </main>
       </div>

@@ -16,11 +16,12 @@ const CLASS_TYPES=[
   {id:"mobility", toggle:"🤸 Mobility", color:C.teal,   item:"Movement", items:"Movements",            empty:"No movements yet.", lead:"Lead Movement", timer:false},
 ];
 
-function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClient,mobile,catalog,onAddToCatalog}){
+function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClient,mobile,catalog,onAddToCatalog,workouts=[]}){
   const [selected,setSelected]=useState(null);
   const [confirm,setConfirm]=useState(null);
   const [modal,setModal]=useState(null);
   const [exPicker,setExPicker]=useState(null);
+  const [wkPicker,setWkPicker]=useState(null); // day id awaiting a workout pick
   const prog=programs.find(p=>p.id===selected);
 
   const create=async()=>{
@@ -32,6 +33,13 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
   const updDay=(did,patch)=>upd({days:prog.days.map(d=>d.id===did?{...d,...patch}:d)});
   const rmDay=did=>upd({days:prog.days.filter(d=>d.id!==did)});
   const addEx=(did,name)=>updDay(did,{exercises:[...(prog.days.find(d=>d.id===did)?.exercises||[]),{id:uid(),name,sets:3,reps:"8-12",rest:90,notes:""}]});
+  const addWorkoutToDay=(did,wk)=>{
+    const day=prog.days.find(d=>d.id===did); if(!day)return;
+    const copiedEx=(wk.exercises||[]).map(e=>({id:uid(),name:e.name,sets:e.sets??3,reps:e.reps??"8-12",rest:e.rest??90,notes:e.notes||""}));
+    const copiedWarm=(wk.warmup||[]).map(w=>({...w,id:uid()}));
+    updDay(did,{exercises:[...(day.exercises||[]),...copiedEx],warmup:[...(day.warmup||[]),...copiedWarm]});
+    setWkPicker(null);
+  };
   const updEx=(did,eid,patch)=>updDay(did,{exercises:prog.days.find(d=>d.id===did).exercises.map(e=>e.id===eid?{...e,...patch}:e)});
   const rmEx=(did,eid)=>updDay(did,{exercises:prog.days.find(d=>d.id===did).exercises.filter(e=>e.id!==eid)});
   const mvEx=(did,eid,dir)=>{
@@ -103,11 +111,32 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
               </div>
             </div>
           ))}
-          <Btn variant="ghost" color={C.purple} style={{padding:"5px 12px",fontSize:11,marginTop:4}} onClick={()=>setExPicker(day.id)}>+ Add Exercise</Btn>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
+            <Btn variant="ghost" color={C.purple} style={{padding:"5px 12px",fontSize:11}} onClick={()=>setExPicker(day.id)}>+ Add Exercise</Btn>
+            <Btn variant="ghost" color={C.blue} style={{padding:"5px 12px",fontSize:11}} onClick={()=>setWkPicker(day.id)}>+ Add Workout</Btn>
+          </div>
         </Card>
       ))}
       <Btn variant="ghost" color={C.purple} onClick={addDay}>+ Add Training Day</Btn>
       {exPicker&&<Modal title="Add Exercise" onClose={()=>setExPicker(null)}><ExPicker onPick={name=>{addEx(exPicker,name);setExPicker(null);}} onClose={()=>setExPicker(null)} catalog={catalog} onAddToCatalog={onAddToCatalog}/></Modal>}
+      {wkPicker&&(
+        <Modal title="Add a Workout to this Day" onClose={()=>setWkPicker(null)} wide>
+          <p style={{color:C.sub,fontSize:13,marginBottom:14}}>Its exercises and warmup get copied into the day — edit them here without affecting the saved workout.</p>
+          {workouts.length===0?<div style={{color:C.muted,textAlign:"center",padding:24}}>No saved workouts yet. Build one in the Workouts tab first.</div>:(
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {workouts.map(wk=>(
+                <div key={wk.id} onClick={()=>addWorkoutToDay(wkPicker,wk)} style={{background:C.s2,borderRadius:10,padding:"12px 14px",border:`1px solid ${C.border}`,cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.borderColor=C.blue} onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div><div style={{color:C.text,fontWeight:700,fontSize:14}}>{wk.name}</div><div style={{color:C.muted,fontSize:11,marginTop:2}}>{wk.focus?`${wk.focus} · `:""}{(wk.exercises||[]).length} exercise{(wk.exercises||[]).length!==1?"s":""}{(wk.warmup||[]).length?` · ${wk.warmup.length} warmup`:""}</div></div>
+                    <span style={{color:C.blue,fontSize:18}}>+</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:16}}><Btn onClick={()=>setWkPicker(null)}>Done</Btn></div>
+        </Modal>
+      )}
       {modal==="assign"&&(
         <Modal title={`Assign "${prog.name}"`} onClose={()=>setModal(null)} wide>
           <p style={{color:C.sub,fontSize:13,marginBottom:16}}>Assign this program to clients so they can load sessions from it.</p>
@@ -388,16 +417,112 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
   );
 }
 
-function ProgramsHub({programs,onSaveProgram,onUpdateProgram,onDeleteProgram,formats,onSaveFormat,onUpdateFormat,onDeleteFormat,clients,onUpdateClient,classes,onUpdateClass,mobile,catalog,onAddToCatalog}){
+// ── Standalone reusable Workout builder ──────────────────────────────────────
+function WorkoutBuilder({workouts,onSave,onUpdate,onDelete,mobile,catalog,onAddToCatalog}){
+  const [selected,setSelected]=useState(null);
+  const [confirm,setConfirm]=useState(null);
+  const [exPicker,setExPicker]=useState(false);
+  const wk=workouts.find(w=>w.id===selected);
+
+  const create=async()=>{
+    const w={id:uid(),name:"New Workout",focus:"",warmup:[],exercises:[],createdAt:now()};
+    await onSave(w); setSelected(w.id);
+  };
+  const upd=patch=>onUpdate(wk.id,{...wk,...patch});
+  const addEx=name=>upd({exercises:[...(wk.exercises||[]),{id:uid(),name,sets:3,reps:"8-12",rest:90,notes:""}]});
+  const updEx=(eid,patch)=>upd({exercises:wk.exercises.map(e=>e.id===eid?{...e,...patch}:e)});
+  const rmEx=eid=>upd({exercises:wk.exercises.filter(e=>e.id!==eid)});
+  const mvEx=(eid,dir)=>{
+    const arr=[...(wk.exercises||[])]; const i=arr.findIndex(e=>e.id===eid); const ni=clamp(i+dir,0,arr.length-1);
+    if(ni===i)return; [arr[i],arr[ni]]=[arr[ni],arr[i]]; upd({exercises:arr});
+  };
+
+  const renderEditor=()=>!wk?null:(
+    <div style={{display:"flex",flexDirection:"column",gap:14,overflowY:"auto",padding:"2px 6px 20px 2px",minHeight:0}}>
+      {mobile&&<Btn variant="outline" style={{alignSelf:"flex-start",padding:"6px 12px",fontSize:12}} onClick={()=>setSelected(null)}>← All Workouts</Btn>}
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+          <SL>Workout Details</SL>
+          <Btn variant="danger" style={{padding:"5px 10px",fontSize:11}} onClick={()=>setConfirm(wk.id)}>Delete</Btn>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"2fr 1fr",gap:12}}>
+          <Input label="Workout name" value={wk.name} onChange={v=>upd({name:v})} required/>
+          <Input label="Focus / tag" value={wk.focus} onChange={v=>upd({focus:v})} placeholder="Push, Full Body…"/>
+        </div>
+      </Card>
+      <WarmupPlanner warmup={wk.warmup||[]} setWarmup={w=>upd({warmup:w})}/>
+      <Card>
+        <div style={{color:C.muted,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Exercises</div>
+        {(wk.exercises||[]).length===0&&<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"8px 0",marginBottom:8}}>No exercises yet.</div>}
+        {(wk.exercises||[]).map(ex=>(
+          <div key={ex.id} style={{background:C.s2,borderRadius:9,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.border}`}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                <button onClick={()=>mvEx(ex.id,-1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▲</button>
+                <button onClick={()=>mvEx(ex.id,1)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12,lineHeight:1,padding:0}}>▼</button>
+              </div>
+              <span style={{color:C.text,fontWeight:600,fontSize:13,flex:1}}>{ex.name}</span>
+              <button onClick={()=>rmEx(ex.id)} style={{background:"none",border:"none",color:C.muted,fontSize:16,cursor:"pointer",lineHeight:1}}>×</button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:mobile?"1fr 1fr":"60px 80px 80px 1fr",gap:8}}>
+              {[{l:"Sets",f:"sets",t:"number"},{l:"Reps",f:"reps",t:"text"},{l:"Rest(s)",f:"rest",t:"number"}].map(fi=>(
+                <div key={fi.f}><div style={{color:C.muted,fontSize:10,marginBottom:3}}>{fi.l}</div><input type={fi.t} value={ex[fi.f]} onChange={e=>updEx(ex.id,{[fi.f]:e.target.value})} style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
+              ))}
+              <div><div style={{color:C.muted,fontSize:10,marginBottom:3}}>Notes</div><input value={ex.notes} onChange={e=>updEx(ex.id,{notes:e.target.value})} placeholder="Cues…" style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 8px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit"}}/></div>
+            </div>
+          </div>
+        ))}
+        <Btn variant="ghost" color={C.blue} style={{padding:"5px 12px",fontSize:11,marginTop:4}} onClick={()=>setExPicker(true)}>+ Add Exercise</Btn>
+      </Card>
+      {exPicker&&<Modal title="Add Exercise" onClose={()=>setExPicker(false)} wide><ExPicker onPick={name=>{addEx(name);setExPicker(false);}} onClose={()=>setExPicker(false)} catalog={catalog} onAddToCatalog={onAddToCatalog}/></Modal>}
+      {confirm&&<Confirm msg={`Delete "${wk.name}"?`} onConfirm={async()=>{await onDelete(confirm);setSelected(null);setConfirm(null);}} onCancel={()=>setConfirm(null)}/>}
+    </div>
+  );
+
+  if(mobile) return wk?renderEditor():(
+    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      <Btn color={C.blue} onClick={create}>+ New Workout</Btn>
+      {workouts.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>💪</div><div style={{color:C.muted,fontSize:13}}>No workouts yet.</div></Card>}
+      {workouts.map(w=>(
+        <div key={w.id} onClick={()=>setSelected(w.id)} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${C.blue}`}}>
+          <div style={{color:C.text,fontWeight:700,fontSize:14}}>{w.name}</div>
+          <div style={{color:C.muted,fontSize:11,marginTop:3}}>{w.focus?`${w.focus} · `:""}{(w.exercises||[]).length} exercise{(w.exercises||[]).length!==1?"s":""}</div>
+        </div>
+      ))}
+    </div>
+  );
+
+  return(
+    <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16,height:"calc(100vh - 143px)",minHeight:0}}>
+      <div style={{display:"flex",flexDirection:"column",gap:10,overflowY:"auto",padding:"6px 10px 20px 10px"}}>
+        <Btn color={C.blue} onClick={create}>+ New Workout</Btn>
+        {workouts.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>💪</div><div style={{color:C.muted,fontSize:13}}>No workouts yet.</div></Card>}
+        {workouts.map(w=>(
+          <div key={w.id} onClick={()=>setSelected(w.id)} style={{background:C.surface,border:`1px solid ${selected===w.id?C.blue:C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${selected===w.id?C.blue:C.border}`}}>
+            <div style={{color:C.text,fontWeight:700,fontSize:14}}>{w.name}</div>
+            <div style={{color:C.muted,fontSize:11,marginTop:3}}>{w.focus?`${w.focus} · `:""}{(w.exercises||[]).length} exercise{(w.exercises||[]).length!==1?"s":""}</div>
+          </div>
+        ))}
+      </div>
+      {!wk
+        ?<Card style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:0}}><div style={{textAlign:"center",color:C.muted}}><div style={{fontSize:36,marginBottom:10}}>💪</div>Select or create a workout</div></Card>
+        :renderEditor()
+      }
+    </div>
+  );
+}
+
+function ProgramsHub({programs,onSaveProgram,onUpdateProgram,onDeleteProgram,formats,onSaveFormat,onUpdateFormat,onDeleteFormat,workouts,onSaveWorkout,onUpdateWorkout,onDeleteWorkout,clients,onUpdateClient,classes,onUpdateClass,mobile,catalog,onAddToCatalog}){
   const [tab,setTab]=useState("programs");
   return(
     <div>
       <div style={{display:"flex",gap:2,marginBottom:20,borderBottom:`1px solid ${C.border}`,overflowX:"auto"}}>
-        {[["programs","📋 Training Programs",C.purple],["formats","🏋️ Class Formats",C.teal]].map(([id,label,color])=>(
+        {[["programs","📋 Training Programs",C.purple],["workouts","💪 Workouts",C.blue],["formats","🏋️ Class Formats",C.teal]].map(([id,label,color])=>(
           <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 18px",border:"none",background:"none",cursor:"pointer",color:tab===id?color:C.sub,fontWeight:tab===id?700:500,fontSize:mobile?12:14,borderBottom:`2px solid ${tab===id?color:"transparent"}`,whiteSpace:"nowrap"}}>{label}</button>
         ))}
       </div>
-      {tab==="programs"&&<ProgramBuilder programs={programs} onSave={onSaveProgram} onUpdate={onUpdateProgram} onDelete={onDeleteProgram} clients={clients} onUpdateClient={onUpdateClient} mobile={mobile} catalog={catalog} onAddToCatalog={onAddToCatalog}/>}
+      {tab==="programs"&&<ProgramBuilder programs={programs} onSave={onSaveProgram} onUpdate={onUpdateProgram} onDelete={onDeleteProgram} clients={clients} onUpdateClient={onUpdateClient} mobile={mobile} catalog={catalog} onAddToCatalog={onAddToCatalog} workouts={workouts||[]}/>}
+      {tab==="workouts"&&<WorkoutBuilder workouts={workouts||[]} onSave={onSaveWorkout} onUpdate={onUpdateWorkout} onDelete={onDeleteWorkout} mobile={mobile} catalog={catalog} onAddToCatalog={onAddToCatalog}/>}
       {tab==="formats"&&<ClassFormatBuilder formats={formats} onSave={onSaveFormat} onUpdate={onUpdateFormat} onDelete={onDeleteFormat} classes={classes} onUpdateClass={onUpdateClass} catalog={catalog} onAddToCatalog={onAddToCatalog} mobile={mobile}/>}
     </div>
   );

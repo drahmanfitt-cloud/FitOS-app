@@ -718,7 +718,7 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
   );
 }
 
-function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay,catalog,onAddToCatalog}){
+function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay,catalog,onAddToCatalog,workouts=[]}){
   const [settings,setSettings]=useState(DEFAULT_SETTINGS);
   const [showSettings,setShowSettings]=useState(false);
   const [clientId,setClientId]=useState(activeClient?.id||"");
@@ -731,6 +731,7 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
   const [saving,setSaving]=useState(false);
   const [programDay,setProgramDay]=useState("");
   const [loadModal,setLoadModal]=useState(false);
+  const [wkModal,setWkModal]=useState(false);
   const [startTime]=useState(Date.now());
   const [elapsed,setElapsed]=useState(0);
 
@@ -772,8 +773,17 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
   const loadFromDay=day=>{
     setName(day.label+(day.focus?` — ${day.focus}`:""));
     setProgramDay(day.label);
+    setWarmup((day.warmup||[]).map(w=>({...w,id:uid()})));
     setExercises((day.exercises||[]).map(e=>({id:uid(),name:e.name,resistanceMode:"weighted",sets:[],templateSets:e.sets,templateReps:e.reps,templateRest:e.rest||settings.defaultRestSec,notes:e.notes||""})));
     setLoadModal(false);
+  };
+
+  const loadFromWorkout=wk=>{
+    setName(wk.name+(wk.focus?` — ${wk.focus}`:""));
+    setProgramDay("");
+    setWarmup((wk.warmup||[]).map(w=>({...w,id:uid()})));
+    setExercises((wk.exercises||[]).map(e=>({id:uid(),name:e.name,resistanceMode:"weighted",sets:[],templateSets:e.sets,templateReps:e.reps,templateRest:e.rest||settings.defaultRestSec,notes:e.notes||""})));
+    setWkModal(false);
   };
 
   // Pre-load a program day when navigated from client profile
@@ -882,6 +892,7 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
         <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
           <div style={{flex:1}}><Input label="Notes" value={notes} onChange={setNotes} placeholder="Coach notes…"/></div>
           {prog&&<Btn variant="ghost" color={C.purple} style={{padding:"9px 14px"}} onClick={()=>setLoadModal(true)}>📋 Load from Program</Btn>}
+          {workouts.length>0&&<Btn variant="ghost" color={C.blue} style={{padding:"9px 14px"}} onClick={()=>setWkModal(true)}>💪 Load Workout</Btn>}
         </div>
         {programDay&&<div style={{marginTop:10}}><Pill color={C.purple}>📋 {programDay}</Pill></div>}
       </Card>
@@ -936,6 +947,23 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
               </div>
             ))}
             {!(prog.days||[]).length&&<div style={{color:C.muted,textAlign:"center",padding:24}}>No days built yet.</div>}
+          </div>
+        </Modal>
+      )}
+      {wkModal&&(
+        <Modal title="Load a Workout" onClose={()=>setWkModal(false)} wide>
+          <p style={{color:C.sub,fontSize:13,marginBottom:14}}>Loads the workout's warmup and exercises into this session to perform.</p>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {workouts.map(wk=>(
+              <div key={wk.id} style={{background:C.s2,borderRadius:10,padding:"14px 16px",border:`1px solid ${C.border}`,cursor:"pointer"}} onClick={()=>loadFromWorkout(wk)} onMouseEnter={e=>e.currentTarget.style.borderColor=C.blue} onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div><div style={{color:C.text,fontWeight:700,fontSize:14}}>{wk.name}</div>{wk.focus&&<Pill color={C.blue}>{wk.focus}</Pill>}</div>
+                  <div style={{color:C.muted,fontSize:12}}>{(wk.exercises||[]).length} exercises{(wk.warmup||[]).length?` · ${wk.warmup.length} warmup`:""}</div>
+                </div>
+                {(wk.exercises||[]).length>0&&<div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap"}}>{wk.exercises.map(e=><span key={e.id} style={{fontSize:11,color:C.sub,background:C.s3,padding:"2px 7px",borderRadius:5}}>{e.name} {e.sets}×{e.reps}</span>)}</div>}
+              </div>
+            ))}
+            {!workouts.length&&<div style={{color:C.muted,textAlign:"center",padding:24}}>No workouts yet.</div>}
           </div>
         </Modal>
       )}
