@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { C, uid, now, clamp, fmt, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
-import { WARMUP_CATS, WarmupItem, WarmupSubsection, WarmupPlanner, WarmupPicker } from "./warmup.jsx";
+import { WarmupPlanner } from "./warmup.jsx";
 import { FloorPlanEditor, FollowAlongDisplay, StationRotationDisplay } from "./display.jsx";
 import { ExPicker } from "./catalog.jsx";
 
@@ -80,8 +80,8 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
             <input value={day.focus} onChange={e=>updDay(day.id,{focus:e.target.value})} placeholder="Focus (Push, Lower…)" style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",color:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",width:mobile?100:160,flexShrink:0,minWidth:0}}/>
             <button onClick={()=>rmDay(day.id)} style={{background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer",lineHeight:1,flexShrink:0,padding:"0 2px"}}>×</button>
           </div>
-          <div style={{background:C.s2,borderRadius:10,padding:"12px 14px",marginBottom:14,border:`1px solid ${C.purple}33`}}>
-            <ProgramWarmupTab warmup={day.warmup||[]} setWarmup={w=>updDay(day.id,{warmup:w})}/>
+          <div style={{marginBottom:14}}>
+            <WarmupPlanner warmup={day.warmup||[]} setWarmup={w=>updDay(day.id,{warmup:w})}/>
           </div>
           <div style={{color:C.muted,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Exercises</div>
           {(day.exercises||[]).length===0&&<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"8px 0",marginBottom:8}}>No exercises yet.</div>}
@@ -384,42 +384,6 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
           {confirm&&<Confirm msg={`Delete "${fmt.name}"?`} onConfirm={async()=>{await onDelete(confirm);setSelected(null);setConfirm(null);}} onCancel={()=>setConfirm(null)}/>}
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Warmup tab embedded inside a program ─────────────────────────────────────
-function ProgramWarmupTab({warmup,setWarmup}){
-  const w=warmup||[];
-  const [pickCat,setPickCat]=useState(null);
-  const addItem=(cat,name)=>setWarmup([...w,{id:uid(),name:name||`New ${cat.label}`,category:cat.id,holdSec:30,reps:"",resistanceMode:"bodyweight",sidesMode:"none",sides:false,notes:""}]);
-  const updateItem=(id,patch)=>setWarmup(w.map(i=>i.id===id?{...i,...patch}:i));
-  const removeItem=id=>setWarmup(w.filter(i=>i.id!==id));
-  const totalMin=Math.round(w.reduce((a,i)=>a+(i.sidesMode==="both"?(i.holdSec||0)*2:(i.holdSec||0)),0)/60);
-  return(
-    <div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <div>
-          <div style={{color:C.text,fontWeight:700,fontSize:15}}>Warmup Protocol</div>
-          <div style={{color:C.muted,fontSize:12,marginTop:2}}>{w.length} exercises · ~{totalMin} min</div>
-        </div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {WARMUP_CATS.map(cat=>(
-            <button key={cat.id} onClick={()=>setPickCat(cat)} style={{padding:"5px 10px",borderRadius:7,fontSize:11,fontWeight:700,cursor:"pointer",border:`1px solid ${cat.color}44`,background:cat.color+"18",color:cat.color}}>
-              + {cat.label.split(" ")[0]}
-            </button>
-          ))}
-        </div>
-      </div>
-      {WARMUP_CATS.map(cat=>(
-        <WarmupSubsection key={cat.id} cat={cat}
-          items={w.filter(i=>i.category===cat.id)}
-          onAdd={()=>setPickCat(cat)}
-          onUpdate={updateItem}
-          onRemove={removeItem}/>
-      ))}
-      {w.length===0&&<div style={{textAlign:"center",padding:"32px 0",color:C.muted,fontSize:13}}>Plan your warmup — add stretching, mobility, and sport-specific exercises.</div>}
-      {pickCat&&<Modal title={`Add ${pickCat.label}`} onClose={()=>setPickCat(null)}><WarmupPicker catId={pickCat.id} color={pickCat.color} onPick={name=>{addItem(pickCat,name);setPickCat(null);}} onClose={()=>setPickCat(null)}/></Modal>}
     </div>
   );
 }
