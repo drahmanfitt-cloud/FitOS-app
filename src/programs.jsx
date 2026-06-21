@@ -517,7 +517,7 @@ function ProgramsHub({programs,onSaveProgram,onUpdateProgram,onDeleteProgram,for
   return(
     <div>
       <div style={{display:"flex",gap:2,marginBottom:20,borderBottom:`1px solid ${C.border}`,overflowX:"auto"}}>
-        {[["programs","📋 Training Programs",C.purple],["workouts","💪 Workouts",C.blue],["formats","🏋️ Class Formats",C.teal]].map(([id,label,color])=>(
+        {[["programs","📋 Training Programs",C.purple],["formats","🏋️ Class Formats",C.teal],["workouts","💪 Workouts",C.blue]].map(([id,label,color])=>(
           <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 18px",border:"none",background:"none",cursor:"pointer",color:tab===id?color:C.sub,fontWeight:tab===id?700:500,fontSize:mobile?12:14,borderBottom:`2px solid ${tab===id?color:"transparent"}`,whiteSpace:"nowrap"}}>{label}</button>
         ))}
       </div>
