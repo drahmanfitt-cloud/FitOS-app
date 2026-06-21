@@ -75,7 +75,7 @@ function WarmupItem({item,onUpdate,onRemove}){
         <div style={{padding:"0 12px 12px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,borderTop:`1px solid ${C.border}`}}>
           <div style={{paddingTop:10}}>
             <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Hold (sec)</div>
-            <input type="number" value={item.holdSec} onChange={e=>onUpdate({holdSec:Number(e.target.value)})}
+            <input type="number" value={item.holdSec} onChange={e=>{const v=e.target.value;onUpdate({holdSec:v===""?"":Number(v)});}}
               style={{width:"100%",background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 8px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit"}}/>
           </div>
           <div style={{paddingTop:10}}>
@@ -112,7 +112,7 @@ function WarmupItem({item,onUpdate,onRemove}){
             {(item.sidesMode==="single"||item.sidesMode==="both")&&(
               <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8}}>
                 <span style={{color:C.muted,fontSize:11}}>Time per side:</span>
-                <input type="number" value={item.holdSec} onChange={e=>onUpdate({holdSec:Number(e.target.value)})}
+                <input type="number" value={item.holdSec} onChange={e=>{const v=e.target.value;onUpdate({holdSec:v===""?"":Number(v)});}}
                   style={{width:52,background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 7px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit",textAlign:"center"}}/>
                 <span style={{color:C.muted,fontSize:11}}>sec {item.sidesMode==="both"?"× 2 sides":""}</span>
                 {item.sidesMode==="both"&&<span style={{color:C.amber,fontSize:11,fontWeight:600}}>= {(item.holdSec||0)*2}s total</span>}

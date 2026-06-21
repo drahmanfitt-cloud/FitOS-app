@@ -325,7 +325,7 @@ function WarmupItem({item,onUpdate,onRemove,settings,onRestStart}){
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
             <div style={{display:"flex",alignItems:"center",gap:5}}>
               <span style={{color:C.muted,fontSize:11}}>Hold</span>
-              <input type="number" value={item.holdSec} onChange={e=>onUpdate({holdSec:Number(e.target.value)})}
+              <input type="number" value={item.holdSec} onChange={e=>{const v=e.target.value;onUpdate({holdSec:v===""?"":Number(v)});}}
                 style={{width:44,background:C.s3,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 7px",color:C.text,fontSize:12,outline:"none",fontFamily:"inherit",textAlign:"center"}}/>
               <span style={{color:C.muted,fontSize:11}}>sec</span>
             </div>
