@@ -593,7 +593,7 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
           </button>
         )}
       </div>
-      <div style={{position:"absolute",top:12,right:16,display:"flex",gap:8}}>
+      <div style={{position:"absolute",top:isFlow?52:12,right:16,display:"flex",gap:8}}>
         {isFlow&&<button onClick={()=>setStarted(false)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:7,padding:"7px 13px",color:"rgba(255,255,255,0.5)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>≡ Agenda</button>}
         <button onClick={onClose} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:7,padding:"7px 13px",color:"rgba(255,255,255,0.5)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>✕ Exit</button>
       </div>
