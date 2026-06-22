@@ -255,8 +255,50 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
     sidesMode:st.sidesMode||"none",
   }));
 
+  // ── Flow classes (yoga / mobility): warmup items + poses share one re-orderable teaching sequence ──
+  const isFlowType=classType==="yoga"||classType==="mobility";
+  const warmupItems=fmt?.warmup||[];
+  const WARM_ICONS={"foam-rolling":"🌀",stretching:"🧘",mobility:"🔄",sport:"⚡"};
+  const WARM_COLORS={stretching:C.purple,mobility:C.teal,"foam-rolling":C.blue,sport:C.amber};
+  // Merged sequence sorted by a shared numeric `seq` (legacy items without seq keep array order: warmup first, then poses).
+  const seqSource=isFlowType?[
+    ...warmupItems.map(w=>({...w,kind:"warmup"})),
+    ...typeStations.map(s=>({...s,kind:"pose"})),
+  ]:[];
+  const orderedSeq=seqSource.map((it,i)=>({it,i})).sort((a,b)=>{
+    const sa=a.it.seq??(1e6+a.i), sb=b.it.seq??(1e6+b.i);
+    return sa-sb;
+  }).map(x=>x.it);
+  const writeSeq=newOrdered=>{
+    const m={}; newOrdered.forEach((it,i)=>{m[it.id]=i;});
+    upd({
+      warmup:warmupItems.map(w=>m[w.id]!=null?{...w,seq:m[w.id]}:w),
+      stations:allStations.map(s=>m[s.id]!=null?{...s,seq:m[s.id]}:s),
+    });
+  };
+  const mvSeq=(id,dir)=>{
+    const arr=[...orderedSeq]; const i=arr.findIndex(x=>x.id===id); const j=clamp(i+dir,0,arr.length-1);
+    if(i===j)return; [arr[i],arr[j]]=[arr[j],arr[i]]; writeSeq(arr);
+  };
+  const rmSeq=it=>{ it.kind==="warmup"?upd({warmup:warmupItems.filter(w=>w.id!==it.id)}):rmSt(it.id); };
+  // Lead-view sequence: normalise warmup items into the pose shape the display expects.
+  const leadSequence=isFlowType?orderedSeq.map(it=>it.kind==="warmup"?{
+    id:it.id,name:it.name,
+    category:it.category==="foam-rolling"?"foam":it.category,
+    icon:WARM_ICONS[it.category]||"🧘",
+    description:it.notes||"",
+    holdSec:Number(it.holdSec)||0,
+    reps:it.reps||"",
+    sidesMode:it.sidesMode||"none",
+  }:{
+    ...it,
+    description:it.description||it.notes||"",
+    holdSec:Number(it.holdSec)||Number(it.workSec)||0,
+    sidesMode:it.sidesMode||"none",
+  }):stationsWithPos;
+
   // Display modes
-  if(displayMode==="followalong") return <FollowAlongDisplay stations={stationsWithPos} classType={classType} mobile={mobile} onClose={()=>setDisplayMode(null)}/>;
+  if(displayMode==="followalong") return <FollowAlongDisplay stations={leadSequence} classType={classType} mobile={mobile} onClose={()=>setDisplayMode(null)}/>;
   if(displayMode==="rotation")    return <StationRotationDisplay stations={stationsWithPos} workSec={Number(fmt?.workSec)||40} restSec={Number(fmt?.restSec)||20} mobile={mobile} onClose={()=>setDisplayMode(null)}/>;
 
   return(
@@ -338,6 +380,38 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
 
           {/* Warmup & mobility planner — foam rolling, stretching, mobility, sport prep */}
           <WarmupPlanner warmup={fmt.warmup||[]} setWarmup={w=>upd({warmup:w})}/>
+
+          {/* Teaching sequence — yoga & mobility weave warmup items and poses into one re-orderable flow */}
+          {isFlowType&&orderedSeq.length>0&&(
+            <Card style={{padding:mobile?13:18}}>
+              <div style={{marginBottom:mobile?10:14}}>
+                <SL>Teaching Sequence · {orderedSeq.length}</SL>
+                <div style={{color:C.muted,fontSize:11,marginTop:2}}>Order warm-up items and {typeCfg.item.toLowerCase()}s exactly as you'll lead them. This is the order shown in {typeCfg.lead}.</div>
+              </div>
+              {orderedSeq.map((it,i)=>{
+                const isWarm=it.kind==="warmup";
+                const col=isWarm?(WARM_COLORS[it.category]||C.teal):COLS(i);
+                return(
+                  <div key={it.id} style={{display:"flex",alignItems:"center",gap:10,background:C.s2,borderRadius:10,padding:mobile?"9px 11px":"10px 14px",marginBottom:8,border:`1px solid ${col}33`}}>
+                    <div style={{width:24,height:24,borderRadius:7,background:col+"22",border:`1px solid ${col}44`,display:"flex",alignItems:"center",justifyContent:"center",color:col,fontWeight:800,fontSize:11,flexShrink:0}}>{i+1}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{color:C.text,fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it.name}</div>
+                      <div style={{display:"flex",gap:8,alignItems:"center",marginTop:1}}>
+                        <span style={{color:col,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>{isWarm?(it.category==="foam-rolling"?"Foam Rolling":it.category):typeCfg.item}</span>
+                        {Number(it.holdSec)>0&&<span style={{color:C.muted,fontSize:10}}>{it.holdSec}s hold</span>}
+                        {!isWarm&&Number(it.workSec)>0&&!Number(it.holdSec)&&<span style={{color:C.muted,fontSize:10}}>{it.workSec}s work</span>}
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:4,flexShrink:0}}>
+                      <button onClick={()=>mvSeq(it.id,-1)} disabled={i===0} style={{background:"none",border:"none",color:i===0?C.border:C.muted,cursor:i===0?"default":"pointer",fontSize:13}}>▲</button>
+                      <button onClick={()=>mvSeq(it.id,1)} disabled={i===orderedSeq.length-1} style={{background:"none",border:"none",color:i===orderedSeq.length-1?C.border:C.muted,cursor:i===orderedSeq.length-1?"default":"pointer",fontSize:13}}>▼</button>
+                      <button onClick={()=>rmSeq(it)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:15,lineHeight:1}}>×</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </Card>
+          )}
 
           {/* Sub tabs: Stations / Floor Plan */}
           <div style={{display:"flex",gap:2,borderBottom:`1px solid ${C.border}`}}>

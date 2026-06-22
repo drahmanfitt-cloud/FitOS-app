@@ -1,2 +1,3 @@
 - [FitOS architecture](fitos-architecture.md) — React+Vite PT app, anon-key-only Supabase (user runs SQL migrations manually), graceful degradation when a table is missing.
 - [FitOS session load semantics](fitos-session-load.md) — loadFromDay/loadFromWorkout must each fully reset the other's session state (programDay + warmup) to avoid mixed saves.
+- [Flow-class teaching sequence](flow-class-teaching-sequence.md) — yoga/mobility merge warmup+poses into one seq-ordered Lead flow w/ agenda screen; HIIT/rotation unchanged.

@@ -221,7 +221,7 @@ function useBreathCue(holdSec, running) {
 }
 
 // ── Yoga/Stretch pose timer ───────────────────────────────────────────────────
-function PoseTimer({pose, onDone}){
+function PoseTimer({pose, onDone, accent=C.purple}){
   // sidesMode: "none" | "single" | "both"
   // For "single": left side only, then done
   // For "both": left side, auto-switch to right, then done
@@ -297,7 +297,7 @@ function PoseTimer({pose, onDone}){
       <div style={{position:"relative",width:140,height:140}}>
         <svg width="140" height="140" style={{transform:"rotate(-90deg)"}}>
           <circle cx="70" cy="70" r="54" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8"/>
-          <circle cx="70" cy="70" r="54" fill="none" stroke={done?C.green:C.purple} strokeWidth="8"
+          <circle cx="70" cy="70" r="54" fill="none" stroke={done?C.green:accent} strokeWidth="8"
             strokeDasharray={circ} strokeDashoffset={circ*(1-pct/100)}
             strokeLinecap="round" style={{transition:"stroke-dashoffset 1s linear, stroke 0.3s"}}/>
         </svg>
@@ -380,18 +380,22 @@ function useSwipe(onSwipeLeft, onSwipeRight, threshold=60){
 
 // ── Follow-Along Display Mode (Standard + Yoga/Stretch) ───────────────────────
 function FollowAlongDisplay({stations,classType,mobile,onClose}){
+  const isFlow=classType==="yoga"||classType==="mobility"; // hold-based, guided flow layout
+  const isYoga=classType==="yoga";
+  const accent=classType==="mobility"?C.teal:isYoga?C.purple:C.green;
   const [idx,setIdx]=useState(0);
   const [poseTimerActive,setPoseTimerActive]=useState(false);
   const [poseDone,setPoseDone]=useState({});
+  const [started,setStarted]=useState(!isFlow); // flow classes open on an agenda screen
   const current=stations[idx];
   const next=stations[idx+1];
-  const progress=(idx/stations.length)*100;
-  const isYoga=classType==="yoga";
+  const total=stations.length;
+  const progress=total?(idx/total)*100:0;
 
   const goNext=useCallback(()=>{
-    if(idx<stations.length-1){setIdx(i=>i+1);setPoseTimerActive(false);}
+    if(idx<total-1){setIdx(i=>i+1);setPoseTimerActive(false);}
     else onClose();
-  },[idx,stations.length,onClose]);
+  },[idx,total,onClose]);
 
   const goPrev=useCallback(()=>{
     setIdx(i=>Math.max(0,i-1));setPoseTimerActive(false);
@@ -399,14 +403,57 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
 
   const {onTouchStart,onTouchMove,onTouchEnd,swipeHint}=useSwipe(goNext,goPrev);
 
-  // Category colours for yoga sections
-  const CAT_COLORS={stretching:C.purple,mobility:C.teal,foam:C.amber};
-  const catColor=CAT_COLORS[current?.category]||C.green;
-  const accentColor=isYoga?C.purple:C.green;
+  // Category colours for warmup / flow sections
+  const CAT_COLORS={stretching:C.purple,mobility:C.teal,foam:C.amber,sport:C.blue};
+  const catColor=CAT_COLORS[current?.category]||accent;
+  const catLabel=(it)=>{
+    if(it?.category) return it.category==="foam"?"Foam Rolling":it.category;
+    return classType==="mobility"?"Movement":"Pose";
+  };
+
+  // ── Agenda / overview screen (flow classes only) ──
+  if(isFlow&&!started){
+    const totalSec=stations.reduce((a,s)=>a+((Number(s.holdSec)||0)*((s.sidesMode==="both"||s.sides)?2:1)),0);
+    return(
+      <div style={{position:"fixed",inset:0,background:classType==="mobility"?"#06100e":"#060810",display:"flex",flexDirection:"column",zIndex:1000}}>
+        <div style={{padding:mobile?"20px 18px 14px":"28px 40px 18px",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+          <div style={{color:accent,fontSize:12,fontWeight:800,letterSpacing:"0.12em",textTransform:"uppercase"}}>{classType==="mobility"?"Mobility Flow":"Yoga Flow"}</div>
+          <div style={{color:"#fff",fontWeight:900,fontSize:mobile?26:34,marginTop:6}}>Class Agenda</div>
+          <div style={{color:"rgba(255,255,255,0.45)",fontSize:14,marginTop:4}}>{total} item{total!==1?"s":""}{totalSec?` · ~${Math.max(1,Math.round(totalSec/60))} min of holds`:""}</div>
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:mobile?"14px 14px 24px":"18px 40px 28px"}}>
+          {total===0&&<div style={{color:"rgba(255,255,255,0.4)",textAlign:"center",padding:40}}>Nothing in this class yet. Add poses or warm-up items in the builder.</div>}
+          {stations.map((s,i)=>{
+            const col=CAT_COLORS[s.category]||accent;
+            return(
+              <div key={s.id||i} onClick={()=>{setIdx(i);setPoseTimerActive(false);setStarted(true);}}
+                style={{display:"flex",alignItems:"center",gap:14,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:mobile?"11px 13px":"13px 16px",marginBottom:8,cursor:"pointer"}}>
+                <div style={{width:30,height:30,borderRadius:8,background:col+"22",border:`1px solid ${col}55`,display:"flex",alignItems:"center",justifyContent:"center",color:col,fontWeight:800,fontSize:13,flexShrink:0}}>{i+1}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{color:"#fff",fontWeight:700,fontSize:15}}>{s.name}</div>
+                  <div style={{display:"flex",gap:8,alignItems:"center",marginTop:3,flexWrap:"wrap"}}>
+                    <span style={{color:col,fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>{catLabel(s)}</span>
+                    {Number(s.holdSec)>0&&<span style={{color:"rgba(255,255,255,0.45)",fontSize:12}}>{s.holdSec}s{(s.sidesMode==="both"||s.sides)?" × 2 sides":s.sidesMode==="single"?" · 1 side":""}</span>}
+                    {s.reps&&<span style={{color:"rgba(255,255,255,0.45)",fontSize:12}}>{s.reps} reps</span>}
+                  </div>
+                </div>
+                <span style={{color:"rgba(255,255,255,0.25)",fontSize:18}}>▸</span>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{padding:mobile?"14px 16px calc(env(safe-area-inset-bottom) + 86px)":"18px 40px",borderTop:"1px solid rgba(255,255,255,0.06)",display:"flex",gap:12}}>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:10,padding:"13px 22px",color:"#fff",fontSize:15,cursor:"pointer",fontFamily:"inherit",fontWeight:600}}>Exit</button>
+          <button onClick={()=>{setIdx(0);setPoseTimerActive(false);setStarted(true);}} disabled={total===0}
+            style={{flex:1,background:accent,border:"none",borderRadius:10,padding:"13px 22px",color:"#000",fontSize:16,cursor:total===0?"default":"pointer",opacity:total===0?0.4:1,fontFamily:"inherit",fontWeight:800}}>▶ Start Class</button>
+        </div>
+      </div>
+    );
+  }
 
   return(
     <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
-      style={{position:"fixed",inset:0,background:isYoga?"#060810":"#000",display:"flex",flexDirection:"column",zIndex:1000,userSelect:"none"}}>
+      style={{position:"fixed",inset:0,background:isFlow?(classType==="mobility"?"#06100e":"#060810"):"#000",display:"flex",flexDirection:"column",zIndex:1000,userSelect:"none"}}>
       {/* Swipe hint overlay */}
       {swipeHint&&(
         <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:swipeHint==="left"?"flex-end":"flex-start",pointerEvents:"none",zIndex:10,padding:"0 24px"}}>
@@ -418,50 +465,51 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
       )}
       {/* Progress bar */}
       <div style={{height:4,background:"rgba(255,255,255,0.06)"}}>
-        <div style={{height:"100%",width:`${progress}%`,background:isYoga?C.purple:C.green,transition:"width 0.3s"}}/>
+        <div style={{height:"100%",width:`${progress}%`,background:accent,transition:"width 0.3s"}}/>
       </div>
 
-      {/* Section category badge for yoga */}
-      {isYoga&&current?.category&&(
+      {/* Section category badge for flow classes */}
+      {isFlow&&(
         <div style={{padding:"10px 24px",display:"flex",alignItems:"center",gap:10,borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
           <div style={{width:8,height:8,borderRadius:"50%",background:catColor}}/>
-          <span style={{color:catColor,fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>{current.category==="foam"?"Foam Rolling":current.category}</span>
-          <span style={{color:"rgba(255,255,255,0.2)",fontSize:12,marginLeft:"auto"}}>{idx+1} / {stations.length}</span>
+          <span style={{color:catColor,fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em"}}>{catLabel(current)}</span>
+          <span style={{color:"rgba(255,255,255,0.2)",fontSize:12,marginLeft:"auto"}}>{idx+1} / {total}</span>
         </div>
       )}
 
       {/* Main content */}
-      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:isYoga?"24px 40px":"40px",textAlign:"center",gap:isYoga?16:20}}>
-        {!isYoga&&<div style={{color:C.muted,fontSize:13,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase"}}>Exercise {idx+1} of {stations.length}</div>}
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:isFlow?"24px 40px":"40px",textAlign:"center",gap:isFlow?16:20}}>
+        {!isFlow&&<div style={{color:C.muted,fontSize:13,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase"}}>Exercise {idx+1} of {total}</div>}
 
         {current?.icon?(
-          <div style={{fontSize:isYoga?64:80}}>{current.icon}</div>
-        ):isYoga?(
-          <div style={{fontSize:64}}>🧘</div>
+          <div style={{fontSize:isFlow?64:80}}>{current.icon}</div>
+        ):isFlow?(
+          <div style={{fontSize:64}}>{classType==="mobility"?"🤸":"🧘"}</div>
         ):null}
 
-        <div style={{color:"#fff",fontWeight:900,fontSize:isYoga?40:48,lineHeight:1.1,maxWidth:600}}>
+        <div style={{color:"#fff",fontWeight:900,fontSize:isFlow?40:48,lineHeight:1.1,maxWidth:600}}>
           {current?.name}
         </div>
 
-        {/* Yoga mode: description + breath timer */}
-        {isYoga?(
+        {/* Flow mode: description + hold/breath timer */}
+        {isFlow?(
           <>
             {current?.description&&(
               <div style={{color:"rgba(255,255,255,0.6)",fontSize:16,maxWidth:500,lineHeight:1.8,textAlign:"center"}}>
                 {current.description}
               </div>
             )}
+            {current?.reps&&<div style={{color:accent,fontWeight:800,fontSize:24}}>{current.reps} reps{(current.sidesMode==="both"||current.sides)?" per side":""}</div>}
             {current?.holdSec>0&&(
               poseTimerActive?(
-                <PoseTimer pose={current} onDone={()=>{setPoseDone(p=>({...p,[idx]:true}));setPoseTimerActive(false);}}/>
+                <PoseTimer pose={current} accent={accent} onDone={()=>{setPoseDone(p=>({...p,[idx]:true}));setPoseTimerActive(false);}}/>
               ):(
                 <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
                   {poseDone[idx]?(
                     <div style={{color:C.green,fontWeight:700,fontSize:16}}>✓ Complete</div>
                   ):(
                     <div style={{textAlign:"center"}}>
-                      <div style={{color:C.purple,fontWeight:700,fontSize:18}}>
+                      <div style={{color:accent,fontWeight:700,fontSize:18}}>
                         Hold {current.holdSec}s
                         {(current.sidesMode==="both"||current.sides)&&" each side"}
                         {current.sidesMode==="single"&&" (one side)"}
@@ -479,7 +527,7 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
                     </div>
                   )}
                   <button onClick={()=>setPoseTimerActive(true)}
-                    style={{background:poseDone[idx]?C.green+"22":C.purple+"22",border:`1px solid ${poseDone[idx]?C.green:C.purple}55`,borderRadius:10,padding:"10px 24px",color:poseDone[idx]?C.green:C.purple,fontSize:14,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+                    style={{background:poseDone[idx]?C.green+"22":accent+"22",border:`1px solid ${poseDone[idx]?C.green:accent}55`,borderRadius:10,padding:"10px 24px",color:poseDone[idx]?C.green:accent,fontSize:14,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
                     {poseDone[idx]?"▶ Repeat Timer":"▶ Start Timer"}
                   </button>
                 </div>
@@ -530,22 +578,25 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
         <div style={{display:"flex",gap:5}}>
           {stations.map((_,i)=>(
             <div key={i} onClick={()=>{setIdx(i);setPoseTimerActive(false);}}
-              style={{width:i===idx?22:7,height:7,borderRadius:4,background:poseDone[i]?C.green:i===idx?(isYoga?C.purple:C.green):C.muted,cursor:"pointer",transition:"all 0.2s"}}/>
+              style={{width:i===idx?22:7,height:7,borderRadius:4,background:poseDone[i]?C.green:i===idx?accent:C.muted,cursor:"pointer",transition:"all 0.2s"}}/>
           ))}
         </div>
-        {idx<stations.length-1?(
+        {idx<total-1?(
           <button onClick={goNext}
-            style={{background:isYoga?C.purple:C.green,border:"none",borderRadius:10,padding:"11px 22px",color:"#000",fontSize:15,cursor:"pointer",fontFamily:"inherit",fontWeight:800}}>
+            style={{background:accent,border:"none",borderRadius:10,padding:"11px 22px",color:"#000",fontSize:15,cursor:"pointer",fontFamily:"inherit",fontWeight:800}}>
             Next →
           </button>
         ):(
           <button onClick={onClose}
-            style={{background:isYoga?C.purple:C.green,border:"none",borderRadius:10,padding:"11px 22px",color:"#000",fontSize:15,cursor:"pointer",fontFamily:"inherit",fontWeight:800}}>
+            style={{background:accent,border:"none",borderRadius:10,padding:"11px 22px",color:"#000",fontSize:15,cursor:"pointer",fontFamily:"inherit",fontWeight:800}}>
             Finish ✓
           </button>
         )}
       </div>
-      <button onClick={onClose} style={{position:"absolute",top:12,right:16,background:"rgba(255,255,255,0.08)",border:"none",borderRadius:7,padding:"7px 13px",color:"rgba(255,255,255,0.5)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>✕ Exit</button>
+      <div style={{position:"absolute",top:12,right:16,display:"flex",gap:8}}>
+        {isFlow&&<button onClick={()=>setStarted(false)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:7,padding:"7px 13px",color:"rgba(255,255,255,0.5)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>≡ Agenda</button>}
+        <button onClick={onClose} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:7,padding:"7px 13px",color:"rgba(255,255,255,0.5)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>✕ Exit</button>
+      </div>
     </div>
   );
 }
