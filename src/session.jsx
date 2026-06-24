@@ -1,7 +1,7 @@
 // FitOS — Session Logger components
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { C, uid, now, fmtDate, fmt } from "./config.js";
-import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, NumInput } from "./ui.jsx";
+import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, NumInput, Confirm } from "./ui.jsx";
 import { DEFAULT_SETTINGS, ResistanceToggle, Toggle, modeFor } from "./clients.jsx";
 import { ExPicker } from "./catalog.jsx";
 import { WarmupPicker } from "./warmup.jsx";
@@ -718,10 +718,11 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
   );
 }
 
-function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,activeClient,programs,initialDay,catalog,onAddToCatalog,workouts=[],onStatus,onSessionsView=true}){
+function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,activeClient,programs,initialDay,catalog,onAddToCatalog,workouts=[],onStatus,onSessionsView=true,onDiscard}){
   const isEdit=!!editSession;
   const [settings,setSettings]=useState(DEFAULT_SETTINGS);
   const [showSettings,setShowSettings]=useState(false);
+  const [confirmCancel,setConfirmCancel]=useState(false);
   const [clientId,setClientId]=useState(editSession?.clientId||activeClient?.id||"");
   const [name,setName]=useState(editSession?.name||"");
   const [notes,setNotes]=useState(editSession?.notes||"");
@@ -959,8 +960,12 @@ function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,acti
           <span style={{color:C.sub,fontSize:13}}>{doneSets}/{totalSets} sets done</span>
           {hasPR&&<Pill color={C.amber}>🏆 New PR!</Pill>}
         </div>
-        <Btn disabled={!clientId||exercises.length===0||saving} onClick={save} style={{padding:"10px 24px"}}>{saving?"Saving…":"Save Session"}</Btn>
+        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+          {onDiscard&&<Btn variant="ghost" color={C.red} disabled={saving} onClick={()=>setConfirmCancel(true)} style={{padding:"10px 18px"}}>{isEdit?"Cancel":"Discard"}</Btn>}
+          <Btn disabled={!clientId||exercises.length===0||saving} onClick={save} style={{padding:"10px 24px"}}>{saving?"Saving…":"Save Session"}</Btn>
+        </div>
       </div>
+      {confirmCancel&&<Confirm msg={isEdit?"Discard your changes to this session?":"Discard this session? Anything you've logged will be lost."} confirmText="Discard" cancelText="Keep editing" onConfirm={()=>{setConfirmCancel(false);onStatus&&onStatus(null);onDiscard&&onDiscard();}} onCancel={()=>setConfirmCancel(false)}/>}
       {loadModal&&prog&&(
         <Modal title={`Load from: ${prog.name}`} onClose={()=>setLoadModal(false)} wide>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>

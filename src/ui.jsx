@@ -75,13 +75,13 @@ export function Modal({title,children,onClose,wide}){
   );
 }
 
-export const Confirm = ({msg,onConfirm,onCancel}) => (
+export const Confirm = ({msg,onConfirm,onCancel,confirmText="Delete",cancelText="Cancel"}) => (
   <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:600,padding:16}}>
     <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:28,maxWidth:380,width:"100%",textAlign:"center"}}>
       <div style={{color:C.text,fontSize:15,marginBottom:20,lineHeight:1.6}}>{msg}</div>
       <div style={{display:"flex",gap:12,justifyContent:"center"}}>
-        <Btn variant="outline" onClick={onCancel}>Cancel</Btn>
-        <Btn variant="danger" onClick={onConfirm}>Delete</Btn>
+        <Btn variant="outline" onClick={onCancel}>{cancelText}</Btn>
+        <Btn variant="danger" onClick={onConfirm}>{confirmText}</Btn>
       </div>
     </div>
   </div>

@@ -1,7 +1,7 @@
 // FitOS — Root App
 import React, { useState, useEffect, useRef } from "react";
 import { C, uid, now, fmtDate, fmt, db, supabase, mapClient, mapSession, mapClass, mapProgram, mapFormat, mapWorkout, mapCatalog, TAG_COLORS } from "./config.js";
-import { Avatar, Pill, Btn, Card, SL, Modal, useToast, Toast, ErrorBoundary } from "./ui.jsx";
+import { Avatar, Pill, Btn, Card, SL, Modal, Confirm, useToast, Toast, ErrorBoundary } from "./ui.jsx";
 import { ClientsScreen, ClientProfile } from "./clients.jsx";
 import { SessionLogger, SessionHistory } from "./session.jsx";
 import { ClassesScreen } from "./classes.jsx";
@@ -163,8 +163,9 @@ function ASStat({label,value,col}){
 
 // Global in-progress session bar — shows on non-session views so the live session
 // (details + elapsed timer, or rest timer when resting) is always reachable.
-function ActiveSessionBar({status,onOpen,mobile}){
+function ActiveSessionBar({status,onOpen,onDiscard,mobile}){
   const [expanded,setExpanded]=useState(false);
+  const [confirmDiscard,setConfirmDiscard]=useState(false);
   const [,setTick]=useState(0);
   useEffect(()=>{const i=setInterval(()=>setTick(t=>t+1),1000);return()=>clearInterval(i);},[]);
   if(!status)return null;
@@ -175,7 +176,8 @@ function ActiveSessionBar({status,onOpen,mobile}){
   const timerCol=resting?C.amber:C.green;
   const timerTxt=resting?`Rest ${fmt(restLeft)}`:fmt(elapsed);
   return(
-    <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:16,margin:mobile?"8px 12px 0":"10px 20px 0",flexShrink:0,overflow:"hidden"}}>
+      {confirmDiscard&&<Confirm msg="Discard this in-progress session? Anything you've logged will be lost." confirmText="Discard" cancelText="Keep" onConfirm={()=>{setConfirmDiscard(false);onDiscard&&onDiscard();}} onCancel={()=>setConfirmDiscard(false)}/>}
       <div onClick={()=>setExpanded(e=>!e)} style={{display:"flex",alignItems:"center",gap:12,padding:mobile?"8px 14px":"8px 22px",cursor:"pointer"}}>
         <span style={{width:8,height:8,borderRadius:"50%",background:timerCol,flexShrink:0,boxShadow:`0 0 0 4px ${timerCol}22`}}/>
         <div style={{minWidth:0,flex:1}}>
@@ -185,6 +187,7 @@ function ActiveSessionBar({status,onOpen,mobile}){
         <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
           <span style={{color:timerCol,fontWeight:900,fontSize:16,fontVariantNumeric:"tabular-nums"}}>{timerTxt}</span>
           <button onClick={e=>{e.stopPropagation();onOpen();}} style={{background:C.green+"18",border:`1px solid ${C.green}33`,borderRadius:7,padding:"5px 10px",color:C.green,fontSize:11,fontWeight:700,cursor:"pointer"}}>Resume →</button>
+          <button onClick={e=>{e.stopPropagation();setConfirmDiscard(true);}} title="Discard session" style={{background:C.red+"14",border:`1px solid ${C.red}33`,borderRadius:7,padding:"5px 9px",color:C.red,fontSize:12,fontWeight:700,cursor:"pointer",lineHeight:1}}>✕</button>
           <span style={{color:C.muted,fontSize:11,transform:expanded?"rotate(180deg)":"none",transition:"transform 0.15s"}}>▾</span>
         </div>
       </div>
@@ -619,6 +622,7 @@ export default function App(){
 
   const navigate=v=>{if(v==="clients")setActiveClient(null);setView(v);};
   const startNewSession=()=>{setEditSession(null);setPreloadDay(null);setSessionKey(k=>k+1);setView("sessions");};
+  const discardSession=()=>{setSessionStatus(null);setEditSession(null);setPreloadDay(null);setSessionKey(k=>k+1);setView("session-history");};
   useEffect(()=>{if(view==="sessions")setLoggerMounted(true);},[view]);
   const TITLES={dashboard:"Dashboard",clients:"Clients",client:"Client Profile",sessions:editSession?"Edit Session":"Log Session","session-history":"Logged Sessions",classes:"Group Classes",programs:"Programs & Formats",catalog:"Exercise Catalog"};
   const SUBS={dashboard:`${clients.filter(c=>c.status==="active").length} active clients`,clients:`${clients.length} clients`,client:activeClient?.name||"",sessions:editSession?"Editing a logged session":"Track sets, reps & weight","session-history":`${sessions.length} logged · tap to view or edit`,classes:`${classes.filter(c=>c.status==="scheduled").length} upcoming`,programs:`${programs.length} programs · ${formats.length} class formats`,catalog:`${catalogExercises.length} exercises`};
@@ -672,13 +676,13 @@ export default function App(){
           </div>
         </div>
 
-        {sessionStatus&&view!=="sessions"&&<ActiveSessionBar status={sessionStatus} onOpen={()=>setView("sessions")} mobile={mobile}/>}
+        {sessionStatus&&view!=="sessions"&&<ActiveSessionBar status={sessionStatus} onOpen={()=>setView("sessions")} onDiscard={discardSession} mobile={mobile}/>}
 
         <main style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"none",touchAction:"auto",padding:mobile?12:20,paddingBottom:mobile?80:20}}>
           {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient} onLogDay={day=>{setEditSession(null);setPreloadDay(day);setSessionKey(k=>k+1);setView("sessions");}} onUpdateGoals={updateClientGoals} onUpdateBodyweight={updateClientBodyweight}/>}
-          {loggerMounted&&<div style={{display:view==="sessions"?"block":"none"}}><ErrorBoundary><SessionLogger key={editSession?`edit-${editSession.id}`:`new-${sessionKey}`} clients={clients} sessions={sessions} onSave={addSession} onUpdate={updateSession} editSession={editSession} onDone={()=>{setEditSession(null);setView("session-history");}} activeClient={activeClient} programs={programs} workouts={workouts} initialDay={preloadDay} catalog={catalogExercises} onAddToCatalog={quickAddCatalog} onStatus={setSessionStatus} onSessionsView={view==="sessions"}/></ErrorBoundary></div>}
+          {loggerMounted&&<div style={{display:view==="sessions"?"block":"none"}}><ErrorBoundary><SessionLogger key={editSession?`edit-${editSession.id}`:`new-${sessionKey}`} clients={clients} sessions={sessions} onSave={addSession} onUpdate={updateSession} editSession={editSession} onDone={()=>{setEditSession(null);setView("session-history");}} activeClient={activeClient} programs={programs} workouts={workouts} initialDay={preloadDay} catalog={catalogExercises} onAddToCatalog={quickAddCatalog} onStatus={setSessionStatus} onSessionsView={view==="sessions"} onDiscard={discardSession}/></ErrorBoundary></div>}
           {view==="session-history"&&<SessionHistory sessions={sessions} clients={clients} mobile={mobile} onNew={startNewSession} onEdit={s=>{setEditSession(s);setPreloadDay(null);setView("sessions");}} onDelete={deleteSession}/>}
           {view==="classes"&&<ClassesScreen clients={clients} classes={classes} onAdd={addClass} onAddSeries={addClassSeries} onEdit={editClass} onDelete={deleteClass} onDeleteSeries={deleteClassSeries} formats={formats} mobile={mobile}/>}
           {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} workouts={workouts} onSaveWorkout={addWorkout} onUpdateWorkout={updateWorkout} onDeleteWorkout={deleteWorkout} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass} mobile={mobile} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/>}
