@@ -572,7 +572,7 @@ function WorkoutBuilder({workouts,onSave,onUpdate,onDelete,mobile,catalog,onAddT
       {workouts.map(w=>(
         <div key={w.id} onClick={()=>setSelected(w.id)} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${C.blue}`}}>
           <div style={{color:C.text,fontWeight:700,fontSize:14}}>{w.name}</div>
-          <div style={{color:C.muted,fontSize:11,marginTop:3}}>{w.focus?`${w.focus} · `:""}{(w.exercises||[]).length} exercise{(w.exercises||[]).length!==1?"s":""}</div>
+          <div style={{color:C.muted,fontSize:11,marginTop:3}}>{w.focus?`${w.focus} · `:""}{(w.exercises||[]).length} exercise{(w.exercises||[]).length!==1?"s":""}{(w.warmup||[]).length?` · ${w.warmup.length} warmup`:""}</div>
         </div>
       ))}
     </div>
@@ -586,7 +586,7 @@ function WorkoutBuilder({workouts,onSave,onUpdate,onDelete,mobile,catalog,onAddT
         {workouts.map(w=>(
           <div key={w.id} onClick={()=>setSelected(w.id)} style={{background:C.surface,border:`1px solid ${selected===w.id?C.blue:C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${selected===w.id?C.blue:C.border}`}}>
             <div style={{color:C.text,fontWeight:700,fontSize:14}}>{w.name}</div>
-            <div style={{color:C.muted,fontSize:11,marginTop:3}}>{w.focus?`${w.focus} · `:""}{(w.exercises||[]).length} exercise{(w.exercises||[]).length!==1?"s":""}</div>
+            <div style={{color:C.muted,fontSize:11,marginTop:3}}>{w.focus?`${w.focus} · `:""}{(w.exercises||[]).length} exercise{(w.exercises||[]).length!==1?"s":""}{(w.warmup||[]).length?` · ${w.warmup.length} warmup`:""}</div>
           </div>
         ))}
       </div>
