@@ -627,7 +627,7 @@ const RESISTANCE_MODES=[
   {value:"bodyweight",label:"Bodyweight",unit:null,color:C.green},
 ];
 
-function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRest,settings,checkPR}){
+function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRest,settings,checkPR,prevSets}){
   const [showCfg,setShowCfg]=useState(false);
   const m=RESISTANCE_MODES.find(r=>r.value===(ex.resistanceMode||"weighted"))||RESISTANCE_MODES[0];
   const hasLoad=m.unit!==null;
@@ -690,8 +690,8 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
             <div/>
           </div>
           {ex.sets.map((s,si)=>{
-            const prevSet=si>0?ex.sets[si-1]:null;
-            const prevText=prevSet?(hasLoad?`${prevSet.load||"–"}×${prevSet.reps||"–"}`:`${prevSet.reps||"–"}`):"—";
+            const prevSet=prevSets&&prevSets[si]?prevSets[si]:null;
+            const prevText=prevSet?(hasLoad?`${prevSet.load||prevSet.weight||"–"}×${prevSet.reps||"–"}`:`${prevSet.reps||"–"}`):"—";
             return(
             <div key={s.id} style={{display:"grid",gridTemplateColumns:hasLoad?`24px 1fr 60px 54px 96px 34px 22px`:`24px 1fr 60px 96px 34px 22px`,gap:6,padding:"7px 0",borderBottom:`1px solid ${C.border}`,alignItems:"center",background:s.pr&&s.done?C.amber+"08":"transparent"}}>
               <span style={{color:C.muted,fontSize:13,fontWeight:700,textAlign:"center"}}>{si+1}</span>
@@ -718,18 +718,19 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
   );
 }
 
-function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay,catalog,onAddToCatalog,workouts=[]}){
+function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,activeClient,programs,initialDay,catalog,onAddToCatalog,workouts=[]}){
+  const isEdit=!!editSession;
   const [settings,setSettings]=useState(DEFAULT_SETTINGS);
   const [showSettings,setShowSettings]=useState(false);
-  const [clientId,setClientId]=useState(activeClient?.id||"");
-  const [name,setName]=useState("");
-  const [notes,setNotes]=useState("");
-  const [warmup,setWarmup]=useState([]);
-  const [exercises,setExercises]=useState([]);
+  const [clientId,setClientId]=useState(editSession?.clientId||activeClient?.id||"");
+  const [name,setName]=useState(editSession?.name||"");
+  const [notes,setNotes]=useState(editSession?.notes||"");
+  const [warmup,setWarmup]=useState(editSession?.warmup||[]);
+  const [exercises,setExercises]=useState(editSession?.exercises||[]);
   const [showPicker,setShowPicker]=useState(false);
   const [saved,setSaved]=useState(false);
   const [saving,setSaving]=useState(false);
-  const [programDay,setProgramDay]=useState("");
+  const [programDay,setProgramDay]=useState(editSession?.programDay||"");
   const [loadModal,setLoadModal]=useState(false);
   const [wkModal,setWkModal]=useState(false);
   const [startTime]=useState(Date.now());
@@ -787,7 +788,20 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
   };
 
   // Pre-load a program day when navigated from client profile
-  useEffect(()=>{if(initialDay)loadFromDay(initialDay);},[]);
+  useEffect(()=>{if(initialDay&&!isEdit)loadFromDay(initialDay);},[]);
+
+  // Previous session's sets for an exercise (same client, excluding the session being edited)
+  const prevSetsFor=exName=>{
+    if(!clientId||!exName)return null;
+    const cutoff=isEdit?new Date(editSession.startedAt||editSession.createdAt||0).getTime():Infinity;
+    const prior=(sessions||[])
+      .filter(s=>s.clientId===clientId&&s.id!==editSession?.id)
+      .filter(s=>!isEdit||new Date(s.startedAt||s.createdAt||0).getTime()<cutoff)
+      .filter(s=>(s.exercises||[]).some(e=>e.name===exName))
+      .sort((a,b)=>new Date(b.startedAt||b.createdAt||0)-new Date(a.startedAt||a.createdAt||0));
+    if(!prior.length)return null;
+    return (prior[0].exercises||[]).find(e=>e.name===exName)?.sets||null;
+  };
 
   const addSet=exId=>setExercises(p=>p.map(e=>{
     if(e.id!==exId)return e;
@@ -814,7 +828,11 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
     if(!clientId)return;
     setSaving(true);
     try{
-      await onSave({id:uid(),clientId,name:name||`Session ${fmtDate(now())}`,notes,exercises,warmup,programDay,startedAt:now()});
+      if(isEdit){
+        await onUpdate(editSession.id,{clientId,name:name||`Session ${fmtDate(now())}`,notes,exercises,warmup,programDay,startedAt:editSession.startedAt||now()});
+      }else{
+        await onSave({id:uid(),clientId,name:name||`Session ${fmtDate(now())}`,notes,exercises,warmup,programDay,startedAt:now()});
+      }
       setSaved(true);
     }catch(e){console.error("Save failed",e);}finally{setSaving(false);}
   };
@@ -832,10 +850,12 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
     return(
       <Card style={{textAlign:"center",padding:48}}>
         <div style={{fontSize:40,marginBottom:12}}>💪</div>
-        <div style={{color:C.green,fontWeight:800,fontSize:22,marginBottom:8}}>Session Saved!</div>
+        <div style={{color:C.green,fontWeight:800,fontSize:22,marginBottom:8}}>{isEdit?"Session Updated!":"Session Saved!"}</div>
         {hasPR&&<div style={{color:C.amber,fontWeight:700,marginBottom:16}}>🏆 New PR detected!</div>}
         <div style={{color:C.sub,marginBottom:24}}>{totalSets} sets saved for {client?.name}</div>
-        <Btn variant="ghost" onClick={()=>{setSaved(false);setExercises([]);setWarmup([]);setName("");setNotes("");setProgramDay("");}}>Log Another</Btn>
+        {isEdit
+          ?<Btn variant="ghost" onClick={()=>onDone&&onDone()}>← Back to Sessions</Btn>
+          :<Btn variant="ghost" onClick={()=>{setSaved(false);setExercises([]);setWarmup([]);setName("");setNotes("");setProgramDay("");}}>Log Another</Btn>}
       </Card>
     );
   }
@@ -917,7 +937,7 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
         <SessionExCard key={ex.id} ex={ex} settings={settings}
           updateEx={updateEx} addSet={addSet} updateSet={updateSet}
           removeSet={removeSet} removeEx={removeEx}
-          startRest={startRest} checkPR={checkPR}/>
+          startRest={startRest} checkPR={checkPR} prevSets={prevSetsFor(ex.name)}/>
       ))}
       <div style={{position:"relative"}}>
         <Btn variant="ghost" color={C.green} onClick={()=>setShowPicker(p=>!p)}>+ Add Exercise</Btn>
@@ -972,5 +992,110 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// SESSION HISTORY
+// ═══════════════════════════════════════════════════════════════════════════════
 
-export { SessionLogger, SessionExCard };
+function SessionHistory({sessions,clients,onEdit,onDelete,onNew,mobile}){
+  const [selected,setSelected]=useState(null);
+  const [confirm,setConfirm]=useState(null);
+  const sorted=[...(sessions||[])].sort((a,b)=>new Date(b.startedAt||b.createdAt||0)-new Date(a.startedAt||a.createdAt||0));
+  const sel=sorted.find(s=>s.id===selected);
+  const clientName=id=>clients.find(c=>c.id===id)?.name||"Unknown client";
+  const statOf=s=>{
+    const exs=s.exercises||[];
+    const sets=exs.reduce((a,e)=>a+(e.sets?.length||0),0);
+    const done=exs.reduce((a,e)=>a+(e.sets?.filter(x=>x.done)?.length||0),0);
+    const prs=exs.reduce((a,e)=>a+(e.sets?.filter(x=>x.pr&&x.done)?.length||0),0);
+    return {exCount:exs.length,sets,done,prs};
+  };
+
+  return(
+    <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"300px 1fr",gap:16,minHeight:mobile?0:500}}>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <Btn style={{justifyContent:"center"}} onClick={()=>onNew&&onNew()}>+ Log Session</Btn>
+        {sorted.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>🕘</div><div style={{color:C.muted,fontSize:13}}>No sessions logged yet.</div></Card>}
+        {sorted.map(s=>{
+          const st=statOf(s);
+          return(
+            <div key={s.id} onClick={()=>setSelected(s.id)} style={{background:C.surface,border:`1px solid ${selected===s.id?C.green:C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${st.prs>0?C.amber:C.green}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                <div style={{color:C.text,fontWeight:700,fontSize:14,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name||"Session"}</div>
+                {st.prs>0&&<Pill color={C.amber}>🏆 {st.prs}</Pill>}
+              </div>
+              <div style={{color:C.sub,fontSize:12,marginTop:4}}>{clientName(s.clientId)}</div>
+              <div style={{color:C.muted,fontSize:11,marginTop:2}}>{fmtDate(s.startedAt||s.createdAt)} · {st.exCount} exercises · {st.done}/{st.sets} sets</div>
+              {s.programDay&&<div style={{marginTop:5}}><Pill color={C.purple}>📋 {s.programDay}</Pill></div>}
+            </div>
+          );
+        })}
+      </div>
+
+      {!sel?<Card style={{display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center",color:C.muted}}><div style={{fontSize:32,marginBottom:10}}>⚡</div>Select a session</div></Card>:(
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <Card>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12,gap:10,flexWrap:"wrap"}}>
+              <div style={{minWidth:0}}>
+                <div style={{color:C.text,fontWeight:800,fontSize:18}}>{sel.name||"Session"}</div>
+                <div style={{color:C.sub,fontSize:13,marginTop:2}}>{clientName(sel.clientId)} · {fmtDate(sel.startedAt||sel.createdAt)}</div>
+                {sel.programDay&&<div style={{marginTop:6}}><Pill color={C.purple}>📋 {sel.programDay}</Pill></div>}
+              </div>
+              <div style={{display:"flex",gap:8,flexShrink:0}}>
+                <Btn variant="ghost" color={C.blue} style={{padding:"6px 12px",fontSize:11}} onClick={()=>onEdit(sel)}>Edit</Btn>
+                <Btn variant="danger" style={{padding:"6px 12px",fontSize:11}} onClick={()=>setConfirm(sel.id)}>Delete</Btn>
+              </div>
+            </div>
+            {sel.notes&&<div style={{background:C.s2,borderRadius:10,padding:"10px 14px",border:`1px solid ${C.border}`,color:C.sub,fontSize:13}}>💬 {sel.notes}</div>}
+            {(()=>{const st=statOf(sel);return(
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginTop:12}}>
+                {[{label:"Exercises",val:st.exCount,color:C.text},{label:"Sets done",val:`${st.done}/${st.sets}`,color:C.green},{label:"PRs",val:st.prs,color:C.amber}].map(x=>(
+                  <div key={x.label} style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:9,padding:12,textAlign:"center"}}><div style={{color:C.muted,fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em"}}>{x.label}</div><div style={{color:x.color,fontWeight:800,fontSize:22}}>{x.val}</div></div>
+                ))}
+              </div>
+            );})()}
+          </Card>
+
+          {(sel.warmup||[]).length>0&&(
+            <Card>
+              <SL>Warm-up</SL>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {sel.warmup.map((w,i)=><span key={w.id||i} style={{fontSize:12,color:C.sub,background:C.s2,padding:"5px 10px",borderRadius:7,border:`1px solid ${C.border}`}}>{w.name}{w.duration?` · ${w.duration}`:""}</span>)}
+              </div>
+            </Card>
+          )}
+
+          {(sel.exercises||[]).map((ex,ei)=>{
+            const m=RESISTANCE_MODES.find(r=>r.value===(ex.resistanceMode||"weighted"))||RESISTANCE_MODES[0];
+            const hasLoad=m.unit!==null;
+            return(
+              <Card key={ex.id||ei}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+                  <span style={{color:C.text,fontWeight:700,fontSize:15}}>{ex.name}</span>
+                  <Pill color={m.color}>{m.label}</Pill>
+                </div>
+                {(ex.sets||[]).length===0?<div style={{color:C.muted,fontSize:12}}>No sets recorded.</div>:(
+                  <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                    {ex.sets.map((s,si)=>(
+                      <div key={s.id||si} style={{display:"flex",alignItems:"center",gap:10,background:s.pr&&s.done?C.amber+"10":C.s2,borderRadius:8,padding:"7px 12px",border:`1px solid ${C.border}`}}>
+                        <span style={{color:C.muted,fontSize:12,fontWeight:700,width:18}}>{si+1}</span>
+                        <span style={{color:C.text,fontSize:13,flex:1}}>{hasLoad?`${s.load||s.weight||"–"} × ${s.reps||"–"}`:`${s.reps||"–"} reps`}</span>
+                        {s.setNotes&&<span style={{color:C.sub,fontSize:11,fontStyle:"italic"}}>{s.setNotes}</span>}
+                        {s.pr&&s.done&&<Pill color={C.amber}>🏆 PR</Pill>}
+                        <span style={{color:s.done?C.green:C.muted,fontSize:14}}>{s.done?"✓":"—"}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {confirm&&<Confirm msg="Delete this session? This cannot be undone." onConfirm={async()=>{await onDelete(confirm);if(selected===confirm)setSelected(null);setConfirm(null);}} onCancel={()=>setConfirm(null)}/>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export { SessionLogger, SessionExCard, SessionHistory };

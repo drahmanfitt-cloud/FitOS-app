@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { C, uid, now, fmtDate, db, supabase, mapClient, mapSession, mapClass, mapProgram, mapFormat, mapWorkout, mapCatalog, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Modal, useToast, Toast, ErrorBoundary } from "./ui.jsx";
 import { ClientsScreen, ClientProfile } from "./clients.jsx";
-import { SessionLogger } from "./session.jsx";
+import { SessionLogger, SessionHistory } from "./session.jsx";
 import { ClassesScreen } from "./classes.jsx";
 import { ProgramsHub } from "./programs.jsx";
 import { Dashboard } from "./dashboard.jsx";
@@ -182,6 +182,7 @@ export default function App(){
   const [toasts,toast]=useToast();
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const [preloadDay,setPreloadDay]=useState(null);
+  const [editSession,setEditSession]=useState(null);
   const [catalogExercises,setCatalogExercises]=useState([]);
   const seededRef=useRef(false);
   const warmupSeededRef=useRef(false);
@@ -375,6 +376,26 @@ export default function App(){
     if(cl){ await db.update("fitos_clients",s.clientId,{session_count:(cl.sessionCount||0)+1}); setClients(p=>p.map(c=>c.id===s.clientId?{...c,sessionCount:(c.sessionCount||0)+1}:c)); }
     toast("Session saved! 💪");
   };
+  const updateSession=async(id,s)=>{
+    const old=sessions.find(x=>x.id===id);
+    const row={client_id:s.clientId,name:s.name,notes:s.notes,exercises:s.exercises,program_day:s.programDay,started_at:s.startedAt};
+    const r=await db.update("fitos_sessions",id,row);
+    setSessions(p=>p.map(x=>x.id===id?mapSession({...r,id}):x));
+    if(old&&old.clientId!==s.clientId){
+      const oldCl=clients.find(c=>c.id===old.clientId);
+      if(oldCl&&(oldCl.sessionCount||0)>0){ await db.update("fitos_clients",old.clientId,{session_count:oldCl.sessionCount-1}); setClients(p=>p.map(c=>c.id===old.clientId?{...c,sessionCount:c.sessionCount-1}:c)); }
+      const newCl=clients.find(c=>c.id===s.clientId);
+      if(newCl){ await db.update("fitos_clients",s.clientId,{session_count:(newCl.sessionCount||0)+1}); setClients(p=>p.map(c=>c.id===s.clientId?{...c,sessionCount:(c.sessionCount||0)+1}:c)); }
+    }
+    toast("Session updated ✓");
+  };
+  const deleteSession=async id=>{
+    const sess=sessions.find(x=>x.id===id);
+    await db.delete("fitos_sessions",id);
+    setSessions(p=>p.filter(x=>x.id!==id));
+    if(sess){ const cl=clients.find(c=>c.id===sess.clientId); if(cl&&(cl.sessionCount||0)>0){ await db.update("fitos_clients",sess.clientId,{session_count:cl.sessionCount-1}); setClients(p=>p.map(c=>c.id===sess.clientId?{...c,sessionCount:c.sessionCount-1}:c)); } }
+    toast("Session deleted","error");
+  };
 
   // ── Class CRUD
   const buildClassRow=(f,seriesId=null)=>({id:uid(),name:f.name,date:f.date,time:f.time,duration:Number(f.duration),capacity:Number(f.capacity),location:f.location||"",notes:f.notes||"",focus:f.focus||"",series_id:seriesId,status:"scheduled",bookings:[]});
@@ -544,9 +565,9 @@ export default function App(){
     toast("Exercise deleted","error");
   };
 
-  const navigate=v=>{if(v==="clients")setActiveClient(null);setView(v);};
-  const TITLES={dashboard:"Dashboard",clients:"Clients",client:"Client Profile",sessions:"Log Session",classes:"Group Classes",programs:"Programs & Formats",catalog:"Exercise Catalog"};
-  const SUBS={dashboard:`${clients.filter(c=>c.status==="active").length} active clients`,clients:`${clients.length} clients`,client:activeClient?.name||"",sessions:"Track sets, reps & weight",classes:`${classes.filter(c=>c.status==="scheduled").length} upcoming`,programs:`${programs.length} programs · ${formats.length} class formats`,catalog:`${catalogExercises.length} exercises`};
+  const navigate=v=>{if(v==="clients")setActiveClient(null);if(v!=="sessions")setEditSession(null);setView(v);};
+  const TITLES={dashboard:"Dashboard",clients:"Clients",client:"Client Profile",sessions:editSession?"Edit Session":"Log Session","session-history":"Logged Sessions",classes:"Group Classes",programs:"Programs & Formats",catalog:"Exercise Catalog"};
+  const SUBS={dashboard:`${clients.filter(c=>c.status==="active").length} active clients`,clients:`${clients.length} clients`,client:activeClient?.name||"",sessions:editSession?"Editing a logged session":"Track sets, reps & weight","session-history":`${sessions.length} logged · tap to view or edit`,classes:`${classes.filter(c=>c.status==="scheduled").length} upcoming`,programs:`${programs.length} programs · ${formats.length} class formats`,catalog:`${catalogExercises.length} exercises`};
   const counts={clients:clients.length,programs:programs.length+formats.length,dashboard:0,sessions:0,classes:classes.filter(c=>c.status==="scheduled").length};
 
   // ── Auth gate
@@ -601,7 +622,8 @@ export default function App(){
           {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient} onLogDay={day=>{setPreloadDay(day);setView("sessions");}} onUpdateGoals={updateClientGoals} onUpdateBodyweight={updateClientBodyweight}/>}
-          {view==="sessions"&&<ErrorBoundary><SessionLogger clients={clients} sessions={sessions} onSave={addSession} activeClient={activeClient} programs={programs} workouts={workouts} initialDay={preloadDay} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/></ErrorBoundary>}
+          {view==="sessions"&&<ErrorBoundary><SessionLogger key={editSession?.id||"new"} clients={clients} sessions={sessions} onSave={addSession} onUpdate={updateSession} editSession={editSession} onDone={()=>{setEditSession(null);setView("session-history");}} activeClient={activeClient} programs={programs} workouts={workouts} initialDay={preloadDay} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/></ErrorBoundary>}
+          {view==="session-history"&&<SessionHistory sessions={sessions} clients={clients} mobile={mobile} onNew={()=>{setEditSession(null);setView("sessions");}} onEdit={s=>{setEditSession(s);setPreloadDay(null);setView("sessions");}} onDelete={deleteSession}/>}
           {view==="classes"&&<ClassesScreen clients={clients} classes={classes} onAdd={addClass} onAddSeries={addClassSeries} onEdit={editClass} onDelete={deleteClass} onDeleteSeries={deleteClassSeries} formats={formats} mobile={mobile}/>}
           {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} workouts={workouts} onSaveWorkout={addWorkout} onUpdateWorkout={updateWorkout} onDeleteWorkout={deleteWorkout} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass} mobile={mobile} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/>}
           {view==="catalog"&&<ExerciseCatalogScreen catalogExercises={catalogExercises} onAdd={addCatalogExercise} onEdit={editCatalogExercise} onDelete={deleteCatalogExercise} onSeed={seedCatalogExercises} sessions={sessions} clients={clients}/>}
