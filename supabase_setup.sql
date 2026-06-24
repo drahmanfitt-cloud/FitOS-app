@@ -78,22 +78,28 @@ drop policy if exists "public_all" on fitos_formats;
 drop policy if exists "public_all" on fitos_catalog;
 
 -- 5. Trainer data: each trainer sees/edits only their own rows
+drop policy if exists "trainer_own" on fitos_clients;
 create policy "trainer_own" on fitos_clients
   for all using (auth.uid() = trainer_id) with check (auth.uid() = trainer_id);
 
+drop policy if exists "trainer_own" on fitos_sessions;
 create policy "trainer_own" on fitos_sessions
   for all using (auth.uid() = trainer_id) with check (auth.uid() = trainer_id);
 
+drop policy if exists "trainer_own" on fitos_classes;
 create policy "trainer_own" on fitos_classes
   for all using (auth.uid() = trainer_id) with check (auth.uid() = trainer_id);
 
+drop policy if exists "trainer_own" on fitos_programs;
 create policy "trainer_own" on fitos_programs
   for all using (auth.uid() = trainer_id) with check (auth.uid() = trainer_id);
 
+drop policy if exists "trainer_own" on fitos_formats;
 create policy "trainer_own" on fitos_formats
   for all using (auth.uid() = trainer_id) with check (auth.uid() = trainer_id);
 
 -- 6. Trainer profiles: each user manages their own profile only
+drop policy if exists "own_profile" on fitos_trainer_profiles;
 create policy "own_profile" on fitos_trainer_profiles
   for all using (auth.uid() = id) with check (auth.uid() = id);
 
@@ -117,6 +123,7 @@ create table if not exists fitos_workouts (
 alter table fitos_workouts add column if not exists trainer_id uuid references auth.users(id);
 alter table fitos_workouts enable row level security;
 drop policy if exists "public_all" on fitos_workouts;
+drop policy if exists "trainer_own" on fitos_workouts;
 create policy "trainer_own" on fitos_workouts
   for all using (auth.uid() = trainer_id) with check (auth.uid() = trainer_id);
 
