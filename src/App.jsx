@@ -14,7 +14,7 @@ import { SEED_LIBRARY, WARMUP_SEED } from "./seedLibrary.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const NAV=[{id:"dashboard",label:"Dashboard",icon:"▦"},{id:"clients",label:"Clients",icon:"👥"},{id:"sessions",label:"Log Session",icon:"⚡"},{id:"classes",label:"Classes",icon:"📅"},{id:"programs",label:"Programs",icon:"📋"},{id:"catalog",label:"Exercise Catalog",icon:"📖"}];
+const NAV=[{id:"dashboard",label:"Dashboard",icon:"▦"},{id:"clients",label:"Clients",icon:"👥"},{id:"session-history",label:"Sessions",icon:"⚡"},{id:"classes",label:"Classes",icon:"📅"},{id:"programs",label:"Programs",icon:"📋"},{id:"catalog",label:"Exercise Catalog",icon:"📖"}];
 
 // ── Bottom nav for mobile ─────────────────────────────────────────────────────
 function BottomNav({active,setActive,counts}){
