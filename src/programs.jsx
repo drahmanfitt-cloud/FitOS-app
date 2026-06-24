@@ -16,7 +16,7 @@ const CLASS_TYPES=[
   {id:"mobility", toggle:"🤸 Mobility", color:C.teal,   item:"Movement", items:"Movements",            empty:"No movements yet.", lead:"Lead Movement", timer:false},
 ];
 
-function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClient,mobile,catalog,onAddToCatalog,workouts=[]}){
+function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClient,mobile,catalog,onAddToCatalog,workouts=[],onSaveWorkout}){
   const [selected,setSelected]=useState(null);
   const [confirm,setConfirm]=useState(null);
   const [modal,setModal]=useState(null);
@@ -39,6 +39,17 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
     const copiedWarm=(wk.warmup||[]).map(w=>({...w,id:uid()}));
     updDay(did,{exercises:[...(day.exercises||[]),...copiedEx],warmup:[...(day.warmup||[]),...copiedWarm]});
     setWkPicker(null);
+  };
+  const copyDayToWorkout=async day=>{
+    if(!onSaveWorkout)return;
+    await onSaveWorkout({
+      id:uid(),
+      name:day.label||"Workout",
+      focus:day.focus||"",
+      warmup:(day.warmup||[]).map(w=>({...w,id:uid()})),
+      exercises:(day.exercises||[]).map(e=>({id:uid(),name:e.name,sets:e.sets??3,reps:e.reps??"8-12",rest:e.rest??90,notes:e.notes||""})),
+      createdAt:now(),
+    });
   };
   const updEx=(did,eid,patch)=>updDay(did,{exercises:prog.days.find(d=>d.id===did).exercises.map(e=>e.id===eid?{...e,...patch}:e)});
   const rmEx=(did,eid)=>updDay(did,{exercises:prog.days.find(d=>d.id===did).exercises.filter(e=>e.id!==eid)});
@@ -85,6 +96,7 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
         <Card key={day.id} style={{borderColor:C.purple+"33"}}>
           <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:14}}>
             <input value={day.label} onChange={e=>updDay(day.id,{label:e.target.value})} style={{background:"none",border:"none",color:C.text,fontWeight:700,fontSize:15,outline:"none",fontFamily:"inherit",flex:1,minWidth:0,padding:0}}/>
+            <button onClick={()=>copyDayToWorkout(day)} title="Copy this day to the Workouts tab" className="fitos-btn" style={{"--btn-col":C.blue,background:C.blue+"14",border:`1px solid ${C.blue}33`,borderRadius:7,padding:"5px 9px",color:C.blue,fontSize:11,fontWeight:700,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>⧉{!mobile&&" Copy"}</button>
             <input value={day.focus} onChange={e=>updDay(day.id,{focus:e.target.value})} placeholder="Focus (Push, Lower…)" style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:7,padding:"5px 10px",color:C.sub,fontSize:12,outline:"none",fontFamily:"inherit",width:mobile?100:160,flexShrink:0,minWidth:0}}/>
             <button onClick={()=>rmDay(day.id)} style={{background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer",lineHeight:1,flexShrink:0,padding:"0 2px"}}>×</button>
           </div>
@@ -595,7 +607,7 @@ function ProgramsHub({programs,onSaveProgram,onUpdateProgram,onDeleteProgram,for
           <button key={id} onClick={()=>setTab(id)} style={{padding:"10px 18px",border:"none",background:"none",cursor:"pointer",color:tab===id?color:C.sub,fontWeight:tab===id?700:500,fontSize:mobile?12:14,borderBottom:`2px solid ${tab===id?color:"transparent"}`,whiteSpace:"nowrap"}}>{label}</button>
         ))}
       </div>
-      {tab==="programs"&&<ProgramBuilder programs={programs} onSave={onSaveProgram} onUpdate={onUpdateProgram} onDelete={onDeleteProgram} clients={clients} onUpdateClient={onUpdateClient} mobile={mobile} catalog={catalog} onAddToCatalog={onAddToCatalog} workouts={workouts||[]}/>}
+      {tab==="programs"&&<ProgramBuilder programs={programs} onSave={onSaveProgram} onUpdate={onUpdateProgram} onDelete={onDeleteProgram} clients={clients} onUpdateClient={onUpdateClient} mobile={mobile} catalog={catalog} onAddToCatalog={onAddToCatalog} workouts={workouts||[]} onSaveWorkout={onSaveWorkout}/>}
       {tab==="workouts"&&<WorkoutBuilder workouts={workouts||[]} onSave={onSaveWorkout} onUpdate={onUpdateWorkout} onDelete={onDeleteWorkout} mobile={mobile} catalog={catalog} onAddToCatalog={onAddToCatalog}/>}
       {tab==="formats"&&<ClassFormatBuilder formats={formats} onSave={onSaveFormat} onUpdate={onUpdateFormat} onDelete={onDeleteFormat} classes={classes} onUpdateClass={onUpdateClass} catalog={catalog} onAddToCatalog={onAddToCatalog} mobile={mobile}/>}
     </div>
