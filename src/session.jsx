@@ -773,10 +773,30 @@ function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,acti
   const client=clients.find(c=>c.id===clientId);
   const prog=programs.find(p=>p.id===client?.programId);
 
+  // Warmup items built in the Workout/Program planner use a slightly different shape
+  // (category "sport", sidesMode, notes) than the session logger (purpose "sport-specific",
+  // sides boolean, description). Normalise so every section — incl. Sport Specific — survives.
+  const adoptWarmup=list=>(list||[]).map(w=>{
+    const isSport=w.purpose==="sport-specific"||w.category==="sport"||w.category==="sport-specific";
+    return {
+      id:uid(),
+      name:w.name||"",
+      category:isSport?"mobility":(w.category||"mobility"),
+      purpose:isSport?"sport-specific":(w.purpose||""),
+      holdSec:w.holdSec??settings.defaultWarmupHoldSec,
+      reps:w.reps??"",
+      resistanceMode:w.resistanceMode||"bodyweight",
+      resistanceVal:w.resistanceVal??"",
+      sides:w.sides!==undefined?w.sides:(w.sidesMode==="both"),
+      description:w.description||w.notes||"",
+      expanded:false,
+    };
+  });
+
   const loadFromDay=day=>{
     setName(day.label+(day.focus?` — ${day.focus}`:""));
     setProgramDay(day.label);
-    setWarmup((day.warmup||[]).map(w=>({...w,id:uid()})));
+    setWarmup(adoptWarmup(day.warmup));
     setExercises((day.exercises||[]).map(e=>({id:uid(),name:e.name,resistanceMode:"weighted",sets:[],templateSets:e.sets,templateReps:e.reps,templateRest:e.rest||settings.defaultRestSec,notes:e.notes||""})));
     setLoadModal(false);
   };
@@ -784,7 +804,7 @@ function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,acti
   const loadFromWorkout=wk=>{
     setName(wk.name+(wk.focus?` — ${wk.focus}`:""));
     setProgramDay("");
-    setWarmup((wk.warmup||[]).map(w=>({...w,id:uid()})));
+    setWarmup(adoptWarmup(wk.warmup));
     setExercises((wk.exercises||[]).map(e=>({id:uid(),name:e.name,resistanceMode:"weighted",sets:[],templateSets:e.sets,templateReps:e.reps,templateRest:e.rest||settings.defaultRestSec,notes:e.notes||""})));
     setWkModal(false);
   };

@@ -18,3 +18,11 @@ Adding warmup items uses a lookup picker (`WarmupPicker` in warmup.jsx), not fre
 The same WARMUP_LIBRARY movements are mirrored into the catalog via `WARMUP_SEED` (generated in `src/seedLibrary.js` by importing WARMUP_LIBRARY from warmup.jsx — single source of truth for names). They carry a `purpose`: stretching→"Stretch", mobility→"Mobility", foam-rolling→"Foam Rolling" (names suffixed " Foam Roll"), sport→"Sport Specific". Catalog cards render a colored dot on the right edge keyed by purpose (WARMUP_DOT_PURPOSES in catalog.jsx) — colors match WARMUP_CATS (purple/teal/blue/amber).
 **Sync trap:** WARMUP_SEED is deduped against SEED_LIBRARY by name before being folded in, and the App.jsx load effect tops up existing catalogs once (guarded by localStorage `fitos_warmup_seeded` + warmupSeededRef) so warmups appear without re-adding on every load or fighting user deletions.
 **Why:** user wanted every warmup movement in the catalog in one place, color-labeled, without duplicates.
+
+## Two INCOMPATIBLE warmup item schemas — convert when crossing the boundary
+`WarmupPlanner` (workouts + program days) and `WarmupSection` (session logger) store warmup items differently:
+- Sport items: planner uses `category:"sport"`; session uses `category:"mobility"` + `purpose:"sport-specific"` (session filters sport ONLY by `purpose`, never category).
+- Per-side: planner `sidesMode` ("none"|"both"); session `sides` (boolean).
+- Notes: planner `notes`; session `description`. Session also has `resistanceVal`/`expanded` that planner lacks.
+**Trap:** copying planner-shaped warmup raw into a session (loadFromDay/loadFromWorkout) makes the whole Sport Specific section vanish (no item matches `purpose`) and silently drops sidesMode/notes. Those two loaders run `adoptWarmup()` to normalize. copy-day→workout (programs.jsx copyDayToWorkout) needs NO conversion — both ends are planner schema.
+**How to apply:** any new path that moves planner warmup into the session WarmupSection MUST normalize via the same mapping; editing a saved session bypasses it (saved sessions are already session-schema).
