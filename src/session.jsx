@@ -1011,7 +1011,7 @@ function SessionHistory({sessions,clients,onEdit,onDelete,onNew,mobile}){
 
   return(
     <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"300px 1fr",gap:16,minHeight:mobile?0:500}}>
-      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      <div style={{display:"flex",flexDirection:"column",gap:10,order:mobile&&sel?2:0}}>
         <Btn style={{justifyContent:"center"}} onClick={()=>onNew&&onNew()}>+ Log Session</Btn>
         {sorted.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>🕘</div><div style={{color:C.muted,fontSize:13}}>No sessions logged yet.</div></Card>}
         {sorted.map(s=>{
@@ -1031,7 +1031,7 @@ function SessionHistory({sessions,clients,onEdit,onDelete,onNew,mobile}){
       </div>
 
       {!sel?<Card style={{display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center",color:C.muted}}><div style={{fontSize:32,marginBottom:10}}>⚡</div>Select a session</div></Card>:(
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{display:"flex",flexDirection:"column",gap:14,order:mobile?1:0}}>
           <Card>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12,gap:10,flexWrap:"wrap"}}>
               <div style={{minWidth:0}}>
