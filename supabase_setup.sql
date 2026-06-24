@@ -23,6 +23,43 @@ alter table fitos_programs add column if not exists trainer_id uuid references a
 alter table fitos_programs add column if not exists warmup jsonb default '[]';
 alter table fitos_formats  add column if not exists trainer_id uuid references auth.users(id);
 
+-- 2b. Exercise Catalog (shared library — also stores custom warmup movements so
+--     they persist long-term and resurface as suggestions in the warmup pickers).
+--     Custom warmups are saved here tagged by `purpose`
+--     (Stretch / Mobility / Foam Rolling / Sport Specific).
+--     Created here BEFORE the RLS/policy steps below, which reference it.
+create table if not exists fitos_catalog (
+  id text primary key,
+  name text not null,
+  category text default 'Strength',
+  muscles text[] default '{}',
+  equipment text default 'Barbell',
+  difficulty text default 'Intermediate',
+  purpose text default '',
+  instructions text default '',
+  video_url text default '',
+  trainer_notes text default '',
+  tags text[] default '{}',
+  photo_base64 text default '',
+  created_at timestamptz default now()
+);
+
+-- Backfill any missing columns on an existing fitos_catalog table.
+-- `purpose` is what lets custom warmup movements save long-term and reappear
+-- in the warmup pickers — add it first if you previously lacked it.
+alter table fitos_catalog add column if not exists name          text;
+alter table fitos_catalog add column if not exists category      text default 'Strength';
+alter table fitos_catalog add column if not exists muscles       text[] default '{}';
+alter table fitos_catalog add column if not exists equipment     text default 'Barbell';
+alter table fitos_catalog add column if not exists difficulty    text default 'Intermediate';
+alter table fitos_catalog add column if not exists purpose       text default '';
+alter table fitos_catalog add column if not exists instructions  text default '';
+alter table fitos_catalog add column if not exists video_url     text default '';
+alter table fitos_catalog add column if not exists trainer_notes text default '';
+alter table fitos_catalog add column if not exists tags          text[] default '{}';
+alter table fitos_catalog add column if not exists photo_base64  text default '';
+alter table fitos_catalog add column if not exists created_at    timestamptz default now();
+
 -- 3. Enable Row Level Security on all tables
 alter table fitos_trainer_profiles enable row level security;
 alter table fitos_clients           enable row level security;
@@ -61,6 +98,7 @@ create policy "own_profile" on fitos_trainer_profiles
   for all using (auth.uid() = id) with check (auth.uid() = id);
 
 -- 7. Exercise catalog: shared — any authenticated user can read/write
+drop policy if exists "catalog_authenticated" on fitos_catalog;
 create policy "catalog_authenticated" on fitos_catalog
   for all using (auth.uid() is not null) with check (auth.uid() is not null);
 
