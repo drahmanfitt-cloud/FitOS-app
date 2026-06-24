@@ -718,7 +718,7 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
   );
 }
 
-function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,activeClient,programs,initialDay,catalog,onAddToCatalog,workouts=[]}){
+function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,activeClient,programs,initialDay,catalog,onAddToCatalog,workouts=[],onStatus,onSessionsView=true}){
   const isEdit=!!editSession;
   const [settings,setSettings]=useState(DEFAULT_SETTINGS);
   const [showSettings,setShowSettings]=useState(false);
@@ -740,23 +740,24 @@ function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,acti
   const [restFor,setRestFor]=useState(0);
   const [restRunning,setRestRunning]=useState(false);
   const [restExpanded,setRestExpanded]=useState(false);
+  const [restEndsAt,setRestEndsAt]=useState(0);
   const restRef=useRef(null);
 
   const startRest=useCallback((sec)=>{
     if(!sec||sec<=0)return;
-    setRestFor(sec);setRestSec(sec);setRestRunning(true);setRestExpanded(false);
+    setRestFor(sec);setRestSec(sec);setRestRunning(true);setRestExpanded(false);setRestEndsAt(Date.now()+sec*1000);
   },[]);
-  const pauseRest=useCallback(()=>setRestRunning(r=>!r),[]);
+  const pauseRest=useCallback(()=>setRestRunning(r=>{if(!r)setRestEndsAt(Date.now()+restSec*1000);return !r;}),[restSec]);
   const skipRest=useCallback(()=>{
     if(restRef.current)clearInterval(restRef.current);
-    setRestRunning(false);setRestSec(0);setRestFor(0);setRestExpanded(false);
+    setRestRunning(false);setRestSec(0);setRestFor(0);setRestExpanded(false);setRestEndsAt(0);
   },[]);
 
   useEffect(()=>{
     if(!restRunning){if(restRef.current)clearInterval(restRef.current);return;}
     restRef.current=setInterval(()=>{
       setRestSec(s=>{
-        if(s<=1){clearInterval(restRef.current);setRestRunning(false);setRestFor(0);return 0;}
+        if(s<=1){clearInterval(restRef.current);setRestRunning(false);setRestFor(0);setRestEndsAt(0);return 0;}
         return s-1;
       });
     },1000);
@@ -846,6 +847,12 @@ function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,acti
   const restPct=restFor>0?restSec/restFor*100:0;
   const isBottom=settings.restTimerPosition==="bottom";
 
+  useEffect(()=>{
+    if(!onStatus)return;
+    const active=!!clientId&&exercises.length>0&&!saved;
+    onStatus(active?{name:name||"Session",clientName:client?.name||"",startTime,doneSets,totalSets,restRunning,restEndsAt}:null);
+  },[onStatus,clientId,exercises.length,saved,name,client?.name,startTime,doneSets,totalSets,restRunning,restEndsAt]);
+
   if(saved){
     return(
       <Card style={{textAlign:"center",padding:48}}>
@@ -862,7 +869,7 @@ function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,acti
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16,position:"relative"}}>
-      {restFor>0&&!restExpanded&&(
+      {onSessionsView&&restFor>0&&!restExpanded&&(
         <div onClick={()=>setRestExpanded(true)} style={{position:"fixed",left:0,right:0,[isBottom?"bottom":"top"]:0,background:C.s2,borderTop:isBottom?`1px solid ${C.border}`:"none",borderBottom:!isBottom?`1px solid ${C.border}`:"none",zIndex:400,cursor:"pointer",boxShadow:isBottom?"0 -4px 20px rgba(0,0,0,0.4)":"0 4px 20px rgba(0,0,0,0.4)"}}>
           {!isBottom&&<div style={{height:3,background:C.s3}}><div style={{height:"100%",width:`${restPct}%`,background:C.green,transition:"width 1s linear"}}/></div>}
           <div style={{display:"flex",alignItems:"center",gap:14,padding:"10px 20px"}}>
@@ -878,7 +885,7 @@ function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,acti
           {isBottom&&<div style={{height:3,background:C.s3}}><div style={{height:"100%",width:`${restPct}%`,background:C.green,transition:"width 1s linear"}}/></div>}
         </div>
       )}
-      {restFor>0&&restExpanded&&(
+      {onSessionsView&&restFor>0&&restExpanded&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,backdropFilter:"blur(10px)"}} onClick={()=>setRestExpanded(false)}>
           <div style={{textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:22}} onClick={e=>e.stopPropagation()}>
             <div style={{color:C.sub,fontSize:13,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase"}}>Rest Time</div>
