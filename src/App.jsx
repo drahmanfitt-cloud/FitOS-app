@@ -521,11 +521,11 @@ export default function App(){
       return 0;
     }
   };
-  const quickAddCatalog=async name=>{
+  const quickAddCatalog=async(name,meta={})=>{
     const clean=(name||"").trim();
     if(!clean)return;
     if((catalogExercises||[]).some(e=>e.name.toLowerCase().trim()===clean.toLowerCase()))return;
-    const row={id:uid(),name:clean,category:"Strength",muscles:[],equipment:"Other",difficulty:"Intermediate",purpose:"",instructions:"",video_url:"",trainer_notes:"",tags:[],photo_base64:""};
+    const row={id:uid(),name:clean,category:meta.category||"Strength",muscles:[],equipment:meta.equipment||"Other",difficulty:"Intermediate",purpose:meta.purpose||"",instructions:"",video_url:"",trainer_notes:"",tags:[],photo_base64:""};
     try{
       const r=await db.insert("fitos_catalog",row);
       setCatalogExercises(p=>[mapCatalog(r),...p]);

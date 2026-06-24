@@ -29,24 +29,44 @@ const WARMUP_LIBRARY = {
   sport:["Band Pull-Apart","A-Skips","B-Skips","High Knees","Butt Kicks","Carioca","Bounding","Pogo Hops","Lateral Shuffle","Sprint Build-Up","Med Ball Slam","Box Jump","Broad Jump","Jump Rope","Power Skip","Plyo Lunge"],
 };
 
+// Maps a warmup category to its Exercise Catalog metadata, so a custom warmup
+// movement gets saved with the right purpose/category/equipment and resurfaces
+// as a suggestion next time (mirrors how custom Exercises persist via ExPicker).
+// Keyed by the normalized category key (sport-specific → sport).
+const WARMUP_CATALOG_META = {
+  stretching:    {purpose:"Stretch",       category:"Mobility",       equipment:"Bodyweight"},
+  mobility:      {purpose:"Mobility",       category:"Mobility",       equipment:"Bodyweight"},
+  "foam-rolling":{purpose:"Foam Rolling",   category:"Rehabilitation", equipment:"Foam Roller"},
+  sport:         {purpose:"Sport Specific", category:"Plyometric",     equipment:"Bodyweight"},
+};
+
 // Lookup picker for warmup movements — mirrors the exercise ExPicker:
-// search the category's library, or type a custom name. catId may be a
-// WARMUP_CATS id (stretching/mobility/foam-rolling/sport) or "sport-specific".
-function WarmupPicker({catId,color=C.purple,onPick,onClose}){
+// search the category's built-in library AND any custom movements previously
+// saved to the Exercise Catalog (matched by this category's purpose), or type a
+// custom name. When onAddToCatalog is provided, a typed custom name is saved to
+// the catalog with the right purpose so it pops up here next time.
+// catId may be a WARMUP_CATS id (stretching/mobility/foam-rolling/sport) or "sport-specific".
+function WarmupPicker({catId,color=C.purple,onPick,onClose,catalog=[],onAddToCatalog}){
   const [q,setQ]=useState("");
   const key=catId==="sport-specific"?"sport":catId;
-  const list=WARMUP_LIBRARY[key]||[];
+  const meta=WARMUP_CATALOG_META[key];
+  const lib=WARMUP_LIBRARY[key]||[];
+  // Custom warmups previously saved to the catalog are tagged with this category's purpose.
+  const catNames=(catalog||[]).filter(c=>c&&meta&&(c.purpose||"")===meta.purpose).map(c=>typeof c==="string"?c:c?.name).filter(Boolean);
+  const catSet=new Set(catNames.map(n=>n.toLowerCase().trim()));
+  const seen=new Set();const list=[];
+  [...catNames,...lib].forEach(n=>{const k=n.toLowerCase().trim();if(k&&!seen.has(k)){seen.add(k);list.push(n);}});
   const hits=list.filter(e=>e.toLowerCase().includes(q.toLowerCase()));
   const exists=q&&list.some(n=>n.toLowerCase()===q.toLowerCase().trim());
   const choose=name=>{onPick(name);onClose?.();};
-  const chooseCustom=()=>{const clean=q.trim();if(!clean)return;onPick(clean);onClose?.();};
+  const chooseCustom=async()=>{const clean=q.trim();if(!clean)return;if(onAddToCatalog){try{await onAddToCatalog(clean,meta||{});}catch(e){console.error("save warmup to catalog failed",e);}}onPick(clean);onClose?.();};
   return(
     <div>
       <input autoFocus value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&q.trim()){if(exists){choose(hits[0]);}else chooseCustom();}}} placeholder="Search or type custom name…"
         style={{width:"100%",background:C.s2,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit",marginBottom:10}}/>
       <div style={{maxHeight:260,overflowY:"auto",display:"flex",flexDirection:"column",gap:2}}>
-        {q&&!exists&&<div onClick={chooseCustom} style={{padding:"8px 10px",borderRadius:7,cursor:"pointer",color:C.text,fontSize:13,display:"flex",gap:8,alignItems:"center"}}><Pill color={color}>custom</Pill>{q}</div>}
-        {hits.map(e=><div key={e} onClick={()=>choose(e)} style={{padding:"8px 10px",borderRadius:7,cursor:"pointer",color:C.text,fontSize:13,display:"flex",alignItems:"center",gap:9}} onMouseEnter={el=>el.currentTarget.style.background=C.s2} onMouseLeave={el=>el.currentTarget.style.background="transparent"}><span style={{width:8,height:8,borderRadius:"50%",background:color,flexShrink:0}}/>{e}</div>)}
+        {q&&!exists&&<div onClick={chooseCustom} style={{padding:"8px 10px",borderRadius:7,cursor:"pointer",color:C.text,fontSize:13,display:"flex",gap:8,alignItems:"center"}}><Pill color={color}>{onAddToCatalog?"+ save to catalog":"custom"}</Pill>{q}</div>}
+        {hits.map(e=><div key={e} onClick={()=>choose(e)} style={{padding:"8px 10px",borderRadius:7,cursor:"pointer",color:C.text,fontSize:13,display:"flex",alignItems:"center",gap:9}} onMouseEnter={el=>el.currentTarget.style.background=C.s2} onMouseLeave={el=>el.currentTarget.style.background="transparent"}><span style={{width:8,height:8,borderRadius:"50%",background:color,flexShrink:0}}/>{catSet.has(e.toLowerCase().trim())&&<Pill color={C.teal}>catalog</Pill>}{e}</div>)}
         {hits.length===0&&!q&&<div style={{padding:"10px",color:C.muted,fontSize:12,textAlign:"center"}}>Type to search the library…</div>}
       </div>
     </div>
@@ -232,7 +252,7 @@ function ProgramBuilderPreview(){
 // ── Reusable warmup planner panel (used in class formats, above stations) ─────
 // Planning-only: define foam rolling / stretching / mobility / sport-specific prep.
 // Mirrors the Log Session warmup panel but without live timers.
-function WarmupPlanner({warmup,setWarmup,title="Warmup & Mobility",defaultOpen=true}){
+function WarmupPlanner({warmup,setWarmup,title="Warmup & Mobility",defaultOpen=true,catalog=[],onAddToCatalog}){
   const [open,setOpen]=useState(defaultOpen);
   const [pickCat,setPickCat]=useState(null);
   const w=warmup||[];
@@ -269,7 +289,7 @@ function WarmupPlanner({warmup,setWarmup,title="Warmup & Mobility",defaultOpen=t
           </div>
         </div>
       )}
-      {pickCat&&<Modal title={`Add ${pickCat.label}`} onClose={()=>setPickCat(null)}><WarmupPicker catId={pickCat.id} color={pickCat.color} onPick={name=>{addItem(pickCat,name);setPickCat(null);}} onClose={()=>setPickCat(null)}/></Modal>}
+      {pickCat&&<Modal title={`Add ${pickCat.label}`} onClose={()=>setPickCat(null)}><WarmupPicker catId={pickCat.id} color={pickCat.color} catalog={catalog} onAddToCatalog={onAddToCatalog} onPick={name=>{addItem(pickCat,name);setPickCat(null);}} onClose={()=>setPickCat(null)}/></Modal>}
     </div>
   );
 }

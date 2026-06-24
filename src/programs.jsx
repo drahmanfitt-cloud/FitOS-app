@@ -89,7 +89,7 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
             <button onClick={()=>rmDay(day.id)} style={{background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer",lineHeight:1,flexShrink:0,padding:"0 2px"}}>×</button>
           </div>
           <div style={{marginBottom:14}}>
-            <WarmupPlanner warmup={day.warmup||[]} setWarmup={w=>updDay(day.id,{warmup:w})}/>
+            <WarmupPlanner warmup={day.warmup||[]} setWarmup={w=>updDay(day.id,{warmup:w})} catalog={catalog} onAddToCatalog={onAddToCatalog}/>
           </div>
           <div style={{color:C.muted,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Exercises</div>
           {(day.exercises||[]).length===0&&<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"8px 0",marginBottom:8}}>No exercises yet.</div>}
@@ -379,7 +379,7 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
           </div>
 
           {/* Warmup & mobility planner — foam rolling, stretching, mobility, sport prep */}
-          <WarmupPlanner warmup={fmt.warmup||[]} setWarmup={w=>upd({warmup:w})}/>
+          <WarmupPlanner warmup={fmt.warmup||[]} setWarmup={w=>upd({warmup:w})} catalog={catalog} onAddToCatalog={onAddToCatalog}/>
 
           {/* Teaching sequence — yoga & mobility weave warmup items and poses into one re-orderable flow */}
           {isFlowType&&orderedSeq.length>0&&(
@@ -524,7 +524,7 @@ function WorkoutBuilder({workouts,onSave,onUpdate,onDelete,mobile,catalog,onAddT
           <Input label="Focus / tag" value={wk.focus} onChange={v=>upd({focus:v})} placeholder="Push, Full Body…"/>
         </div>
       </Card>
-      <WarmupPlanner warmup={wk.warmup||[]} setWarmup={w=>upd({warmup:w})}/>
+      <WarmupPlanner warmup={wk.warmup||[]} setWarmup={w=>upd({warmup:w})} catalog={catalog} onAddToCatalog={onAddToCatalog}/>
       <Card>
         <div style={{color:C.muted,fontSize:11,fontWeight:600,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:8}}>Exercises</div>
         {(wk.exercises||[]).length===0&&<div style={{color:C.muted,fontSize:12,textAlign:"center",padding:"8px 0",marginBottom:8}}>No exercises yet.</div>}

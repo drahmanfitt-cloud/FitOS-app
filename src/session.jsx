@@ -493,7 +493,7 @@ function WarmupSubsection({label,color,icon,items,onAdd,onRemoveAll,renderItem})
   );
 }
 
-function WarmupSection({warmup,setWarmup,settings,onRestStart}){
+function WarmupSection({warmup,setWarmup,settings,onRestStart,catalog=[],onAddToCatalog}){
   const [open,setOpen]=useState(false);
   const [pickCat,setPickCat]=useState(null);
   const NEW_NAMES={stretching:"Stretch",mobility:"Mobility","foam-rolling":"Foam Rolling","sport-specific":"Sport Specific"};
@@ -580,7 +580,7 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart}){
           </div>
         </div>
       )}
-      {pickCat&&<Modal title={`Add ${NEW_NAMES[pickCat]||pickCat}`} onClose={()=>setPickCat(null)}><WarmupPicker catId={pickCat} color={CAT_COLORS[pickCat]} onPick={name=>{addItem(pickCat,name);setPickCat(null);}} onClose={()=>setPickCat(null)}/></Modal>}
+      {pickCat&&<Modal title={`Add ${NEW_NAMES[pickCat]||pickCat}`} onClose={()=>setPickCat(null)}><WarmupPicker catId={pickCat} color={CAT_COLORS[pickCat]} catalog={catalog} onAddToCatalog={onAddToCatalog} onPick={name=>{addItem(pickCat,name);setPickCat(null);}} onClose={()=>setPickCat(null)}/></Modal>}
     </div>
   );
 }
@@ -912,7 +912,7 @@ function SessionLogger({clients,sessions,onSave,activeClient,programs,initialDay
           <div style={{color:C.amber,fontWeight:900,fontSize:22,fontVariantNumeric:"tabular-nums"}}>{fmt(estTotal)}</div>
         </div>
       </div>
-      <WarmupSection warmup={warmup} setWarmup={setWarmup} settings={settings} onRestStart={startRest}/>
+      <WarmupSection warmup={warmup} setWarmup={setWarmup} settings={settings} onRestStart={startRest} catalog={catalog} onAddToCatalog={onAddToCatalog}/>
       {exercises.map(ex=>(
         <SessionExCard key={ex.id} ex={ex} settings={settings}
           updateEx={updateEx} addSet={addSet} updateSet={updateSet}
