@@ -505,7 +505,7 @@ function WarmupSection({warmup,setWarmup,settings,onRestStart,catalog=[],onAddTo
   const mobility=warmup.filter(i=>i.category==="mobility");
   const totalSec=warmup.reduce((a,i)=>a+(i.sides?(i.holdSec||0)*2:(i.holdSec||0)),0);
   return(
-    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden",flexShrink:0}}>
       <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",padding:"14px 18px",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
         <div style={{width:32,height:32,borderRadius:8,background:C.purple+"18",border:`1px solid ${C.purple}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🧘</div>
         <div style={{flex:1}}>

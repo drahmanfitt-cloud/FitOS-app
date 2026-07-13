@@ -262,7 +262,7 @@ function WarmupPlanner({warmup,setWarmup,title="Warmup & Mobility",defaultOpen=t
   const totalSec=w.reduce((a,i)=>a+(i.sidesMode==="both"?(i.holdSec||0)*2:(i.holdSec||0)),0);
   const summary=WARMUP_CATS.map(c=>{const n=w.filter(i=>i.category===c.id).length;return n?`${n} ${c.label.toLowerCase()}`:null;}).filter(Boolean).join(" · ");
   return(
-    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+    <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden",flexShrink:0}}>
       <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",padding:"13px 16px",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
         <div style={{width:32,height:32,borderRadius:8,background:C.purple+"18",border:`1px solid ${C.purple}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🧘</div>
         <div style={{flex:1,minWidth:0}}>

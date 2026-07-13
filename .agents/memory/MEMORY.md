@@ -2,3 +2,4 @@
 - [FitOS session load semantics](fitos-session-load.md) — loadFromDay/loadFromWorkout must each fully reset the other's session state (programDay + warmup) to avoid mixed saves.
 - [Flow-class teaching sequence](flow-class-teaching-sequence.md) — yoga/mobility merge warmup+poses into one seq-ordered Lead flow w/ agenda screen; HIIT/rotation unchanged.
 - [FitOS session CRUD & cross-session Prev](fitos-session-crud.md) — keep client session_count in sync on edit/delete; "Prev" = prior session's set at same index (not same-session); warmup not persisted.
+- [Flex column panel clipping](flex-clipping-panels.md) — panels with overflow:hidden inside scrollable flex columns need flexShrink:0 or they clip mid-content.
