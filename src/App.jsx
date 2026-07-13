@@ -15,7 +15,7 @@ import { SEED_LIBRARY, WARMUP_SEED } from "./seedLibrary.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const NAV=[{id:"dashboard",label:"Dashboard",icon:"▦"},{id:"clients",label:"Clients",icon:"👥"},{id:"session-history",label:"Sessions",icon:"⚡"},{id:"classes",label:"Classes",icon:"📅"},{id:"programs",label:"Programs",icon:"📋"},{id:"tasks",label:"Tasks",icon:"☑️"},{id:"catalog",label:"Exercise Catalog",icon:"📖"}];
+const NAV=[{id:"dashboard",label:"Dashboard",icon:"▦"},{id:"tasks",label:"Tasks",icon:"☑️"},{id:"clients",label:"Clients",icon:"👥"},{id:"session-history",label:"Sessions",icon:"⚡"},{id:"classes",label:"Classes",icon:"📅"},{id:"programs",label:"Programs",icon:"📋"},{id:"catalog",label:"Exercise Catalog",icon:"📖"}];
 
 // ── Bottom nav for mobile ─────────────────────────────────────────────────────
 function BottomNav({active,setActive,counts}){
@@ -720,7 +720,7 @@ export default function App(){
         {sessionStatus&&view!=="sessions"&&<ActiveSessionBar status={sessionStatus} onOpen={()=>setView("sessions")} onDiscard={discardSession} mobile={mobile}/>}
 
         <main style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"none",touchAction:"auto",padding:mobile?12:20,paddingBottom:mobile?80:20}}>
-          {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
+          {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} tasks={tasks} onToggleTask={id=>updateTask(id,{done:true})} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient} onLogDay={day=>{setEditSession(null);setPreloadDay(day);setSessionKey(k=>k+1);setView("sessions");}} onUpdateGoals={updateClientGoals} onUpdateBodyweight={updateClientBodyweight}/>}
           {loggerMounted&&<div style={{display:view==="sessions"?"block":"none"}}><ErrorBoundary><SessionLogger key={editSession?`edit-${editSession.id}`:`new-${sessionKey}`} clients={clients} sessions={sessions} onSave={addSession} onUpdate={updateSession} editSession={editSession} onDone={()=>{setEditSession(null);setView("session-history");}} activeClient={activeClient} programs={programs} workouts={workouts} initialDay={preloadDay} catalog={catalogExercises} onAddToCatalog={quickAddCatalog} onStatus={setSessionStatus} onSessionsView={view==="sessions"} onDiscard={discardSession}/></ErrorBoundary></div>}

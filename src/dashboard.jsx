@@ -6,8 +6,14 @@ import { Avatar, Pill, Card, SL } from "./ui.jsx";
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function Dashboard({clients,sessions,classes,programs,formats,setView,setActiveClient,mobile}){
+const todayYMD=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;};
+
+function Dashboard({clients,sessions,classes,programs,formats,tasks=[],onToggleTask,setView,setActiveClient,mobile}){
   const active=clients.filter(c=>c.status==="active");
+  const today=todayYMD();
+  const openTasks=tasks.filter(t=>!t.done);
+  const dueNow=[...openTasks.filter(t=>t.dueDate&&t.dueDate<today),...openTasks.filter(t=>t.dueDate===today)];
+  const taskPreview=dueNow.slice(0,6);
   const upcoming=[...classes].filter(c=>c.status==="scheduled").sort((a,b)=>new Date(a.date+" "+a.time)-new Date(b.date+" "+b.time)).slice(0,4);
   const recent=[...sessions].sort((a,b)=>new Date(b.startedAt)-new Date(a.startedAt)).slice(0,5);
   const totalPRs=sessions.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(st=>st.pr&&st.done).length,0),0);
@@ -25,6 +31,33 @@ function Dashboard({clients,sessions,classes,programs,formats,setView,setActiveC
           </Card>
         ))}
       </div>
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:taskPreview.length?12:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <SL>Today's Tasks</SL>
+            {dueNow.length>0&&<span style={{background:C.green+"22",color:C.green,fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:10}}>{dueNow.length}</span>}
+          </div>
+          <span onClick={()=>setView("tasks")} style={{color:C.green,fontSize:12,cursor:"pointer"}}>View all →</span>
+        </div>
+        {taskPreview.length===0
+          ?<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"14px 0"}}>Nothing due today. <span onClick={()=>setView("tasks")} style={{color:C.green,cursor:"pointer"}}>Plan your day →</span></div>
+          :taskPreview.map((t,i)=>{
+            const cl=clients.find(c=>c.id===t.clientId);
+            const overdue=t.dueDate&&t.dueDate<today;
+            return(
+              <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:i<taskPreview.length-1?`1px solid ${C.border}`:"none"}}>
+                <button onClick={()=>onToggleTask&&onToggleTask(t.id)} title="Mark as done"
+                  style={{width:20,height:20,borderRadius:"50%",flexShrink:0,cursor:"pointer",border:`2px solid ${C.border2}`,background:"transparent",padding:0}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{color:C.text,fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
+                  {cl&&<div style={{color:C.muted,fontSize:11}}>{cl.name}</div>}
+                </div>
+                {overdue&&<Pill color={C.red}>Overdue</Pill>}
+              </div>
+            );
+          })}
+        {dueNow.length>6&&<div onClick={()=>setView("tasks")} style={{color:C.green,fontSize:12,cursor:"pointer",textAlign:"center",paddingTop:10}}>+{dueNow.length-6} more →</div>}
+      </Card>
       <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr",gap:mobile?10:16}}>
         <Card onClick={()=>setView("classes")} style={{cursor:"pointer",transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=C.green} onMouseLeave={e=>e.currentTarget.style.borderColor=""}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Upcoming Classes</SL><span style={{color:C.green,fontSize:12}}>View all →</span></div>
