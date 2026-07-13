@@ -1,6 +1,6 @@
 // FitOS — Root App
 import React, { useState, useEffect, useRef } from "react";
-import { C, uid, now, fmtDate, fmt, db, supabase, mapClient, mapSession, mapClass, mapProgram, mapFormat, mapWorkout, mapCatalog, TAG_COLORS } from "./config.js";
+import { C, uid, now, fmtDate, fmt, db, supabase, mapClient, mapSession, mapClass, mapProgram, mapFormat, mapWorkout, mapCatalog, mapTask, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Modal, Confirm, useToast, Toast, ErrorBoundary } from "./ui.jsx";
 import { ClientsScreen, ClientProfile } from "./clients.jsx";
 import { SessionLogger, SessionHistory } from "./session.jsx";
@@ -8,13 +8,14 @@ import { ClassesScreen } from "./classes.jsx";
 import { ProgramsHub } from "./programs.jsx";
 import { Dashboard } from "./dashboard.jsx";
 import { ExerciseCatalogScreen } from "./catalog.jsx";
+import { TasksScreen } from "./tasks.jsx";
 import { AuthScreen } from "./auth.jsx";
 import { ProfileSetup, ProfileEditor } from "./profile.jsx";
 import { SEED_LIBRARY, WARMUP_SEED } from "./seedLibrary.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const NAV=[{id:"dashboard",label:"Dashboard",icon:"▦"},{id:"clients",label:"Clients",icon:"👥"},{id:"session-history",label:"Sessions",icon:"⚡"},{id:"classes",label:"Classes",icon:"📅"},{id:"programs",label:"Programs",icon:"📋"},{id:"catalog",label:"Exercise Catalog",icon:"📖"}];
+const NAV=[{id:"dashboard",label:"Dashboard",icon:"▦"},{id:"clients",label:"Clients",icon:"👥"},{id:"session-history",label:"Sessions",icon:"⚡"},{id:"classes",label:"Classes",icon:"📅"},{id:"programs",label:"Programs",icon:"📋"},{id:"tasks",label:"Tasks",icon:"☑️"},{id:"catalog",label:"Exercise Catalog",icon:"📖"}];
 
 // ── Bottom nav for mobile ─────────────────────────────────────────────────────
 function BottomNav({active,setActive,counts}){
@@ -230,6 +231,7 @@ export default function App(){
   const [programs,setPrograms]=useState([]);
   const [formats,setFormats]=useState([]);
   const [workouts,setWorkouts]=useState([]);
+  const [tasks,setTasks]=useState([]);
   const [activeClient,setActiveClient]=useState(null);
   const [toasts,toast]=useToast();
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
@@ -334,6 +336,9 @@ export default function App(){
       // Workouts load separately so a missing fitos_workouts table (migration not run yet) never breaks the rest.
       try{ const wk=await db.select("fitos_workouts"); setWorkouts(wk.map(mapWorkout)); }
       catch(wErr){ console.warn("Workouts table not ready (run the migration):", wErr.message); }
+      // Tasks load separately so a missing fitos_tasks table never breaks the rest.
+      try{ const tk=await db.select("fitos_tasks"); setTasks(tk.map(mapTask)); }
+      catch(tErr){ console.warn("Tasks table not ready (run the migration):", tErr.message); }
       // Auto-preload the shared catalog the first time it's empty
       if(cat.length===0 && !seededRef.current){
         seededRef.current=true;
@@ -375,11 +380,12 @@ export default function App(){
     setClients(c.map(mapClient));setSessions(s.map(mapSession));setClasses(cl.map(mapClass));
     setPrograms(p.map(mapProgram));setFormats(f.map(mapFormat));
     try{ const wk=await db.select("fitos_workouts"); setWorkouts(wk.map(mapWorkout)); }catch(wErr){ console.warn("Workouts table not ready:", wErr.message); }
+    try{ const tk=await db.select("fitos_tasks"); setTasks(tk.map(mapTask)); }catch(tErr){ console.warn("Tasks table not ready:", tErr.message); }
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setClients([]);setSessions([]);setClasses([]);setPrograms([]);setFormats([]);setWorkouts([]);setCatalogExercises([]);
+    setClients([]);setSessions([]);setClasses([]);setPrograms([]);setFormats([]);setWorkouts([]);setTasks([]);setCatalogExercises([]);
     setView("dashboard");setActiveClient(null);setShowProfileEditor(false);
   };
 
@@ -620,13 +626,48 @@ export default function App(){
     toast("Exercise deleted","error");
   };
 
+  // ── Task CRUD (day planner)
+  const addTask=async t=>{
+    const row={id:t.id,title:t.title,notes:t.notes||"",due_date:t.dueDate||null,client_id:t.clientId||null,done:false};
+    try{
+      const r=await db.insert("fitos_tasks",row);
+      setTasks(p=>[mapTask(r),...p]); toast("Task added ✓");
+    }catch(e){
+      console.error(e);
+      // Only keep the task locally when the table itself is missing (migration not run yet);
+      // other failures (e.g. connection issues) should not pretend to have saved.
+      if(/PGRST205|could not find the table|does not exist|schema cache/i.test(e?.message||"")){
+        setTasks(p=>[mapTask({...row,created_at:now()}),...p]);
+        toast("Task saved locally — run the fitos_tasks migration in Supabase to keep it","error");
+      }else{
+        toast("Couldn't add task — check your connection","error");
+      }
+    }
+  };
+  const updateTask=async(id,patch)=>{
+    setTasks(p=>p.map(t=>t.id===id?{...t,...patch}:t));
+    const dbPatch={};
+    if(patch.title!==undefined)dbPatch.title=patch.title;
+    if(patch.notes!==undefined)dbPatch.notes=patch.notes;
+    if(patch.dueDate!==undefined)dbPatch.due_date=patch.dueDate||null;
+    if(patch.clientId!==undefined)dbPatch.client_id=patch.clientId||null;
+    if(patch.done!==undefined)dbPatch.done=patch.done;
+    try{ await db.update("fitos_tasks",id,dbPatch); }
+    catch(e){ console.error(e); toast("Couldn't save task — run the fitos_tasks migration in Supabase","error"); }
+  };
+  const deleteTask=async id=>{
+    setTasks(p=>p.filter(t=>t.id!==id));
+    try{ await db.delete("fitos_tasks",id); toast("Task deleted","error"); }
+    catch(e){ console.error(e); }
+  };
+
   const navigate=v=>{if(v==="clients")setActiveClient(null);setView(v);};
   const startNewSession=()=>{setEditSession(null);setPreloadDay(null);setSessionKey(k=>k+1);setView("sessions");};
   const discardSession=()=>{setSessionStatus(null);setEditSession(null);setPreloadDay(null);setSessionKey(k=>k+1);setView("session-history");};
   useEffect(()=>{if(view==="sessions")setLoggerMounted(true);},[view]);
-  const TITLES={dashboard:"Dashboard",clients:"Clients",client:"Client Profile",sessions:editSession?"Edit Session":"Log Session","session-history":"Logged Sessions",classes:"Group Classes",programs:"Programs & Formats",catalog:"Exercise Catalog"};
-  const SUBS={dashboard:`${clients.filter(c=>c.status==="active").length} active clients`,clients:`${clients.length} clients`,client:activeClient?.name||"",sessions:editSession?"Editing a logged session":"Track sets, reps & weight","session-history":`${sessions.length} logged · tap to view or edit`,classes:`${classes.filter(c=>c.status==="scheduled").length} upcoming`,programs:`${programs.length} programs · ${formats.length} class formats`,catalog:`${catalogExercises.length} exercises`};
-  const counts={clients:clients.length,programs:programs.length+formats.length,dashboard:0,sessions:0,classes:classes.filter(c=>c.status==="scheduled").length};
+  const TITLES={dashboard:"Dashboard",clients:"Clients",client:"Client Profile",sessions:editSession?"Edit Session":"Log Session","session-history":"Logged Sessions",classes:"Group Classes",programs:"Programs & Formats",tasks:"Task Planner",catalog:"Exercise Catalog"};
+  const SUBS={dashboard:`${clients.filter(c=>c.status==="active").length} active clients`,clients:`${clients.length} clients`,client:activeClient?.name||"",sessions:editSession?"Editing a logged session":"Track sets, reps & weight","session-history":`${sessions.length} logged · tap to view or edit`,classes:`${classes.filter(c=>c.status==="scheduled").length} upcoming`,programs:`${programs.length} programs · ${formats.length} class formats`,catalog:`${catalogExercises.length} exercises`,tasks:`${tasks.filter(t=>!t.done).length} open task${tasks.filter(t=>!t.done).length===1?"":"s"}`};
+  const counts={clients:clients.length,programs:programs.length+formats.length,dashboard:0,sessions:0,classes:classes.filter(c=>c.status==="scheduled").length,tasks:tasks.filter(t=>!t.done).length};
 
   // ── Auth gate
   if (authLoading) return <Spinner msg="Connecting…"/>;
@@ -686,6 +727,7 @@ export default function App(){
           {view==="session-history"&&<SessionHistory sessions={sessions} clients={clients} mobile={mobile} onNew={startNewSession} onEdit={s=>{setEditSession(s);setPreloadDay(null);setView("sessions");}} onDelete={deleteSession}/>}
           {view==="classes"&&<ClassesScreen clients={clients} classes={classes} onAdd={addClass} onAddSeries={addClassSeries} onEdit={editClass} onDelete={deleteClass} onDeleteSeries={deleteClassSeries} formats={formats} mobile={mobile}/>}
           {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} workouts={workouts} onSaveWorkout={addWorkout} onUpdateWorkout={updateWorkout} onDeleteWorkout={deleteWorkout} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass} mobile={mobile} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/>}
+          {view==="tasks"&&<TasksScreen tasks={tasks} clients={clients} onAdd={addTask} onUpdate={updateTask} onDelete={deleteTask} onOpenClient={c=>{setActiveClient(c);setView("client");}} mobile={mobile}/>}
           {view==="catalog"&&<ExerciseCatalogScreen catalogExercises={catalogExercises} onAdd={addCatalogExercise} onEdit={editCatalogExercise} onDelete={deleteCatalogExercise} onSeed={seedCatalogExercises} sessions={sessions} clients={clients}/>}
         </main>
       </div>

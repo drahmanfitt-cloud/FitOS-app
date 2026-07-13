@@ -128,6 +128,24 @@ create policy "trainer_own" on fitos_workouts
   for all using (auth.uid() = trainer_id) with check (auth.uid() = trainer_id);
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- 9. Task Planner (day planner tasks, optionally linked to a client)
+create table if not exists fitos_tasks (
+  id text primary key,
+  title text not null,
+  notes text default '',
+  due_date date,
+  client_id text,
+  done boolean default false,
+  trainer_id uuid references auth.users(id),
+  created_at timestamptz default now()
+);
+
+alter table fitos_tasks enable row level security;
+drop policy if exists "trainer_own" on fitos_tasks;
+create policy "trainer_own" on fitos_tasks
+  for all using (auth.uid() = trainer_id) with check (auth.uid() = trainer_id);
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- GOOGLE OAUTH (manual step — do this in the Supabase Dashboard):
 -- Authentication → Providers → Google → Enable
 -- Paste in your Google OAuth Client ID and Secret
