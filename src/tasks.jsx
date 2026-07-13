@@ -10,21 +10,21 @@ const shiftDays=(ymd,n)=>{const[y,m,d]=ymd.split("-").map(Number);const dt=new D
 const dayLabel=ymd=>{const[y,m,d]=ymd.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});};
 
 // ── Calendar-reminder helpers ─────────────────────────────────────────────────
-// Local "floating" timestamps (no timezone suffix) so the alert fires at the
-// user's local wall-clock time wherever they are.
-const calStamp=(ymd,hhmm)=>`${ymd.replace(/-/g,"")}T${hhmm.replace(":","")}00`;
-// Start/end stamps for a 30-min event; rolls the date forward if it crosses midnight.
+// The chosen time is interpreted in the user's local timezone, then emitted as
+// an explicit UTC instant (with Z) — unambiguous in every calendar app, so the
+// alert fires at exactly the picked local time (avoids "floating time" being
+// misread as UTC by some clients, which shifted events by a few hours).
+const toUTCStamp=d=>d.toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
+// Start/end UTC stamps for a 30-min event starting at local ymd+hhmm.
 const calRange=(ymd,hhmm)=>{
   const[y,mo,d]=ymd.split("-").map(Number);const[h,mi]=hhmm.split(":").map(Number);
-  const end=new Date(y,mo-1,d,h,mi+30);
-  const pad=n=>String(n).padStart(2,"0");
   return{
-    start:calStamp(ymd,hhmm),
-    end:`${end.getFullYear()}${pad(end.getMonth()+1)}${pad(end.getDate())}T${pad(end.getHours())}${pad(end.getMinutes())}00`,
+    start:toUTCStamp(new Date(y,mo-1,d,h,mi)),
+    end:toUTCStamp(new Date(y,mo-1,d,h,mi+30)),
   };
 };
 // RFC5545: DTSTAMP must be UTC
-const utcNowStamp=()=>new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
+const utcNowStamp=()=>toUTCStamp(new Date());
 const escICS=s=>(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n");
 
 function reminderText(task,client){
