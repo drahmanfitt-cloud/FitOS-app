@@ -9,6 +9,95 @@ const todayStr=()=>toYMD(new Date());
 const shiftDays=(ymd,n)=>{const[y,m,d]=ymd.split("-").map(Number);const dt=new Date(y,m-1,d);dt.setDate(dt.getDate()+n);return toYMD(dt);};
 const dayLabel=ymd=>{const[y,m,d]=ymd.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});};
 
+// ── Calendar-reminder helpers ─────────────────────────────────────────────────
+// Local "floating" timestamps (no timezone suffix) so the alert fires at the
+// user's local wall-clock time wherever they are.
+const calStamp=(ymd,hhmm)=>`${ymd.replace(/-/g,"")}T${hhmm.replace(":","")}00`;
+// Start/end stamps for a 30-min event; rolls the date forward if it crosses midnight.
+const calRange=(ymd,hhmm)=>{
+  const[y,mo,d]=ymd.split("-").map(Number);const[h,mi]=hhmm.split(":").map(Number);
+  const end=new Date(y,mo-1,d,h,mi+30);
+  const pad=n=>String(n).padStart(2,"0");
+  return{
+    start:calStamp(ymd,hhmm),
+    end:`${end.getFullYear()}${pad(end.getMonth()+1)}${pad(end.getDate())}T${pad(end.getHours())}${pad(end.getMinutes())}00`,
+  };
+};
+// RFC5545: DTSTAMP must be UTC
+const utcNowStamp=()=>new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
+const escICS=s=>(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n");
+
+function reminderText(task,client){
+  const parts=[];
+  if(client)parts.push(`Client: ${client.name}`);
+  if(task.notes)parts.push(task.notes);
+  parts.push("From FitOS Task Planner");
+  return parts.join("\n");
+}
+
+function googleCalUrl(task,client,time){
+  const {start,end}=calRange(task.dueDate,time);
+  const p=new URLSearchParams({
+    action:"TEMPLATE",
+    text:`☑️ ${task.title}`,
+    dates:`${start}/${end}`,
+    details:reminderText(task,client),
+  });
+  return `https://calendar.google.com/calendar/render?${p.toString()}`;
+}
+
+function downloadICS(task,client,time){
+  const {start,end}=calRange(task.dueDate,time);
+  const ics=[
+    "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//FitOS//Task Planner//EN",
+    "BEGIN:VEVENT",
+    `UID:fitos-task-${task.id}@fitos`,
+    `DTSTAMP:${utcNowStamp()}`,
+    `DTSTART:${start}`,
+    `DTEND:${end}`,
+    `SUMMARY:${escICS("☑️ "+task.title)}`,
+    `DESCRIPTION:${escICS(reminderText(task,client))}`,
+    "BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${escICS(task.title)}`,"TRIGGER:-PT0M","END:VALARM",
+    "END:VEVENT","END:VCALENDAR",
+  ].join("\r\n");
+  const blob=new Blob([ics],{type:"text/calendar;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=`fitos-task-${task.id}.ics`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+
+// ── Reminder modal — pick a time, send to phone calendar ─────────────────────
+function ReminderModal({task,client,onClose}){
+  const [time,setTime]=useState("09:00");
+  const inputStyle={width:"100%",background:C.s2,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit"};
+  return(
+    <Modal title="🔔 Phone Reminder" onClose={onClose}>
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{background:C.s2,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px"}}>
+          <div style={{color:C.text,fontWeight:700,fontSize:13}}>{task.title}</div>
+          <div style={{color:C.muted,fontSize:11,marginTop:2}}>{dayLabel(task.dueDate)}{client?` · ${client.name}`:""}</div>
+        </div>
+        <div>
+          <div style={{color:C.muted,fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Remind me at</div>
+          <input type="time" value={time} onChange={e=>setTime(e.target.value)} style={inputStyle}/>
+        </div>
+        <div style={{color:C.sub,fontSize:12,lineHeight:1.55}}>
+          This adds the task to your phone's calendar with an alert — your phone will notify you even when FitOS is closed.
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <Btn onClick={()=>{window.open(googleCalUrl(task,client,time),"_blank","noopener");onClose();}}>📅 Add to Google Calendar</Btn>
+          <Btn variant="outline" onClick={()=>{downloadICS(task,client,time);onClose();}}>🍎 Apple / other calendar (.ics)</Btn>
+        </div>
+        <div style={{color:C.muted,fontSize:11,lineHeight:1.5}}>
+          On iPhone: use the Apple option, then open the downloaded file to add it to your calendar.
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Add / edit form (rendered inside a Modal) ─────────────────────────────────
 function TaskForm({initial,clients,onSave,onClose}){
   const [title,setTitle]=useState(initial?.title||"");
@@ -57,9 +146,11 @@ function TaskForm({initial,clients,onSave,onClose}){
 // ── Single task row ───────────────────────────────────────────────────────────
 function TaskRow({task,client,overdue,onToggle,onEdit,onDelete,onOpenClient,showDate}){
   const [confirmDel,setConfirmDel]=useState(false);
+  const [showRemind,setShowRemind]=useState(false);
   return(
     <div style={{display:"flex",alignItems:"center",gap:11,padding:"10px 12px",background:C.s2,border:`1px solid ${task.done?C.border:overdue?C.red+"44":C.border}`,borderRadius:10,marginBottom:8,opacity:task.done?0.55:1,flexShrink:0}}>
       {confirmDel&&<Confirm msg={`Delete task "${task.title}"?`} onConfirm={()=>{setConfirmDel(false);onDelete();}} onCancel={()=>setConfirmDel(false)}/>}
+      {showRemind&&<ReminderModal task={task} client={client} onClose={()=>setShowRemind(false)}/>}
       <button onClick={onToggle} title={task.done?"Mark as not done":"Mark as done"}
         style={{width:22,height:22,borderRadius:"50%",flexShrink:0,cursor:"pointer",border:`2px solid ${task.done?C.green:C.border2}`,background:task.done?C.green:"transparent",color:"#000",fontSize:12,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,padding:0}}>
         {task.done?"✓":""}
@@ -79,6 +170,9 @@ function TaskRow({task,client,overdue,onToggle,onEdit,onDelete,onOpenClient,show
           <Avatar name={client.name} size={18} color={C.blue}/>
           <span style={{color:C.blue,fontSize:11,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{client.name}</span>
         </div>
+      )}
+      {!task.done&&task.dueDate&&(
+        <button onClick={()=>setShowRemind(true)} title="Set a phone reminder" style={{background:"none",border:"none",cursor:"pointer",fontSize:14,lineHeight:1,flexShrink:0,padding:2,opacity:0.75}}>🔔</button>
       )}
       <button onClick={()=>setConfirmDel(true)} title="Delete task" style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:16,lineHeight:1,flexShrink:0,padding:2}}>×</button>
     </div>
