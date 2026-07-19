@@ -9,6 +9,43 @@ import { ExPicker } from "./catalog.jsx";
 // PROGRAMS HUB (inline — same as v3, but saving to Supabase)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ── Search helpers: build one lowercase text blob per item so the search bar
+// matches names, tags, descriptions, exercises, equipment, clients — anything related.
+const norm=s=>(s??"").toString().toLowerCase();
+const matches=(hay,q)=>hay.includes(norm(q).trim());
+const progHay=(p,clients)=>[
+  p.name,p.description,
+  ...(p.days||[]).flatMap(d=>[d.label,d.focus,...(d.exercises||[]).flatMap(e=>[e.name,e.notes]),...(d.warmup||[]).map(w=>w.name)]),
+  ...(p.assignedClients||[]).map(id=>clients?.find(c=>c.id===id)?.name),
+].map(norm).join(" ");
+const fmtHay=f=>[
+  f.name,f.description,f.type,FORMAT_TYPES.find(t=>t.value===f.type)?.label,
+  ...(f.stations||[]).flatMap(s=>[s.name,s.equipment,s.notes,s.classType]),
+  ...(f.warmup||[]).flatMap(w=>[w.name,w.category,w.notes]),
+].map(norm).join(" ");
+const wkHay=w=>[
+  w.name,w.focus,
+  ...(w.exercises||[]).flatMap(e=>[e.name,e.notes]),
+  ...(w.warmup||[]).flatMap(x=>[x.name,x.category,x.notes]),
+].map(norm).join(" ");
+
+function SearchBar({value,onChange,placeholder,color}){
+  return(
+    <div style={{position:"relative"}}>
+      <span style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",fontSize:13,opacity:0.55,pointerEvents:"none"}}>🔍</span>
+      <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+        style={{width:"100%",boxSizing:"border-box",background:C.s2,border:`1px solid ${C.border}`,borderRadius:9,padding:"9px 30px 9px 32px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit"}}
+        onFocus={e=>e.target.style.borderColor=color} onBlur={e=>e.target.style.borderColor=C.border}/>
+      {value&&<button onClick={()=>onChange("")} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:C.muted,fontSize:15,cursor:"pointer",lineHeight:1,padding:2}}>×</button>}
+    </div>
+  );
+}
+const NoResults=({q})=>(
+  <Card style={{textAlign:"center",padding:24}}>
+    <div style={{color:C.muted,fontSize:13}}>No matches for "{q}".</div>
+  </Card>
+);
+
 const FORMAT_TYPES=[{value:"station",label:"Station Rotation"},{value:"circuit",label:"Circuit"},{value:"amrap",label:"AMRAP"},{value:"emom",label:"EMOM"},{value:"tabata",label:"Tabata"},{value:"custom",label:"Custom"}];
 const CLASS_TYPES=[
   {id:"hiit",     toggle:"🏋️ HIIT",     color:C.green,  item:"Station",  items:"Stations / Exercises", empty:"No stations yet.",  lead:"Follow-Along",  timer:true},
@@ -22,7 +59,9 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
   const [modal,setModal]=useState(null);
   const [exPicker,setExPicker]=useState(null);
   const [wkPicker,setWkPicker]=useState(null); // day id awaiting a workout pick
+  const [query,setQuery]=useState("");
   const prog=programs.find(p=>p.id===selected);
+  const shown=query.trim()?programs.filter(p=>matches(progHay(p,clients),query)):programs;
 
   const create=async()=>{
     const p={id:uid(),name:"New Program",description:"",weeks:4,daysPerWeek:3,days:[],assignedClients:[],createdAt:now()};
@@ -185,8 +224,10 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
     return(
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         <Btn color={C.purple} onClick={create}>+ New Program</Btn>
+        <SearchBar value={query} onChange={setQuery} placeholder="Search programs, exercises, tags…" color={C.purple}/>
         {programs.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>📋</div><div style={{color:C.muted,fontSize:13}}>No programs yet.</div></Card>}
-        {programs.map(p=>(
+        {programs.length>0&&shown.length===0&&<NoResults q={query}/>}
+        {shown.map(p=>(
           <div key={p.id} onClick={()=>setSelected(p.id)} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${C.purple}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div style={{color:C.text,fontWeight:700,fontSize:14}}>{p.name}</div>
@@ -207,8 +248,10 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
     <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16,height:"calc(100vh - 143px)",minHeight:0}}>
       <div style={{display:"flex",flexDirection:"column",gap:10,overflowY:"auto",padding:"6px 10px 20px 10px"}}>
         <Btn color={C.purple} onClick={create}>+ New Program</Btn>
+        <SearchBar value={query} onChange={setQuery} placeholder="Search programs…" color={C.purple}/>
         {programs.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>📋</div><div style={{color:C.muted,fontSize:13}}>No programs yet.</div></Card>}
-        {programs.map(p=>(
+        {programs.length>0&&shown.length===0&&<NoResults q={query}/>}
+        {shown.map(p=>(
           <div key={p.id} onClick={()=>setSelected(p.id)} style={{background:C.surface,border:`1px solid ${selected===p.id?C.purple:C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${selected===p.id?C.purple:C.border}`}}>
             <div style={{color:C.text,fontWeight:700,fontSize:14}}>{p.name}</div>
             <div style={{color:C.muted,fontSize:11,marginTop:3}}>{p.weeks}wk · {p.daysPerWeek}d/wk · {p.days?.length||0} days</div>
@@ -233,6 +276,8 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
   const [displayMode,setDisplayMode]=useState(null); // null | "followalong" | "rotation"
   const [classType,setClassType]=useState("hiit");   // "hiit" | "yoga" | "mobility"
   const [subTab,setSubTab]=useState("stations");      // "stations" | "floorplan"
+  const [query,setQuery]=useState("");
+  const shownFormats=query.trim()?formats.filter(f=>matches(fmtHay(f),query)):formats;
   const fmt=formats.find(f=>f.id===selected);
   const typeCfg=CLASS_TYPES.find(t=>t.id===classType)||CLASS_TYPES[0];
   const allStations=fmt?.stations||[];
@@ -317,8 +362,10 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
     <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"240px 1fr",gap:16,minHeight:mobile?0:520}}>
       {(!mobile||!fmt)&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
         <Btn color={C.teal} onClick={create}>+ New Class Format</Btn>
+        <SearchBar value={query} onChange={setQuery} placeholder="Search formats, stations…" color={C.teal}/>
         {formats.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>🏋️</div><div style={{color:C.muted,fontSize:13}}>No formats yet.</div></Card>}
-        {formats.map(f=>(
+        {formats.length>0&&shownFormats.length===0&&<NoResults q={query}/>}
+        {shownFormats.map(f=>(
           <div key={f.id} onClick={()=>setSelected(f.id)} style={{background:C.surface,border:`1px solid ${selected===f.id?C.teal:C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${selected===f.id?C.teal:C.border}`}}>
             <div style={{color:C.text,fontWeight:700,fontSize:14}}>{f.name}</div>
             <div style={{color:C.muted,fontSize:11,marginTop:3}}>{FORMAT_TYPES.find(t=>t.value===f.type)?.label} · {f.stations?.length||0} stations · {f.totalDuration}min</div>
@@ -508,6 +555,8 @@ function WorkoutBuilder({workouts,onSave,onUpdate,onDelete,mobile,catalog,onAddT
   const [selected,setSelected]=useState(null);
   const [confirm,setConfirm]=useState(null);
   const [exPicker,setExPicker]=useState(false);
+  const [query,setQuery]=useState("");
+  const shown=query.trim()?workouts.filter(w=>matches(wkHay(w),query)):workouts;
   const wk=workouts.find(w=>w.id===selected);
 
   const create=async()=>{
@@ -568,8 +617,10 @@ function WorkoutBuilder({workouts,onSave,onUpdate,onDelete,mobile,catalog,onAddT
   if(mobile) return wk?renderEditor():(
     <div style={{display:"flex",flexDirection:"column",gap:10}}>
       <Btn color={C.blue} onClick={create}>+ New Workout</Btn>
+      <SearchBar value={query} onChange={setQuery} placeholder="Search workouts, exercises, tags…" color={C.blue}/>
       {workouts.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>💪</div><div style={{color:C.muted,fontSize:13}}>No workouts yet.</div></Card>}
-      {workouts.map(w=>(
+      {workouts.length>0&&shown.length===0&&<NoResults q={query}/>}
+      {shown.map(w=>(
         <div key={w.id} onClick={()=>setSelected(w.id)} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${C.blue}`}}>
           <div style={{color:C.text,fontWeight:700,fontSize:14}}>{w.name}</div>
           <div style={{color:C.muted,fontSize:11,marginTop:3}}>{w.focus?`${w.focus} · `:""}{(w.exercises||[]).length} exercise{(w.exercises||[]).length!==1?"s":""}{(w.warmup||[]).length?` · ${w.warmup.length} warmup`:""}</div>
@@ -582,8 +633,10 @@ function WorkoutBuilder({workouts,onSave,onUpdate,onDelete,mobile,catalog,onAddT
     <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16,height:"calc(100vh - 143px)",minHeight:0}}>
       <div style={{display:"flex",flexDirection:"column",gap:10,overflowY:"auto",padding:"6px 10px 20px 10px"}}>
         <Btn color={C.blue} onClick={create}>+ New Workout</Btn>
+        <SearchBar value={query} onChange={setQuery} placeholder="Search workouts…" color={C.blue}/>
         {workouts.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>💪</div><div style={{color:C.muted,fontSize:13}}>No workouts yet.</div></Card>}
-        {workouts.map(w=>(
+        {workouts.length>0&&shown.length===0&&<NoResults q={query}/>}
+        {shown.map(w=>(
           <div key={w.id} onClick={()=>setSelected(w.id)} style={{background:C.surface,border:`1px solid ${selected===w.id?C.blue:C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${selected===w.id?C.blue:C.border}`}}>
             <div style={{color:C.text,fontWeight:700,fontSize:14}}>{w.name}</div>
             <div style={{color:C.muted,fontSize:11,marginTop:3}}>{w.focus?`${w.focus} · `:""}{(w.exercises||[]).length} exercise{(w.exercises||[]).length!==1?"s":""}{(w.warmup||[]).length?` · ${w.warmup.length} warmup`:""}</div>
