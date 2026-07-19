@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { C, uid, now, clamp, fmt, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
 import { WarmupPlanner } from "./warmup.jsx";
-import { FloorPlanEditor, FollowAlongDisplay, StationRotationDisplay } from "./display.jsx";
+import { FloorPlanEditor, FollowAlongDisplay, StationRotationDisplay, CLASS_TYPES } from "./display.jsx";
 import { ExPicker } from "./catalog.jsx";
 
 // PROGRAMS HUB (inline — same as v3, but saving to Supabase)
@@ -47,11 +47,6 @@ const NoResults=({q})=>(
 );
 
 const FORMAT_TYPES=[{value:"station",label:"Station Rotation"},{value:"circuit",label:"Circuit"},{value:"amrap",label:"AMRAP"},{value:"emom",label:"EMOM"},{value:"tabata",label:"Tabata"},{value:"custom",label:"Custom"}];
-const CLASS_TYPES=[
-  {id:"hiit",     toggle:"🏋️ HIIT",     color:C.green,  item:"Station",  items:"Stations / Exercises", empty:"No stations yet.",  lead:"Follow-Along",  timer:true},
-  {id:"yoga",     toggle:"🧘 Yoga",     color:C.purple, item:"Pose",     items:"Poses",                empty:"No poses yet.",     lead:"Lead Class",    timer:false},
-  {id:"mobility", toggle:"🤸 Mobility", color:C.teal,   item:"Movement", items:"Movements",            empty:"No movements yet.", lead:"Lead Movement", timer:false},
-];
 
 function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClient,mobile,catalog,onAddToCatalog,workouts=[],onSaveWorkout}){
   const [selected,setSelected]=useState(null);

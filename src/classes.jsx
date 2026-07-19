@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { C, uid, now, fmtDate, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
+import { ClassRunPanel } from "./display.jsx";
 
 // GROUP CLASSES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -192,6 +193,7 @@ function ClassesScreen({clients,classes,onAdd,onAddSeries,onEdit,onDelete,onDele
               </div>
             </div>
           </div>
+          {selFmt&&sel.status==="scheduled"&&<div style={{marginTop:10}}><ClassRunPanel format={selFmt} mobile={mobile}/></div>}
         </Card>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
           {[{label:"Enrolled",val:`${sel.bookings?.length||0}/${sel.capacity}`,color:C.text},{label:"Attended",val:(sel.bookings||[]).filter(b=>b.attendance==="attended").length,color:C.green},{label:"No-shows",val:(sel.bookings||[]).filter(b=>b.attendance==="no-show").length,color:C.red}].map(s=>(
@@ -281,6 +283,7 @@ function ClassesScreen({clients,classes,onAdd,onAddSeries,onEdit,onDelete,onDele
                 </div>
               </div>
             </div>
+            {selFmt&&sel.status==="scheduled"&&<div style={{marginTop:10}}><ClassRunPanel format={selFmt} mobile={mobile}/></div>}
           </Card>
 
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}}>

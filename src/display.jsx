@@ -841,4 +841,94 @@ function ClassFormatPreview(){ return null; }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export { ROOM_SHAPES, STATION_COLORS, FloorPlanEditor, useBreathCue, PoseTimer, useSwipe, FollowAlongDisplay, StationRotationDisplay, YOGA_SECTIONS, YogaSectionBlock };
+// ── Shared class-type config (used by the Format builder and the Schedule runner)
+const CLASS_TYPES=[
+  {id:"hiit",     toggle:"🏋️ HIIT",     color:C.green,  item:"Station",  items:"Stations / Exercises", empty:"No stations yet.",  lead:"Follow-Along",  timer:true},
+  {id:"yoga",     toggle:"🧘 Yoga",     color:C.purple, item:"Pose",     items:"Poses",                empty:"No poses yet.",     lead:"Lead Class",    timer:false},
+  {id:"mobility", toggle:"🤸 Mobility", color:C.teal,   item:"Movement", items:"Movements",            empty:"No movements yet.", lead:"Lead Movement", timer:false},
+];
+
+// Build the station lists a live display needs, from a saved format + class type.
+// Mirrors the normalisation done in the Class Format builder.
+function buildRunData(format,classType){
+  const allStations=format?.stations||[];
+  const typeStations=allStations.filter(s=>(s.classType||"hiit")===classType);
+  const stationsWithPos=typeStations.map(st=>({...st,sidesMode:st.sidesMode||"none"}));
+  const isFlowType=classType==="yoga"||classType==="mobility";
+  const warmupItems=format?.warmup||[];
+  const WARM_ICONS={"foam-rolling":"🌀",stretching:"🧘",mobility:"🔄",sport:"⚡"};
+  const seqSource=isFlowType?[
+    ...warmupItems.map(w=>({...w,kind:"warmup"})),
+    ...typeStations.map(s=>({...s,kind:"pose"})),
+  ]:[];
+  const orderedSeq=seqSource.map((it,i)=>({it,i})).sort((a,b)=>{
+    const sa=a.it.seq??(1e6+a.i), sb=b.it.seq??(1e6+b.i);
+    return sa-sb;
+  }).map(x=>x.it);
+  const leadSequence=isFlowType?orderedSeq.map(it=>it.kind==="warmup"?{
+    id:it.id,name:it.name,
+    category:it.category==="foam-rolling"?"foam":it.category,
+    icon:WARM_ICONS[it.category]||"🧘",
+    description:it.notes||"",
+    holdSec:Number(it.holdSec)||0,
+    reps:it.reps||"",
+    sidesMode:it.sidesMode||"none",
+  }:{
+    ...it,
+    description:it.description||it.notes||"",
+    holdSec:Number(it.holdSec)||Number(it.workSec)||0,
+    sidesMode:it.sidesMode||"none",
+  }):stationsWithPos;
+  return {stationsWithPos,leadSequence};
+}
+
+// Compact "run this class" panel — lets a trainer launch the live display
+// straight from a scheduled class (Schedule screen) without visiting Programs.
+function ClassRunPanel({format,mobile}){
+  const present=[...new Set((format?.stations||[]).map(s=>s.classType||"hiit"))];
+  const types=CLASS_TYPES.filter(t=>present.includes(t.id));
+  const list=types.length?types:[CLASS_TYPES[0]];
+  const [classType,setClassType]=useState(list[0].id);
+  const [displayMode,setDisplayMode]=useState(null);
+  // Reset when a different format is shown
+  useEffect(()=>{ setClassType(list[0].id); setDisplayMode(null); },[format?.id]);
+  const activeType=list.some(t=>t.id===classType)?classType:list[0].id;
+  const typeCfg=CLASS_TYPES.find(t=>t.id===activeType)||CLASS_TYPES[0];
+  const {stationsWithPos,leadSequence}=buildRunData(format,activeType);
+  const empty=leadSequence.length===0&&stationsWithPos.length===0;
+
+  if(displayMode==="followalong") return <FollowAlongDisplay stations={leadSequence} classType={activeType} mobile={mobile} onClose={()=>setDisplayMode(null)}/>;
+  if(displayMode==="rotation")    return <StationRotationDisplay stations={stationsWithPos} workSec={Number(format?.workSec)||40} restSec={Number(format?.restSec)||20} mobile={mobile} onClose={()=>setDisplayMode(null)}/>;
+
+  return(
+    <div style={{background:C.s2,borderRadius:10,padding:mobile?"10px 12px":"12px 14px",border:`1px solid ${typeCfg.color}33`,display:"flex",flexDirection:"column",gap:mobile?8:10}}>
+      <div style={{color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>▶ Run this class</div>
+      {empty?(
+        <div style={{color:C.muted,fontSize:12}}>This format has no stations yet — add some in Programs → Class Formats.</div>
+      ):(
+        <>
+          {list.length>1&&(
+            <div style={{display:"flex",background:C.s3,borderRadius:8,padding:3}}>
+              {list.map(t=>(
+                <button key={t.id} onClick={()=>setClassType(t.id)}
+                  style={{flex:1,padding:"6px",borderRadius:6,border:"none",cursor:"pointer",fontWeight:700,fontSize:mobile?11:12,background:activeType===t.id?t.color:"transparent",color:activeType===t.id?"#000":C.sub,transition:"all 0.15s"}}>
+                  {t.toggle}
+                </button>
+              ))}
+            </div>
+          )}
+          <div style={{display:"flex",gap:8}}>
+            <Btn variant="ghost" color={typeCfg.color} style={{flex:1,justifyContent:"center",padding:"7px",fontSize:11}} onClick={()=>setDisplayMode("followalong")}>
+              📖 {typeCfg.lead}
+            </Btn>
+            {typeCfg.timer&&<Btn variant="ghost" color={C.green} style={{flex:1,justifyContent:"center",padding:"7px",fontSize:11}} onClick={()=>setDisplayMode("rotation")}>
+              ▶ Station Timer
+            </Btn>}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export { ROOM_SHAPES, STATION_COLORS, FloorPlanEditor, useBreathCue, PoseTimer, useSwipe, FollowAlongDisplay, StationRotationDisplay, YOGA_SECTIONS, YogaSectionBlock, CLASS_TYPES, ClassRunPanel };
