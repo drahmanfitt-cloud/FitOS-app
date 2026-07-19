@@ -232,6 +232,7 @@ function PoseTimer({pose, onDone, accent=C.purple, title, size=140}){
   const [seconds, setSeconds] = useState(pose.holdSec||30);
   const [running, setRunning] = useState(true);
   const [switching, setSwitching] = useState(false); // brief pause between sides
+  const [seekPreview, setSeekPreview] = useState(null); // {ang, target} — hover marker on the ring
   const {breathPhase, breathSec} = useBreathCue(pose.holdSec, running);
   const pct = (seconds/(pose.holdSec||30))*100;
   const r = size/2-Math.max(8,size*0.06);
@@ -246,6 +247,21 @@ function PoseTimer({pose, onDone, accent=C.purple, title, size=140}){
 
   const BREATH_COLORS = {inhale:C.blue, hold:C.purple, exhale:C.teal};
   const breathColor = BREATH_COLORS[breathPhase]||C.blue;
+
+  // Translate a pointer event into a spot on the ring: returns {ang, target}
+  // or null when the press is over the text in the middle. Generous band —
+  // anything outside the centre text counts as the ring.
+  const ringHit = e=>{
+    const rect=e.currentTarget.getBoundingClientRect();
+    const dx=e.clientX-(rect.left+rect.width/2);
+    const dy=e.clientY-(rect.top+rect.height/2);
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<r*0.62) return null; // protect the pose name / time text
+    let ang=Math.atan2(dy,dx)+Math.PI/2; // 0 at top, clockwise
+    if(ang<0) ang+=Math.PI*2;
+    const frac=ang/(Math.PI*2);
+    return {ang, target:Math.max(1,Math.round((pose.holdSec||30)*frac))};
+  };
 
   useEffect(()=>{
     if(!running||switching)return;
@@ -307,32 +323,39 @@ function PoseTimer({pose, onDone, accent=C.purple, title, size=140}){
       <div
         onPointerDown={e=>{
           if(switching) return;
-          const rect=e.currentTarget.getBoundingClientRect();
-          const dx=e.clientX-(rect.left+rect.width/2);
-          const dy=e.clientY-(rect.top+rect.height/2);
-          const dist=Math.sqrt(dx*dx+dy*dy);
-          // Only react to presses on/near the ring itself, not the text in the middle
-          if(dist<r-strokeW*2||dist>r+strokeW*2.5) return;
-          let ang=Math.atan2(dy,dx)+Math.PI/2; // 0 at top, clockwise
-          if(ang<0) ang+=Math.PI*2;
-          const frac=ang/(Math.PI*2);
-          const target=Math.max(1,Math.round((pose.holdSec||30)*frac));
+          const hit=ringHit(e);
+          if(!hit) return;
           // Cancel any pending completion/side-switch callbacks so a seek
           // right after the timer hits zero doesn't still fire onDone.
           pendingTimeouts.current.forEach(clearTimeout);
           pendingTimeouts.current=[];
           setSwitching(false);
-          setSeconds(target);
+          setSeekPreview(null);
+          setSeconds(hit.target);
           setRunning(true);
         }}
+        onPointerMove={e=>{
+          if(switching||e.pointerType==="touch"){ return; }
+          setSeekPreview(ringHit(e));
+        }}
+        onPointerLeave={()=>setSeekPreview(null)}
         title="Tap the ring to jump the timer"
-        style={{position:"relative",width:size,height:size,cursor:"pointer",touchAction:"manipulation"}}>
+        style={{position:"relative",width:size,height:size,cursor:seekPreview?"pointer":"default",touchAction:"manipulation"}}>
         <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
           <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeW}/>
           <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={done?C.green:accent} strokeWidth={strokeW}
             strokeDasharray={circ} strokeDashoffset={circ*(1-pct/100)}
             strokeLinecap="round" style={{transition:"stroke-dashoffset 1s linear, stroke 0.3s"}}/>
         </svg>
+        {/* Seek preview: dot on the ring + time you'd jump to */}
+        {seekPreview&&!switching&&(
+          <>
+            <div style={{position:"absolute",left:size/2+r*Math.sin(seekPreview.ang)-7,top:size/2-r*Math.cos(seekPreview.ang)-7,width:14,height:14,borderRadius:"50%",background:"#fff",border:`3px solid ${accent}`,pointerEvents:"none",boxShadow:"0 0 8px rgba(0,0,0,0.6)"}}/>
+            <div style={{position:"absolute",left:"50%",bottom:-30,transform:"translateX(-50%)",background:"rgba(0,0,0,0.75)",border:`1px solid ${accent}55`,borderRadius:8,padding:"3px 12px",color:"#fff",fontSize:13,fontWeight:700,pointerEvents:"none",whiteSpace:"nowrap",fontVariantNumeric:"tabular-nums"}}>
+              ⏱ {fmt(seekPreview.target)}
+            </div>
+          </>
+        )}
         <div style={{position:"absolute",inset:size*0.14,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:size*0.03,textAlign:"center"}}>
           {done?(
             <span style={{color:C.green,fontSize:size*0.23}}>✓</span>
