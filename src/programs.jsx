@@ -246,7 +246,7 @@ function ProgramBuilder({programs,onSave,onUpdate,onDelete,clients,onUpdateClien
 
   return(
     <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16,height:"calc(100vh - 143px)",minHeight:0}}>
-      <div style={{display:"flex",flexDirection:"column",gap:10,overflowY:"auto",padding:"6px 10px 20px 10px"}}>
+      <div style={{display:"flex",flexDirection:"column",gap:10,overflowY:"auto",padding:"0 0 20px 0"}}>
         <Btn color={C.purple} onClick={create}>+ New Program</Btn>
         <SearchBar value={query} onChange={setQuery} placeholder="Search programs…" color={C.purple}/>
         {programs.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>📋</div><div style={{color:C.muted,fontSize:13}}>No programs yet.</div></Card>}
@@ -631,7 +631,7 @@ function WorkoutBuilder({workouts,onSave,onUpdate,onDelete,mobile,catalog,onAddT
 
   return(
     <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16,height:"calc(100vh - 143px)",minHeight:0}}>
-      <div style={{display:"flex",flexDirection:"column",gap:10,overflowY:"auto",padding:"6px 10px 20px 10px"}}>
+      <div style={{display:"flex",flexDirection:"column",gap:10,overflowY:"auto",padding:"0 0 20px 0"}}>
         <Btn color={C.blue} onClick={create}>+ New Workout</Btn>
         <SearchBar value={query} onChange={setQuery} placeholder="Search workouts…" color={C.blue}/>
         {workouts.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>💪</div><div style={{color:C.muted,fontSize:13}}>No workouts yet.</div></Card>}
