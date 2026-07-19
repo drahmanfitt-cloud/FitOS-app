@@ -235,6 +235,12 @@ function PoseTimer({pose, onDone, accent=C.purple}){
   const {breathPhase, breathSec} = useBreathCue(pose.holdSec, running);
   const pct = (seconds/(pose.holdSec||30))*100;
   const circ = 2*Math.PI*54;
+  // Track delayed callbacks so they can be cancelled if this timer unmounts
+  // (e.g. the trainer taps Next right as a hold finishes) — prevents a stale
+  // onDone from auto-advancing the class after manual navigation.
+  const pendingTimeouts = useRef([]);
+  const later = (fn,ms)=>{ pendingTimeouts.current.push(setTimeout(fn,ms)); };
+  useEffect(()=>()=>{ pendingTimeouts.current.forEach(clearTimeout); },[]);
 
   const BREATH_COLORS = {inhale:C.blue, hold:C.purple, exhale:C.teal};
   const breathColor = BREATH_COLORS[breathPhase]||C.blue;
@@ -249,14 +255,14 @@ function PoseTimer({pose, onDone, accent=C.purple}){
           if(sidesMode==="both"&&side==="left"){
             // Auto-switch to right side with a 1.5s pause
             setSwitching(true);
-            setTimeout(()=>{
+            later(()=>{
               setSide("right");
               setSeconds(pose.holdSec||30);
               setSwitching(false);
               setRunning(true);
             },1500);
           } else {
-            setTimeout(()=>onDone?.(),600);
+            later(()=>onDone?.(),600);
           }
           return 0;
         }
@@ -386,6 +392,7 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
   const [idx,setIdx]=useState(0);
   const [poseTimerActive,setPoseTimerActive]=useState(false);
   const [poseDone,setPoseDone]=useState({});
+  const [autoRun,setAutoRun]=useState(false); // auto-advance to next pose when a timer finishes
   const [started,setStarted]=useState(!isFlow); // flow classes open on an agenda screen
   const current=stations[idx];
   const next=stations[idx+1];
@@ -502,7 +509,17 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
             {current?.reps&&<div style={{color:accent,fontWeight:800,fontSize:24}}>{current.reps} reps{(current.sidesMode==="both"||current.sides)?" per side":""}</div>}
             {current?.holdSec>0&&(
               poseTimerActive?(
-                <PoseTimer pose={current} accent={accent} onDone={()=>{setPoseDone(p=>({...p,[idx]:true}));setPoseTimerActive(false);}}/>
+                <PoseTimer key={idx} pose={current} accent={accent} onDone={()=>{
+                  setPoseDone(p=>({...p,[idx]:true}));
+                  if(autoRun&&idx<total-1){
+                    const nxt=stations[idx+1];
+                    setIdx(idx+1);
+                    // Keep the timer rolling if the next item has a hold time; otherwise pause for reps-based items
+                    setPoseTimerActive(Number(nxt?.holdSec)>0);
+                  } else {
+                    setPoseTimerActive(false);
+                  }
+                }}/>
               ):(
                 <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
                   {poseDone[idx]?(
@@ -533,6 +550,14 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
                 </div>
               )
             )}
+            {/* Auto-run toggle: when on, finishing a hold timer moves to the next pose and starts its timer */}
+            {current?.holdSec>0&&(
+              <button onClick={()=>setAutoRun(a=>!a)}
+                style={{background:autoRun?C.green+"22":"rgba(255,255,255,0.06)",border:`1px solid ${autoRun?C.green+"66":"rgba(255,255,255,0.14)"}`,borderRadius:20,padding:"6px 16px",color:autoRun?C.green:"rgba(255,255,255,0.5)",fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+                <span style={{width:8,height:8,borderRadius:"50%",background:autoRun?C.green:"rgba(255,255,255,0.25)"}}/>
+                Auto-run {autoRun?"ON":"OFF"}
+              </button>
+            )}
             {current?.breathNote&&(
               <div style={{color:"rgba(255,255,255,0.35)",fontSize:13,fontStyle:"italic",maxWidth:400}}>
                 🌬 {current.breathNote}
@@ -562,9 +587,11 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
           </>
         )}
 
-        {next&&!poseTimerActive&&(
-          <div style={{color:"rgba(255,255,255,0.25)",fontSize:13,marginTop:8}}>
-            Next: <span style={{color:"rgba(255,255,255,0.45)",fontWeight:600}}>{next.name}</span>
+        {next&&(
+          <div style={{color:"rgba(255,255,255,0.3)",fontSize:14,marginTop:8,display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"6px 18px"}}>
+            <span style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em"}}>Up next</span>
+            <span style={{color:"rgba(255,255,255,0.6)",fontWeight:700}}>{next.name}</span>
+            {Number(next.holdSec)>0&&<span style={{color:"rgba(255,255,255,0.35)",fontSize:12}}>{next.holdSec}s</span>}
           </div>
         )}
       </div>
@@ -765,6 +792,12 @@ function StationRotationDisplay({stations,workSec=40,restSec=20,mobile,onClose})
                 <div style={{color:"#fff",fontWeight:900,fontSize:32,textAlign:"center",lineHeight:1.1}}>{current?.name}</div>
                 {current?.reps&&<div style={{color:C.green,fontWeight:700,fontSize:20}}>{current.reps} reps{sidesMode!=="none"?" per side":""}</div>}
                 {current?.notes&&<div style={{color:C.sub,fontSize:15,textAlign:"center",maxWidth:400}}>{current.notes}</div>}
+                {next&&(
+                  <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"6px 18px",marginTop:4}}>
+                    <span style={{color:C.muted,fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em"}}>Up next</span>
+                    <span style={{color:"rgba(255,255,255,0.65)",fontWeight:700,fontSize:14}}>{next.name}</span>
+                  </div>
+                )}
               </>
             )}
             {isRest&&next&&(
