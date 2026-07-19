@@ -889,7 +889,13 @@ const savedType=(id,list)=>{ try{const v=localStorage.getItem(typeMemKey(id)); i
 
 function ClassRunPanel({format,mobile}){
   const present=[...new Set((format?.stations||[]).map(s=>s.classType||"hiit"))];
-  const types=CLASS_TYPES.filter(t=>present.includes(t.id));
+  const hasWarmup=(format?.warmup||[]).length>0;
+  // Yoga/mobility flows can be built entirely from warmup/section items (no stations),
+  // so a format with sequence items but no stations still counts as runnable.
+  const types=CLASS_TYPES.filter(t=>
+    present.includes(t.id)||
+    (hasWarmup&&(t.id==="yoga"||t.id==="mobility"))
+  );
   const list=types.length?types:[CLASS_TYPES[0]];
   const [classType,setClassTypeRaw]=useState(()=>savedType(format?.id,list));
   const [displayMode,setDisplayMode]=useState(null);
