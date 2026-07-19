@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { C, uid, now, fmtDate, fmtTime, clamp, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
+import { RetentionScreen } from "./retention.jsx";
 
 function ClientForm({initial,onSave,onClose,mobile}){
   const EMPTY={name:"",email:"",phone:"",dob:"",tag:"General",status:"active",notes:""};
@@ -23,18 +24,37 @@ function ClientForm({initial,onSave,onClose,mobile}){
   );
 }
 
-function ClientsScreen({clients,onAdd,onEdit,onDelete,programs,setView,setActiveClient,mobile}){
+function ClientsScreen({clients,onAdd,onEdit,onDelete,programs,sessions=[],tasks=[],onAddTask,setView,setActiveClient,mobile}){
   const [search,setSearch]=useState("");
   const [modal,setModal]=useState(null);
   const [confirm,setConfirm]=useState(null);
   const [saving,setSaving]=useState(false);
+  const [tab,setTab]=useState("list"); // "list" | "retention"
   const SC={active:C.green,inactive:C.red,prospect:C.amber};
   const filtered=clients.filter(c=>(c.name||"").toLowerCase().includes(search.toLowerCase())||(c.email||"").toLowerCase().includes(search.toLowerCase()));
 
   const save=async(f)=>{ setSaving(true); if(modal==="add") await onAdd(f); else await onEdit(modal.client.id,f); setSaving(false); setModal(null); };
 
+  const tabs=(
+    <div style={{display:"flex",gap:2,borderBottom:`1px solid ${C.border}`}}>
+      {[["list","👥 Client List",C.blue],["retention","📉 Retention",C.green]].map(([id,label,color])=>(
+        <button key={id} onClick={()=>setTab(id)} style={{padding:"9px 16px",border:"none",background:"none",cursor:"pointer",color:tab===id?color:C.sub,fontWeight:tab===id?700:500,fontSize:mobile?12:13,borderBottom:`2px solid ${tab===id?color:"transparent"}`,whiteSpace:"nowrap"}}>{label}</button>
+      ))}
+    </div>
+  );
+
+  if(tab==="retention"){
+    return(
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        {tabs}
+        <RetentionScreen clients={clients} sessions={sessions} tasks={tasks} onAddTask={onAddTask} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>
+      </div>
+    );
+  }
+
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      {tabs}
       <div style={{display:"flex",gap:10}}>
         <div style={{flex:1,background:C.surface,border:`1px solid ${C.border}`,borderRadius:9,padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
           <span style={{color:C.muted}}>🔍</span>

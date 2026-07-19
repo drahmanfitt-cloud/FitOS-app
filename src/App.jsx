@@ -243,6 +243,7 @@ export default function App(){
   const [catalogExercises,setCatalogExercises]=useState([]);
   const seededRef=useRef(false);
   const warmupSeededRef=useRef(false);
+  const checkinRef=useRef(false);
   // Debounced DB writer: coalesce rapid edits (e.g. fast typing) into one PATCH per record.
   const writeTimers=useRef({});
   const queueWrite=(table,id,patch,opts={})=>{
@@ -337,7 +338,35 @@ export default function App(){
       try{ const wk=await db.select("fitos_workouts"); setWorkouts(wk.map(mapWorkout)); }
       catch(wErr){ console.warn("Workouts table not ready (run the migration):", wErr.message); }
       // Tasks load separately so a missing fitos_tasks table never breaks the rest.
-      try{ const tk=await db.select("fitos_tasks"); setTasks(tk.map(mapTask)); }
+      try{
+        const tk=await db.select("fitos_tasks"); setTasks(tk.map(mapTask));
+        // ── Auto check-in tasks: create one for each active client with no logged
+        // session in 14+ days, unless an open "Check in…" task already exists.
+        if(!checkinRef.current){
+          checkinRef.current=true;
+          const DAY=86400000, cutoff=Date.now()-14*DAY;
+          const last={};
+          s.forEach(r=>{ if(!r.client_id)return; const t=new Date(r.started_at||r.created_at).getTime(); if(!last[r.client_id]||t>last[r.client_id])last[r.client_id]=t; });
+          const quiet=c.filter(cl=>(cl.status||"active")==="active").filter(cl=>{
+            const ls=last[cl.id];
+            if(ls)return ls<cutoff;
+            const created=cl.created_at?new Date(cl.created_at).getTime():Date.now();
+            return created<cutoff; // never trained AND added 14+ days ago
+          });
+          // Skip clients with an open check-in task OR one created in the last 14 days
+          // (so completing a check-in doesn't spawn a fresh one on the next reload).
+          const todo=quiet.filter(cl=>!tk.some(t=>t.client_id===cl.id&&/^check in/i.test(t.title||"")&&(!t.done||(t.created_at&&new Date(t.created_at).getTime()>cutoff))));
+          if(todo.length){
+            const today=new Date().toISOString().slice(0,10);
+            const rows=todo.map(cl=>({id:uid(),title:`Check in with ${cl.name}`,notes:last[cl.id]?`Auto-added: no session in ${Math.floor((Date.now()-last[cl.id])/DAY)} days.`:"Auto-added: no sessions logged yet.",due_date:today,client_id:cl.id,done:false}));
+            try{
+              const ins=await db.insertMany("fitos_tasks",rows);
+              setTasks(p=>[...ins.map(mapTask),...p]);
+              toast(`Added ${ins.length} check-in task${ins.length>1?"s":""} for quiet clients`);
+            }catch(ciErr){ console.warn("Auto check-in tasks skipped:", ciErr.message); }
+          }
+        }
+      }
       catch(tErr){ console.warn("Tasks table not ready (run the migration):", tErr.message); }
       // Auto-preload the shared catalog the first time it's empty
       if(cat.length===0 && !seededRef.current){
@@ -721,7 +750,7 @@ export default function App(){
 
         <main style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"none",touchAction:"auto",padding:mobile?12:20,paddingBottom:mobile?80:20}}>
           {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} tasks={tasks} onToggleTask={id=>updateTask(id,{done:true})} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
-          {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
+          {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} sessions={sessions} tasks={tasks} onAddTask={addTask} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient} onLogDay={day=>{setEditSession(null);setPreloadDay(day);setSessionKey(k=>k+1);setView("sessions");}} onUpdateGoals={updateClientGoals} onUpdateBodyweight={updateClientBodyweight}/>}
           {loggerMounted&&<div style={{display:view==="sessions"?"block":"none"}}><ErrorBoundary><SessionLogger key={editSession?`edit-${editSession.id}`:`new-${sessionKey}`} clients={clients} sessions={sessions} onSave={addSession} onUpdate={updateSession} editSession={editSession} onDone={()=>{setEditSession(null);setView("session-history");}} activeClient={activeClient} programs={programs} workouts={workouts} initialDay={preloadDay} catalog={catalogExercises} onAddToCatalog={quickAddCatalog} onStatus={setSessionStatus} onSessionsView={view==="sessions"} onDiscard={discardSession}/></ErrorBoundary></div>}
           {view==="session-history"&&<SessionHistory sessions={sessions} clients={clients} mobile={mobile} onNew={startNewSession} onEdit={s=>{setEditSession(s);setPreloadDay(null);setView("sessions");}} onDelete={deleteSession}/>}
