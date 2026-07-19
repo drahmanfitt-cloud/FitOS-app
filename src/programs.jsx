@@ -1,9 +1,9 @@
 // FitOS — Programs Hub & Class Format Builder
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { C, uid, now, clamp, fmt, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Input, Select, Modal, Confirm } from "./ui.jsx";
 import { WarmupPlanner } from "./warmup.jsx";
-import { FloorPlanEditor, FollowAlongDisplay, StationRotationDisplay, CLASS_TYPES } from "./display.jsx";
+import { FloorPlanEditor, FollowAlongDisplay, StationRotationDisplay, CLASS_TYPES, savedType, typeMemKey } from "./display.jsx";
 import { ExPicker } from "./catalog.jsx";
 
 // PROGRAMS HUB (inline — same as v3, but saving to Supabase)
@@ -269,7 +269,10 @@ function ClassFormatBuilder({formats,onSave,onUpdate,onDelete,classes,onUpdateCl
   const [stPicker,setStPicker]=useState(false);
   const [loadModal,setLoadModal]=useState(false);
   const [displayMode,setDisplayMode]=useState(null); // null | "followalong" | "rotation"
-  const [classType,setClassType]=useState("hiit");   // "hiit" | "yoga" | "mobility"
+  const [classType,setClassTypeRaw]=useState("hiit");   // "hiit" | "yoga" | "mobility"
+  // Remember the chosen class type per format (so a Yoga format re-opens on Yoga, not HIIT)
+  const setClassType=t=>{ setClassTypeRaw(t); if(selected){ try{localStorage.setItem(typeMemKey(selected),t);}catch{} } };
+  useEffect(()=>{ if(selected) setClassTypeRaw(savedType(selected,CLASS_TYPES)); },[selected]);
   const [subTab,setSubTab]=useState("stations");      // "stations" | "floorplan"
   const [query,setQuery]=useState("");
   const shownFormats=query.trim()?formats.filter(f=>matches(fmtHay(f),query)):formats;

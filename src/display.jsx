@@ -884,14 +884,18 @@ function buildRunData(format,classType){
 
 // Compact "run this class" panel — lets a trainer launch the live display
 // straight from a scheduled class (Schedule screen) without visiting Programs.
+const typeMemKey=id=>"fitos_fmt_type_"+id;
+const savedType=(id,list)=>{ try{const v=localStorage.getItem(typeMemKey(id)); if(v&&list.some(t=>t.id===v))return v;}catch{} return list[0].id; };
+
 function ClassRunPanel({format,mobile}){
   const present=[...new Set((format?.stations||[]).map(s=>s.classType||"hiit"))];
   const types=CLASS_TYPES.filter(t=>present.includes(t.id));
   const list=types.length?types:[CLASS_TYPES[0]];
-  const [classType,setClassType]=useState(list[0].id);
+  const [classType,setClassTypeRaw]=useState(()=>savedType(format?.id,list));
   const [displayMode,setDisplayMode]=useState(null);
-  // Reset when a different format is shown
-  useEffect(()=>{ setClassType(list[0].id); setDisplayMode(null); },[format?.id]);
+  const setClassType=t=>{ setClassTypeRaw(t); try{localStorage.setItem(typeMemKey(format?.id),t);}catch{} };
+  // Reset when a different format is shown (restores that format's remembered type)
+  useEffect(()=>{ setClassTypeRaw(savedType(format?.id,list)); setDisplayMode(null); },[format?.id]);
   const activeType=list.some(t=>t.id===classType)?classType:list[0].id;
   const typeCfg=CLASS_TYPES.find(t=>t.id===activeType)||CLASS_TYPES[0];
   const {stationsWithPos,leadSequence}=buildRunData(format,activeType);
@@ -901,8 +905,7 @@ function ClassRunPanel({format,mobile}){
   if(displayMode==="rotation")    return <StationRotationDisplay stations={stationsWithPos} workSec={Number(format?.workSec)||40} restSec={Number(format?.restSec)||20} mobile={mobile} onClose={()=>setDisplayMode(null)}/>;
 
   return(
-    <div style={{background:C.s2,borderRadius:10,padding:mobile?"10px 12px":"12px 14px",border:`1px solid ${typeCfg.color}33`,display:"flex",flexDirection:"column",gap:mobile?8:10}}>
-      <div style={{color:C.sub,fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>▶ Run this class</div>
+    <div style={{borderTop:`1px solid ${C.border}`,marginTop:mobile?10:12,paddingTop:mobile?10:12,display:"flex",flexDirection:"column",gap:mobile?8:10}}>
       {empty?(
         <div style={{color:C.muted,fontSize:12}}>This format has no stations yet — add some in Programs → Class Formats.</div>
       ):(
@@ -931,4 +934,4 @@ function ClassRunPanel({format,mobile}){
   );
 }
 
-export { ROOM_SHAPES, STATION_COLORS, FloorPlanEditor, useBreathCue, PoseTimer, useSwipe, FollowAlongDisplay, StationRotationDisplay, YOGA_SECTIONS, YogaSectionBlock, CLASS_TYPES, ClassRunPanel };
+export { ROOM_SHAPES, STATION_COLORS, FloorPlanEditor, useBreathCue, PoseTimer, useSwipe, FollowAlongDisplay, StationRotationDisplay, YOGA_SECTIONS, YogaSectionBlock, CLASS_TYPES, ClassRunPanel, savedType, typeMemKey };
