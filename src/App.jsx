@@ -15,7 +15,7 @@ import { SEED_LIBRARY, WARMUP_SEED } from "./seedLibrary.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const NAV=[{id:"dashboard",label:"Dashboard",icon:"▦"},{id:"tasks",label:"Tasks",icon:"☑️"},{id:"clients",label:"Clients",icon:"👥"},{id:"session-history",label:"Sessions",icon:"⚡"},{id:"classes",label:"Classes",icon:"📅"},{id:"programs",label:"Programs",icon:"📋"},{id:"catalog",label:"Exercise Catalog",icon:"📖"}];
+const NAV=[{id:"dashboard",label:"Dashboard",icon:"▦"},{id:"tasks",label:"Tasks",icon:"☑️"},{id:"clients",label:"Clients",icon:"👥"},{id:"session-history",label:"Sessions",icon:"⚡"},{id:"classes",label:"Schedule",icon:"📅"},{id:"programs",label:"Programs",icon:"📋"},{id:"catalog",label:"Exercise Catalog",icon:"📖"}];
 
 // ── Bottom nav for mobile ─────────────────────────────────────────────────────
 function BottomNav({active,setActive,counts}){
@@ -665,7 +665,7 @@ export default function App(){
   const startNewSession=()=>{setEditSession(null);setPreloadDay(null);setSessionKey(k=>k+1);setView("sessions");};
   const discardSession=()=>{setSessionStatus(null);setEditSession(null);setPreloadDay(null);setSessionKey(k=>k+1);setView("session-history");};
   useEffect(()=>{if(view==="sessions")setLoggerMounted(true);},[view]);
-  const TITLES={dashboard:"Dashboard",clients:"Clients",client:"Client Profile",sessions:editSession?"Edit Session":"Log Session","session-history":"Logged Sessions",classes:"Group Classes",programs:"Programs & Formats",tasks:"Task Planner",catalog:"Exercise Catalog"};
+  const TITLES={dashboard:"Dashboard",clients:"Clients",client:"Client Profile",sessions:editSession?"Edit Session":"Log Session","session-history":"Logged Sessions",classes:"Schedule",programs:"Programs & Formats",tasks:"Task Planner",catalog:"Exercise Catalog"};
   const SUBS={dashboard:`${clients.filter(c=>c.status==="active").length} active clients`,clients:`${clients.length} clients`,client:activeClient?.name||"",sessions:editSession?"Editing a logged session":"Track sets, reps & weight","session-history":`${sessions.length} logged · tap to view or edit`,classes:`${classes.filter(c=>c.status==="scheduled").length} upcoming`,programs:`${programs.length} programs · ${formats.length} class formats`,catalog:`${catalogExercises.length} exercises`,tasks:`${tasks.filter(t=>!t.done).length} open task${tasks.filter(t=>!t.done).length===1?"":"s"}`};
   const counts={clients:clients.length,programs:programs.length+formats.length,dashboard:0,sessions:0,classes:classes.filter(c=>c.status==="scheduled").length,tasks:tasks.filter(t=>!t.done).length};
 
