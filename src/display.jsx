@@ -301,8 +301,32 @@ function PoseTimer({pose, onDone, accent=C.purple, title, size=140}){
         </div>
       )}
 
-      {/* Countdown ring — wraps the pose name when a title is given */}
-      <div style={{position:"relative",width:size,height:size}}>
+      {/* Countdown ring — wraps the pose name when a title is given.
+          Clicking/tapping a point on the ring seeks the timer to that spot
+          (top = full time, clockwise back to 0). */}
+      <div
+        onPointerDown={e=>{
+          if(switching) return;
+          const rect=e.currentTarget.getBoundingClientRect();
+          const dx=e.clientX-(rect.left+rect.width/2);
+          const dy=e.clientY-(rect.top+rect.height/2);
+          const dist=Math.sqrt(dx*dx+dy*dy);
+          // Only react to presses on/near the ring itself, not the text in the middle
+          if(dist<r-strokeW*2||dist>r+strokeW*2.5) return;
+          let ang=Math.atan2(dy,dx)+Math.PI/2; // 0 at top, clockwise
+          if(ang<0) ang+=Math.PI*2;
+          const frac=ang/(Math.PI*2);
+          const target=Math.max(1,Math.round((pose.holdSec||30)*frac));
+          // Cancel any pending completion/side-switch callbacks so a seek
+          // right after the timer hits zero doesn't still fire onDone.
+          pendingTimeouts.current.forEach(clearTimeout);
+          pendingTimeouts.current=[];
+          setSwitching(false);
+          setSeconds(target);
+          setRunning(true);
+        }}
+        title="Tap the ring to jump the timer"
+        style={{position:"relative",width:size,height:size,cursor:"pointer",touchAction:"manipulation"}}>
         <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
           <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeW}/>
           <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={done?C.green:accent} strokeWidth={strokeW}
