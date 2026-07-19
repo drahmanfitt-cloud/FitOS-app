@@ -221,7 +221,7 @@ function useBreathCue(holdSec, running) {
 }
 
 // ── Yoga/Stretch pose timer ───────────────────────────────────────────────────
-function PoseTimer({pose, onDone, accent=C.purple}){
+function PoseTimer({pose, onDone, accent=C.purple, title, size=140}){
   // sidesMode: "none" | "single" | "both"
   // For "single": left side only, then done
   // For "both": left side, auto-switch to right, then done
@@ -234,7 +234,9 @@ function PoseTimer({pose, onDone, accent=C.purple}){
   const [switching, setSwitching] = useState(false); // brief pause between sides
   const {breathPhase, breathSec} = useBreathCue(pose.holdSec, running);
   const pct = (seconds/(pose.holdSec||30))*100;
-  const circ = 2*Math.PI*54;
+  const r = size/2-Math.max(8,size*0.06);
+  const strokeW = Math.max(8,Math.round(size*0.045));
+  const circ = 2*Math.PI*r;
   // Track delayed callbacks so they can be cancelled if this timer unmounts
   // (e.g. the trainer taps Next right as a hold finishes) — prevents a stale
   // onDone from auto-advancing the class after manual navigation.
@@ -299,21 +301,22 @@ function PoseTimer({pose, onDone, accent=C.purple}){
         </div>
       )}
 
-      {/* Countdown ring */}
-      <div style={{position:"relative",width:140,height:140}}>
-        <svg width="140" height="140" style={{transform:"rotate(-90deg)"}}>
-          <circle cx="70" cy="70" r="54" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8"/>
-          <circle cx="70" cy="70" r="54" fill="none" stroke={done?C.green:accent} strokeWidth="8"
+      {/* Countdown ring — wraps the pose name when a title is given */}
+      <div style={{position:"relative",width:size,height:size}}>
+        <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeW}/>
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={done?C.green:accent} strokeWidth={strokeW}
             strokeDasharray={circ} strokeDashoffset={circ*(1-pct/100)}
             strokeLinecap="round" style={{transition:"stroke-dashoffset 1s linear, stroke 0.3s"}}/>
         </svg>
-        <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2}}>
+        <div style={{position:"absolute",inset:size*0.14,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:size*0.03,textAlign:"center"}}>
           {done?(
-            <span style={{color:C.green,fontSize:32}}>✓</span>
+            <span style={{color:C.green,fontSize:size*0.23}}>✓</span>
           ):(
             <>
-              <span style={{color:"#fff",fontWeight:900,fontSize:32,fontVariantNumeric:"tabular-nums"}}>{fmt(seconds)}</span>
-              <span style={{color:C.muted,fontSize:10}}>remaining</span>
+              {title&&<span style={{color:"#fff",fontWeight:900,fontSize:Math.max(16,size*0.075),lineHeight:1.15,maxWidth:"100%",overflowWrap:"break-word"}}>{title}</span>}
+              <span style={{color:"#fff",fontWeight:900,fontSize:title?size*0.15:size*0.23,fontVariantNumeric:"tabular-nums"}}>{fmt(seconds)}</span>
+              <span style={{color:C.muted,fontSize:Math.max(10,size*0.045)}}>remaining</span>
             </>
           )}
         </div>
@@ -488,15 +491,20 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
       <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:isFlow?"24px 40px":"40px",textAlign:"center",gap:isFlow?16:20}}>
         {!isFlow&&<div style={{color:C.muted,fontSize:13,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase"}}>Exercise {idx+1} of {total}</div>}
 
-        {current?.icon?(
-          <div style={{fontSize:isFlow?64:80}}>{current.icon}</div>
-        ):isFlow?(
-          <div style={{fontSize:64}}>{classType==="mobility"?"🤸":"🧘"}</div>
-        ):null}
+        {/* While a flow timer runs, the pose name lives inside the countdown ring instead */}
+        {!(isFlow&&poseTimerActive&&current?.holdSec>0)&&(
+          <>
+            {current?.icon?(
+              <div style={{fontSize:isFlow?64:80}}>{current.icon}</div>
+            ):isFlow?(
+              <div style={{fontSize:64}}>{classType==="mobility"?"🤸":"🧘"}</div>
+            ):null}
 
-        <div style={{color:"#fff",fontWeight:900,fontSize:isFlow?40:48,lineHeight:1.1,maxWidth:600}}>
-          {current?.name}
-        </div>
+            <div style={{color:"#fff",fontWeight:900,fontSize:isFlow?40:48,lineHeight:1.1,maxWidth:600}}>
+              {current?.name}
+            </div>
+          </>
+        )}
 
         {/* Flow mode: description + hold/breath timer */}
         {isFlow?(
@@ -509,7 +517,7 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
             {current?.reps&&<div style={{color:accent,fontWeight:800,fontSize:24}}>{current.reps} reps{(current.sidesMode==="both"||current.sides)?" per side":""}</div>}
             {current?.holdSec>0&&(
               poseTimerActive?(
-                <PoseTimer key={idx} pose={current} accent={accent} onDone={()=>{
+                <PoseTimer key={idx} pose={current} accent={accent} title={current?.name} size={mobile?300:380} onDone={()=>{
                   setPoseDone(p=>({...p,[idx]:true}));
                   if(autoRun&&idx<total-1){
                     const nxt=stations[idx+1];
@@ -549,14 +557,6 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
                   </button>
                 </div>
               )
-            )}
-            {/* Auto-run toggle: when on, finishing a hold timer moves to the next pose and starts its timer */}
-            {current?.holdSec>0&&(
-              <button onClick={()=>setAutoRun(a=>!a)}
-                style={{background:autoRun?C.green+"22":"rgba(255,255,255,0.06)",border:`1px solid ${autoRun?C.green+"66":"rgba(255,255,255,0.14)"}`,borderRadius:20,padding:"6px 16px",color:autoRun?C.green:"rgba(255,255,255,0.5)",fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
-                <span style={{width:8,height:8,borderRadius:"50%",background:autoRun?C.green:"rgba(255,255,255,0.25)"}}/>
-                Auto-run {autoRun?"ON":"OFF"}
-              </button>
             )}
             {current?.breathNote&&(
               <div style={{color:"rgba(255,255,255,0.35)",fontSize:13,fontStyle:"italic",maxWidth:400}}>
@@ -621,6 +621,13 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
         )}
       </div>
       <div style={{position:"absolute",top:isFlow?52:12,right:16,display:"flex",gap:8}}>
+        {isFlow&&(
+          <button onClick={()=>setAutoRun(a=>!a)}
+            style={{background:autoRun?C.green+"22":"rgba(255,255,255,0.08)",border:autoRun?`1px solid ${C.green}66`:"1px solid transparent",borderRadius:7,padding:"7px 13px",color:autoRun?C.green:"rgba(255,255,255,0.5)",fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+            <span style={{width:7,height:7,borderRadius:"50%",background:autoRun?C.green:"rgba(255,255,255,0.25)"}}/>
+            Auto-run {autoRun?"ON":"OFF"}
+          </button>
+        )}
         {isFlow&&<button onClick={()=>setStarted(false)} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:7,padding:"7px 13px",color:"rgba(255,255,255,0.5)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>≡ Agenda</button>}
         <button onClick={onClose} style={{background:"rgba(255,255,255,0.08)",border:"none",borderRadius:7,padding:"7px 13px",color:"rgba(255,255,255,0.5)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>✕ Exit</button>
       </div>
