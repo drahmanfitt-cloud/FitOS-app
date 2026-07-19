@@ -921,10 +921,10 @@ function ClassRunPanel({format,mobile}){
             </div>
           )}
           <div style={{display:"flex",gap:8}}>
-            <Btn variant="ghost" color={typeCfg.color} style={{flex:1,justifyContent:"center",padding:"7px",fontSize:11}} onClick={()=>setDisplayMode("followalong")}>
+            <Btn color={typeCfg.color} style={{flex:1,justifyContent:"center",padding:"10px",fontSize:13}} onClick={()=>setDisplayMode("followalong")}>
               📖 {typeCfg.lead}
             </Btn>
-            {typeCfg.timer&&<Btn variant="ghost" color={C.green} style={{flex:1,justifyContent:"center",padding:"7px",fontSize:11}} onClick={()=>setDisplayMode("rotation")}>
+            {typeCfg.timer&&<Btn variant="ghost" color={C.green} style={{flex:1,justifyContent:"center",padding:"10px",fontSize:13}} onClick={()=>setDisplayMode("rotation")}>
               ▶ Station Timer
             </Btn>}
           </div>

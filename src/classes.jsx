@@ -252,7 +252,7 @@ function ClassesScreen({clients,classes,onAdd,onAddSeries,onEdit,onDelete,onDele
         </div>
         {visible.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>{showHistory?"🕘":"📅"}</div><div style={{color:C.muted,fontSize:13}}>{showHistory?"No completed classes yet.":"No upcoming classes."}</div></Card>}
         {visible.map(c=>(
-          <div key={c.id} onClick={()=>setSelected(c.id)} style={{background:C.surface,border:`1px solid ${selected===c.id?C.green:C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${c.status==="completed"?C.muted:C.green}`}}>
+          <div key={c.id} onClick={()=>setSelected(c.id)} style={{background:C.surface,borderTop:`1px solid ${selected===c.id?C.green:C.border}`,borderRight:`1px solid ${selected===c.id?C.green:C.border}`,borderBottom:`1px solid ${selected===c.id?C.green:C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${c.status==="completed"?C.muted:C.green}`}}>
             <div style={{display:"flex",justifyContent:"space-between"}}><div style={{color:C.text,fontWeight:700,fontSize:14,display:"flex",alignItems:"center",gap:5}}>{c.seriesId&&<span title="Recurring" style={{color:C.amber}}>↻</span>}{c.name}</div><Pill color={c.status==="completed"?C.muted:C.green}>{c.status}</Pill></div>
             <div style={{color:C.sub,fontSize:12,marginTop:4}}>{c.date} · {c.time} · {c.duration}min</div>
             <div style={{color:C.muted,fontSize:11,marginTop:2}}>{c.bookings?.length||0}/{c.capacity} enrolled</div>
