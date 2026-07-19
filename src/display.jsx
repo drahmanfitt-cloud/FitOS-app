@@ -635,7 +635,7 @@ function FollowAlongDisplay({stations,classType,mobile,onClose}){
         )}
 
         {next&&(
-          <div style={{color:"rgba(255,255,255,0.3)",fontSize:14,marginTop:8,display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"6px 18px"}}>
+          <div style={{color:"rgba(255,255,255,0.3)",fontSize:14,marginTop:"auto",display:"flex",alignItems:"center",gap:8,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"6px 18px"}}>
             <span style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em"}}>Up next</span>
             <span style={{color:"rgba(255,255,255,0.6)",fontWeight:700}}>{next.name}</span>
             {Number(next.holdSec)>0&&<span style={{color:"rgba(255,255,255,0.35)",fontSize:12}}>{next.holdSec}s</span>}
