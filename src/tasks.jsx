@@ -99,9 +99,9 @@ function ReminderModal({task,client,onClose}){
 }
 
 // ── Add / edit form (rendered inside a Modal) ─────────────────────────────────
-function TaskForm({initial,clients,onSave,onClose}){
+export function TaskForm({initial,initialDate,clients,onSave,onClose}){
   const [title,setTitle]=useState(initial?.title||"");
-  const [dueDate,setDueDate]=useState(initial?.dueDate??todayStr());
+  const [dueDate,setDueDate]=useState(initial?.dueDate??initialDate??todayStr());
   const [clientId,setClientId]=useState(initial?.clientId||"");
   const [notes,setNotes]=useState(initial?.notes||"");
   const inputStyle={width:"100%",background:C.s2,border:`1px solid ${C.border}`,borderRadius:8,padding:"9px 12px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit"};
