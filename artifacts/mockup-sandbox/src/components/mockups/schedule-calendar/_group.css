@@ -1,0 +1,59 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+:root {
+  --fitos-bg: #0b0d11;
+  --fitos-surface: #13161d;
+  --fitos-s2: #1a1e28;
+  --fitos-s3: #222738;
+  --fitos-border: #2a2f42;
+  --fitos-border-2: #353b52;
+  --fitos-green: #22d98a;
+  --fitos-blue: #4b8ef8;
+  --fitos-purple: #9b72f5;
+  --fitos-amber: #f5a524;
+  --fitos-red: #f5445a;
+  --fitos-teal: #22c4d9;
+  --fitos-text: #edf0fa;
+  --fitos-sub: #8a92b2;
+  --fitos-muted: #4e566e;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--fitos-bg);
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+}
+
+.fitos-schedule,
+.fitos-schedule *,
+.fitos-schedule *::before,
+.fitos-schedule *::after {
+  box-sizing: border-box;
+}
+
+.fitos-schedule {
+  min-height: 100vh;
+  background: var(--fitos-bg);
+  color: var(--fitos-text);
+  font-family: "Inter", system-ui, sans-serif;
+  padding: 20px;
+}
+
+.fitos-schedule button {
+  font-family: inherit;
+}
+
+.fitos-schedule button:not(:disabled):hover {
+  filter: brightness(1.08);
+}
+
+.fitos-schedule button:focus-visible {
+  outline: 2px solid var(--fitos-green);
+  outline-offset: 2px;
+}
