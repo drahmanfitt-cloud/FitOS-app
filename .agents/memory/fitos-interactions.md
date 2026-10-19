@@ -11,6 +11,10 @@ Training Intelligence's outer section border and the whole time-range selector b
 **Why:** The user explicitly requested less prominent container outlines.
 **How to apply:** Keep container hover borders subtle while retaining the inner panel and individual button feedback.
 
+Condensing Customize dashboard includes its top-right trigger, not only the expanded reorder controls. The four dashboard metric cards should highlight individually on hover and return to neutral afterward.
+**Why:** The user clarified that the top-right control still looked unchanged and reported missing hover feedback.
+**How to apply:** Keep the trigger compact and verify hover enter/leave on the actual metric cards.
+
 The profile default weight preference must use a kg/lbs toggle like Session Settings, not a dropdown.
 **Why:** The user explicitly corrected the initial dropdown design.
 **How to apply:** Preserve the matching toggle when revising My Profile.

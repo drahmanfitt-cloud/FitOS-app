@@ -24,7 +24,11 @@ export function DashboardLayout({userId,children}) {
   return <div className="dashboard-shell" style={{display:"flex",flexDirection:"column",gap:16}}>
     <div className="dashboard-toolbar">
       <div><strong style={{fontSize:13}}>Your coaching overview</strong><p>Training activity, follow-ups, and the clients behind them.</p></div>
-      <button type="button" className="dashboard-button" aria-expanded={customizing} aria-controls="dashboard-customizer" onClick={()=>setCustomizing(v=>!v)}>{customizing?"Done customizing":"Customize dashboard"}</button>
+      <button type="button" className="dashboard-button dashboard-customize-toggle" title={customizing?"Done customizing":"Customize dashboard"} aria-label={customizing?"Done customizing":"Customize dashboard"} aria-expanded={customizing} aria-controls="dashboard-customizer" onClick={()=>setCustomizing(v=>!v)}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          {customizing?<path d="m5 12 4 4L19 6"/>:<><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="currentColor"/><circle cx="15" cy="17" r="3" fill="currentColor"/></>}
+        </svg>
+      </button>
     </div>
     {layout.error&&<p className="dashboard-alert" role="alert">{layout.error} <button type="button" className="dashboard-button secondary" onClick={()=>save(layout.order,"Current layout applied.")}>Try saving layout</button></p>}
     {customizing&&<section id="dashboard-customizer" className="dashboard-customizer" aria-label="Customize dashboard order">
