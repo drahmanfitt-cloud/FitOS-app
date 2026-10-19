@@ -7,6 +7,10 @@ The user wants everything to highlight on hover, specifically including workout 
 **Why:** The user requested the same border feedback as other app bubbles.
 **How to apply:** Give new cards and interactive controls consistent border highlighting and keyboard focus feedback, without making static text look clickable.
 
+Training Intelligence's outer section border and the whole time-range selector border should be much fainter than the inner highlights; individual time buttons stay unchanged.
+**Why:** The user explicitly requested less prominent container outlines.
+**How to apply:** Keep container hover borders subtle while retaining the inner panel and individual button feedback.
+
 The profile default weight preference must use a kg/lbs toggle like Session Settings, not a dropdown.
 **Why:** The user explicitly corrected the initial dropdown design.
 **How to apply:** Preserve the matching toggle when revising My Profile.

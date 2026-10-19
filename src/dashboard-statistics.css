@@ -1,12 +1,14 @@
 .fitos-stats { min-width: 0; }
-.fitos-app .fitos-stats:hover,
-.fitos-app .fitos-stats:focus-within { border-color: #22D98A !important; }
+.fitos-app .fitos-card.fitos-stats:hover,
+.fitos-app .fitos-card.fitos-stats:focus-within { border-color: #22D98A33 !important; }
+.fitos-app .fitos-stats .stats-range:hover,
+.fitos-app .fitos-stats .stats-range:focus-within { border-color: #22D98A33 !important; }
 .fitos-app .fitos-stats .stats-panel:hover,
 .fitos-app .fitos-stats .stats-panel:focus-within {
   border-color: var(--stats-accent, #22D98A) !important;
   box-shadow: 0 0 0 1px var(--stats-accent, #22D98A);
 }
-.fitos-app .fitos-stats :is(.stats-range,.stats-field,button:not(:disabled),summary):hover {
+.fitos-app .fitos-stats :is(.stats-field,button:not(:disabled),summary):hover {
   border-color: #22D98A !important;
 }
 .fitos-app .fitos-stats .stats-table tbody tr:hover {
