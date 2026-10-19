@@ -24,5 +24,5 @@ Upcoming Classes, Recent Sessions, and Active Clients dashboard containers shoul
 **How to apply:** Use hover-only CSS for these containers rather than persistent inline border changes or focus-within highlights.
 
 Screen-to-screen navigation should feel fluid rather than switch abruptly.
-**Why:** The user requested smoother transitions between screens.
-**How to apply:** Keep navigation motion subtle and quick, respect reduced-motion settings, and preserve in-progress sessions.
+**Why:** The user requested smoother transitions and confirmed liking the softened timing and movement, asking only for slightly more fade.
+**How to apply:** Preserve the approved pacing and subtle slide; prefer small fade adjustments over redesigning the motion. Respect reduced-motion settings and preserve in-progress sessions.
