@@ -718,9 +718,9 @@ function SessionExCard({ex,updateEx,addSet,updateSet,removeSet,removeEx,startRes
   );
 }
 
-function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,activeClient,programs,initialDay,catalog,onAddToCatalog,workouts=[],onStatus,onSessionsView=true,onDiscard}){
+function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,activeClient,programs,initialDay,catalog,onAddToCatalog,workouts=[],onStatus,onSessionsView=true,onDiscard,defaultWeightUnit="kg"}){
   const isEdit=!!editSession;
-  const [settings,setSettings]=useState(DEFAULT_SETTINGS);
+  const [settings,setSettings]=useState(()=>({...DEFAULT_SETTINGS,weightUnit:!editSession&&defaultWeightUnit==="lbs"?"lbs":"kg"}));
   const [showSettings,setShowSettings]=useState(false);
   const [confirmCancel,setConfirmCancel]=useState(false);
   const [clientId,setClientId]=useState(editSession?.clientId||activeClient?.id||"");

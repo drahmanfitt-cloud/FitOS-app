@@ -97,11 +97,12 @@ export function ProfileSetup({ user, onComplete }) {
   );
 }
 
-export function ProfileEditor({ profile, onSave, onClose, onSignOut }) {
+export function ProfileEditor({ profile, user, onUserUpdated, onSave, onClose, onSignOut }) {
   const [name, setName] = useState(profile.name || "");
   const [gym, setGym] = useState(profile.gym || "");
   const [role, setRole] = useState(profile.role || "");
   const [selected, setSelected] = useState(profile.specialties || []);
+  const [weightUnit, setWeightUnit] = useState(user?.user_metadata?.weight_unit==="lbs"?"lbs":"kg");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -116,6 +117,9 @@ export function ProfileEditor({ profile, onSave, onClose, onSignOut }) {
         .from("fitos_trainer_profiles")
         .upsert({ id: profile.id, name: name.trim(), gym: gym.trim(), role: role.trim(), specialties: selected });
       if (error) throw error;
+      const { data, error: preferenceError } = await supabase.auth.updateUser({data:{weight_unit:weightUnit}});
+      if(preferenceError) throw preferenceError;
+      onUserUpdated(data.user);
       onSave({ ...profile, name: name.trim(), gym: gym.trim(), role: role.trim(), specialties: selected });
       onClose();
     } catch (err) {
@@ -152,17 +156,28 @@ export function ProfileEditor({ profile, onSave, onClose, onSignOut }) {
           </div>
           <div>
             <label style={{display:"block",color:C.sub,fontSize:12,fontWeight:600,marginBottom:10}}>Specialties</label>
-            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-              {SPECIALTIES.map(s => {
-                const on = selected.includes(s);
-                return (
-                  <button key={s} onClick={() => toggleSpec(s)}
-                    style={{padding:"6px 13px",borderRadius:20,border:`1px solid ${on ? C.green : C.border2}`,background:on ? C.green+"18" : "transparent",color:on ? C.green : C.sub,fontSize:12,fontWeight:on ? 700 : 500,cursor:"pointer",fontFamily:"inherit"}}>
-                    {on ? "✓ " : ""}{s}
-                  </button>
-                );
-              })}
+            <details style={{background:C.s2,border:`1px solid ${C.border2}`,borderRadius:9,padding:"10px 13px"}}>
+              <summary style={{color:C.text,fontSize:13,cursor:"pointer"}}>
+                {selected.length?`${selected.length} selected · ${selected.join(", ")}`:"Select specialties"}
+              </summary>
+              <div style={{display:"grid",gap:10,maxHeight:180,overflowY:"auto",marginTop:12}}>
+                {SPECIALTIES.map(s=><label key={s} style={{display:"flex",gap:8,alignItems:"center",color:C.sub,fontSize:13,cursor:"pointer"}}>
+                  <input type="checkbox" checked={selected.includes(s)} onChange={()=>toggleSpec(s)} style={{accentColor:C.green}}/>{s}
+                </label>)}
+              </div>
+            </details>
+          </div>
+          <div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+              <span id="profile-weight-unit-label" style={{color:C.sub,fontSize:12,fontWeight:600}}>Default weight unit</span>
+              <div role="group" aria-labelledby="profile-weight-unit-label" style={{display:"flex",gap:6}}>
+                {["kg","lbs"].map(u=>(
+                  <button key={u} type="button" aria-pressed={weightUnit===u} onClick={()=>setWeightUnit(u)}
+                    style={{padding:"6px 16px",borderRadius:7,border:`1.5px solid ${weightUnit===u?C.blue:C.border}`,background:weightUnit===u?C.blue+"18":"transparent",color:weightUnit===u?C.blue:C.sub,fontWeight:700,fontSize:13,cursor:"pointer"}}>{u}</button>
+                ))}
+              </div>
             </div>
+            <div style={{color:C.muted,fontSize:11,marginTop:6}}>Used for new sessions. Current sessions and previously logged weights stay unchanged.</div>
           </div>
 
           {error && (
