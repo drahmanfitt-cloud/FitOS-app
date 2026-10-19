@@ -22,3 +22,7 @@ The profile default weight preference must use a kg/lbs toggle like Session Sett
 Upcoming Classes, Recent Sessions, and Active Clients dashboard containers should highlight only while the cursor is on the card, returning to neutral on leave.
 **Why:** The user reported borders remaining highlighted after the cursor left.
 **How to apply:** Use hover-only CSS for these containers rather than persistent inline border changes or focus-within highlights.
+
+Screen-to-screen navigation should feel fluid rather than switch abruptly.
+**Why:** The user requested smoother transitions between screens.
+**How to apply:** Keep navigation motion subtle and quick, respect reduced-motion settings, and preserve in-progress sessions.

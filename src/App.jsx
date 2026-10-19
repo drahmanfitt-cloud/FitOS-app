@@ -1,5 +1,5 @@
 // FitOS — Root App
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { C, uid, now, fmtDate, fmt, db, supabase, mapClient, mapSession, mapClass, mapProgram, mapFormat, mapWorkout, mapCatalog, mapTask, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Btn, Card, SL, Modal, Confirm, useToast, Toast, ErrorBoundary } from "./ui.jsx";
 import { ClientsScreen, ClientProfile } from "./clients.jsx";
@@ -226,6 +226,24 @@ export default function App(){
 
   // ── App data state
   const [view,setView]=useState("dashboard");
+  const screenRef=useRef(null);
+  useLayoutEffect(()=>{
+    const screen=screenRef.current;
+    const reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)");
+    if(!screen?.animate||reducedMotion.matches)return;
+    // Animate the existing container, never key/remount it: an in-progress
+    // session must survive navigating away and back.
+    const transition=screen.animate([
+      {opacity:0,transform:"translateY(8px)"},
+      {opacity:1,transform:"translateY(0)"}
+    ],{duration:220,easing:"cubic-bezier(0.22, 1, 0.36, 1)"});
+    const stopForReducedMotion=()=>{if(reducedMotion.matches)transition.cancel();};
+    reducedMotion.addEventListener("change",stopForReducedMotion);
+    return ()=>{
+      transition.cancel();
+      reducedMotion.removeEventListener("change",stopForReducedMotion);
+    };
+  },[view]);
   const [clients,setClients]=useState([]);
   const [sessions,setSessions]=useState([]);
   const [classes,setClasses]=useState([]);
@@ -768,7 +786,7 @@ export default function App(){
 
         {sessionStatus&&view!=="sessions"&&<ActiveSessionBar status={sessionStatus} onOpen={()=>setView("sessions")} onDiscard={discardSession} mobile={mobile}/>}
 
-        <main style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"none",touchAction:"auto",padding:mobile?12:20,paddingBottom:mobile?80:20}}>
+        <main ref={screenRef} style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"none",touchAction:"auto",padding:mobile?12:20,paddingBottom:mobile?80:20}}>
           {metricTitles[metricView]&&<MetricDetails key={metricView} metric={metricView} clients={clients} sessions={sessions} programs={programs} formats={formats} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="dashboard"&&<Dashboard userId={authUser.id} clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} tasks={tasks} onToggleTask={id=>updateTask(id,{done:true})} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} sessions={sessions} tasks={tasks} onAddTask={addTask} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
