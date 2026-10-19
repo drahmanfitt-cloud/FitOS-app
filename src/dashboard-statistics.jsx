@@ -7,7 +7,7 @@ import "./dashboard-statistics.css";
 function Trend({ buckets, metric, color, label, total }) {
   const max = Math.max(1, ...buckets.map(b => b[metric]));
   const width = 480, height = 122, step = width / buckets.length;
-  return <section className="stats-panel" aria-label={label}>
+  return <section className="stats-panel" aria-label={label} style={{"--stats-accent":color}}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
       <h3 style={{ margin: 0, color: C.sub, fontSize: 12, fontWeight: 600 }}>{label}</h3>
       <strong className="stats-value" style={{ fontSize: 26, color }}>{total}</strong>
