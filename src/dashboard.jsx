@@ -24,7 +24,7 @@ function DashboardContent({clients,sessions,classes,programs,formats,tasks=[],on
   const panels={
     metrics:(
       <div style={{display:"grid",gridTemplateColumns:mobile?"repeat(2,1fr)":"repeat(4,minmax(130px,1fr))",gap:mobile?8:12}}>
-        {[{label:"Active Clients",val:active.length,sub:`${clients.length} total`,color:C.green,icon:"👥",nav:"clients"},{label:"Sessions Logged",val:sessions.length,sub:"all time",color:C.blue,icon:"⚡",nav:"session-history"},{label:"Programs Built",val:programs.length,sub:`${formats.length} class formats`,color:C.purple,icon:"📋",nav:"programs"},{label:"PRs Logged",val:totalPRs,sub:"all time",color:C.amber,icon:"🏆",nav:"sessions"}].map(s=>(
+        {[{label:"Active Clients",val:active.length,sub:`${clients.length} total`,color:C.green,icon:"👥",nav:"analytics-clients"},{label:"Sessions Logged",val:sessions.length,sub:"all time",color:C.blue,icon:"⚡",nav:"analytics-sessions"},{label:"Programs Built",val:programs.length,sub:`${formats.length} class formats`,color:C.purple,icon:"📋",nav:"analytics-programs"},{label:"PRs Logged",val:totalPRs,sub:"all time",color:C.amber,icon:"🏆",nav:"analytics-prs"}].map(s=>(
           <Card key={s.label} className="dashboard-metric-card" role="button" tabIndex={0} onClick={()=>setView(s.nav)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setView(s.nav);}}} style={{"--metric-accent":s.color,padding:"14px 16px",cursor:"pointer",transition:"border-color 0.15s",minWidth:0}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6,gap:6}}>
               <span style={{fontSize:11,color:C.sub,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",minWidth:0}}>{s.label}</span>

@@ -4,6 +4,7 @@ import { C, uid, now, fmtDate, fmt, db, supabase, mapClient, mapSession, mapClas
 import { Avatar, Pill, Btn, Card, SL, Modal, Confirm, useToast, Toast, ErrorBoundary } from "./ui.jsx";
 import { ClientsScreen, ClientProfile } from "./clients.jsx";
 import { SessionLogger, SessionHistory } from "./session.jsx";
+import { MetricDetails } from "./metric-details.jsx";
 import { ClassesScreen } from "./classes.jsx";
 import { ProgramsHub } from "./programs.jsx";
 import { Dashboard } from "./dashboard.jsx";
@@ -697,6 +698,12 @@ export default function App(){
   const TITLES={dashboard:"Dashboard",clients:"Clients",client:"Client Profile",sessions:editSession?"Edit Session":"Log Session","session-history":"Logged Sessions",classes:"Schedule",programs:"Programs & Formats",tasks:"Task Planner",catalog:"Exercise Catalog"};
   const SUBS={dashboard:`${clients.filter(c=>c.status==="active").length} active clients`,clients:`${clients.length} clients`,client:activeClient?.name||"",sessions:editSession?"Editing a logged session":"Track sets, reps & weight","session-history":`${sessions.length} logged · tap to view or edit`,classes:`${classes.filter(c=>c.status==="scheduled").length} upcoming`,programs:`${programs.length} programs · ${formats.length} class formats`,catalog:`${catalogExercises.length} exercises`,tasks:`${tasks.filter(t=>!t.done).length} open task${tasks.filter(t=>!t.done).length===1?"":"s"}`};
   const counts={clients:clients.length,programs:programs.length+formats.length,dashboard:0,sessions:0,classes:classes.filter(c=>c.status==="scheduled").length,tasks:tasks.filter(t=>!t.done).length};
+  const metricView=view.startsWith("analytics-")?view.slice("analytics-".length):null;
+  const metricTitles={clients:"Client Analytics",sessions:"Session Analytics",programs:"Program Analytics",prs:"Personal Records"};
+  if(metricTitles[metricView]){
+    TITLES[view]=metricTitles[metricView];
+    SUBS[view]="Training intelligence · Detailed client metrics";
+  }
 
   // ── Auth gate
   if (authLoading) return <Spinner msg="Connecting…"/>;
@@ -739,7 +746,7 @@ export default function App(){
         }
       `}</style>
 
-      {!mobile&&<Sidebar active={view} setActive={navigate} counts={counts} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} profile={profile} onProfileClick={()=>setShowProfileEditor(true)}/>}
+      {!mobile&&<Sidebar active={metricView?"dashboard":view} setActive={navigate} counts={counts} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} profile={profile} onProfileClick={()=>setShowProfileEditor(true)}/>}
 
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
         <div style={{height:54,...(mobile?{background:C.surface,border:`1px solid ${C.border}`,borderTop:"none",borderRadius:"0 0 18px 18px"}:{borderBottom:`1px solid ${C.border}`,background:C.bg}),display:"flex",alignItems:"center",justifyContent:"space-between",padding:mobile?"0 14px":"0 22px",flexShrink:0}}>
@@ -762,6 +769,7 @@ export default function App(){
         {sessionStatus&&view!=="sessions"&&<ActiveSessionBar status={sessionStatus} onOpen={()=>setView("sessions")} onDiscard={discardSession} mobile={mobile}/>}
 
         <main style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"none",touchAction:"auto",padding:mobile?12:20,paddingBottom:mobile?80:20}}>
+          {metricTitles[metricView]&&<MetricDetails key={metricView} metric={metricView} clients={clients} sessions={sessions} programs={programs} formats={formats} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="dashboard"&&<Dashboard userId={authUser.id} clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} tasks={tasks} onToggleTask={id=>updateTask(id,{done:true})} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} sessions={sessions} tasks={tasks} onAddTask={addTask} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient} onLogDay={day=>{setEditSession(null);setPreloadDay(day);setSessionKey(k=>k+1);setView("sessions");}} onUpdateGoals={updateClientGoals} onUpdateBodyweight={updateClientBodyweight}/>}
@@ -774,7 +782,7 @@ export default function App(){
         </main>
       </div>
 
-      {mobile&&<BottomNav active={view} setActive={navigate} counts={counts}/>}
+      {mobile&&<BottomNav active={metricView?"dashboard":view} setActive={navigate} counts={counts}/>}
 
       {showProfileEditor&&(
         <ProfileEditor
