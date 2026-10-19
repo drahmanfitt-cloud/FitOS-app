@@ -28,15 +28,17 @@ export function DashboardLayout({userId,children}) {
     </div>
     {layout.error&&<p className="dashboard-alert" role="alert">{layout.error} <button type="button" className="dashboard-button secondary" onClick={()=>save(layout.order,"Current layout applied.")}>Try saving layout</button></p>}
     {customizing&&<section id="dashboard-customizer" className="dashboard-customizer" aria-label="Customize dashboard order">
-      <strong style={{fontSize:14}}>Put your priorities first</strong>
-      <p className="dashboard-note">Use Move up or Move down. Every section stays visible. Changes save only in this browser, for this account.</p>
+      <div className="dashboard-customizer-heading">
+        <strong style={{fontSize:13}}>Section order</strong>
+        <button type="button" className="dashboard-button secondary" onClick={()=>save([...DEFAULT_DASHBOARD_ORDER],"Default dashboard order restored.")}>Reset order</button>
+      </div>
+      <p className="dashboard-note">Use the arrows to reorder. Saved for your account in this browser.</p>
       <ol className="dashboard-order">{layout.order.map((key,index)=><li key={key}>
         <span aria-hidden="true" className="dashboard-position">{index+1}</span>
         <span className="dashboard-order-name">{DASHBOARD_MODULES.find(m=>m.key===key).label}</span>
-        <button type="button" className="dashboard-button secondary" disabled={index===0} aria-label={`Move ${DASHBOARD_MODULES.find(m=>m.key===key).label} up`} onClick={()=>move(key,-1)}>↑ Up</button>
-        <button type="button" className="dashboard-button secondary" disabled={index===layout.order.length-1} aria-label={`Move ${DASHBOARD_MODULES.find(m=>m.key===key).label} down`} onClick={()=>move(key,1)}>↓ Down</button>
+        <button type="button" className="dashboard-button secondary" disabled={index===0} title="Move up" aria-label={`Move ${DASHBOARD_MODULES.find(m=>m.key===key).label} up`} onClick={()=>move(key,-1)}>↑</button>
+        <button type="button" className="dashboard-button secondary" disabled={index===layout.order.length-1} title="Move down" aria-label={`Move ${DASHBOARD_MODULES.find(m=>m.key===key).label} down`} onClick={()=>move(key,1)}>↓</button>
       </li>)}</ol>
-      <button type="button" className="dashboard-button secondary" onClick={()=>save([...DEFAULT_DASHBOARD_ORDER],"Default dashboard order restored.")}>Reset default order</button>
     </section>}
     <span className="dashboard-sr" role="status" aria-live="polite">{announcement}</span>
     <div className="dashboard-grid">{layout.order.map(key=><section key={key} className={`dashboard-module ${["classes","sessions"].includes(key)?"compact":""}`} aria-label={DASHBOARD_MODULES.find(m=>m.key===key).label}>{children[key]}</section>)}</div>

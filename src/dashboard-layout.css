@@ -5,9 +5,16 @@
 .dashboard-button.secondary { color:var(--dash-sub); background:#1A1E28; border-color:var(--dash-border); }
 .dashboard-button:disabled { opacity:.4; cursor:not-allowed; }
 .dashboard-shell button:focus-visible,.dashboard-shell summary:focus-visible { outline:2px solid var(--dash-accent); outline-offset:4px; }
-.dashboard-customizer { padding:16px; border:1px solid #22D98A55; background:#13161D; border-radius:14px; }
-.dashboard-order { padding:0; margin:14px 0; list-style:none; display:flex; flex-direction:column; gap:6px; }
-.dashboard-order li { display:flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid var(--dash-border); border-radius:9px; background:#1A1E28; }
+.dashboard-customizer { padding:12px; border:1px solid #22D98A33; background:#13161D; border-radius:12px; }
+.dashboard-customizer-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.dashboard-customizer-heading .dashboard-button { min-height:32px; padding:5px 9px; }
+.dashboard-order { padding:0; margin:10px 0 0; list-style:none; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px 10px; }
+.dashboard-order li { display:flex; align-items:center; gap:6px; padding:4px 8px; border:1px solid var(--dash-border); border-radius:8px; background:#1A1E28; min-width:0; }
+.dashboard-order .dashboard-button { width:32px; min-height:32px; padding:4px; flex-shrink:0; }
+.fitos-app .dashboard-metric-card { border-color:var(--dash-border)!important; }
+@media (hover:hover) {
+ .fitos-app .dashboard-shell .dashboard-metric-card:hover { border-color:var(--metric-accent)!important; }
+}
 .dashboard-order-name { flex:1; font-size:12px; font-weight:600; }
 .dashboard-position { font-size:11px; font-variant-numeric:tabular-nums; color:var(--dash-sub); width:20px; }
 .dashboard-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
@@ -31,6 +38,7 @@
 @media(max-width:767px) {
  .dashboard-grid { grid-template-columns:minmax(0,1fr); gap:12px; }
  .dashboard-module.compact { grid-column:1/-1; }
- .dashboard-order li { padding:7px; gap:5px; }
- .dashboard-order .dashboard-button { padding:8px; }
+ .dashboard-order { grid-template-columns:minmax(0,1fr); }
+ .dashboard-order li { padding:4px 7px; gap:5px; }
+ .dashboard-order .dashboard-button { width:38px; min-height:38px; padding:6px; }
 }
