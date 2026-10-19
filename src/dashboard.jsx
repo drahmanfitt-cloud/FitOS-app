@@ -38,7 +38,7 @@ function DashboardContent({clients,sessions,classes,programs,formats,tasks=[],on
     statistics:<DashboardStatistics clients={clients} sessions={sessions} programs={programs} setActiveClient={setActiveClient} setView={setView}/>,
     retention:<DashboardRetention clients={clients} sessions={sessions} setActiveClient={setActiveClient} setView={setView}/>,
     tasks:(
-      <Card>
+      <Card className="dashboard-hover-card">
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:taskPreview.length?12:0}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <SL>Today's Tasks</SL>
