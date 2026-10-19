@@ -234,9 +234,9 @@ export default function App(){
     // Animate the existing container, never key/remount it: an in-progress
     // session must survive navigating away and back.
     const transition=screen.animate([
-      {opacity:0,transform:"translateY(8px)"},
+      {opacity:0.15,transform:"translateY(10px)"},
       {opacity:1,transform:"translateY(0)"}
-    ],{duration:220,easing:"cubic-bezier(0.22, 1, 0.36, 1)"});
+    ],{duration:340,easing:"cubic-bezier(0.25, 0.46, 0.35, 1)"});
     const stopForReducedMotion=()=>{if(reducedMotion.matches)transition.cancel();};
     reducedMotion.addEventListener("change",stopForReducedMotion);
     return ()=>{
