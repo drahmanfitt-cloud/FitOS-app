@@ -3,7 +3,7 @@ name: FitOS interaction preferences
 description: User-requested consistency for hover feedback and weight preferences.
 ---
 
-The user wants everything to highlight on hover, specifically including workout cards and the repeat button.
+The user wants everything to highlight on hover, specifically including workout cards, the repeat button, and all Training Intelligence panels and controls.
 **Why:** The user requested the same border feedback as other app bubbles.
 **How to apply:** Give new cards and interactive controls consistent border highlighting and keyboard focus feedback, without making static text look clickable.
 

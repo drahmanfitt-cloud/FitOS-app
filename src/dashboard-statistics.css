@@ -18,6 +18,16 @@
 .fitos-stats .stats-link:hover { color: #22D98A; }
 .fitos-stats .stats-value { font-variant-numeric: tabular-nums; }
 .fitos-stats .stats-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.fitos-stats :is(.stats-panel,.stats-range,.stats-field,button,summary) { transition: border-color .15s, box-shadow .15s; }
+.fitos-stats :is(.stats-range button,.stats-link,summary) { border: 1px solid transparent; border-radius: 6px; }
+.fitos-stats .stats-panel:focus-within,
+.fitos-stats .stats-range:focus-within,
+.fitos-stats :is(.stats-field,button,summary):focus-visible { border-color: #22D98A; }
+.fitos-stats .stats-table tbody tr:focus-within { outline: 1px solid #22D98A; outline-offset: -1px; }
+@media (hover: hover) {
+  .fitos-stats :is(.stats-panel,.stats-range,.stats-field,button:not(:disabled),summary):hover { border-color: #22D98A; }
+  .fitos-stats .stats-table tbody tr:hover { outline: 1px solid #22D98A; outline-offset: -1px; border-color: #22D98A; }
+}
 @media (max-width: 767px) {
   .fitos-stats .stats-trends, .fitos-stats .stats-context { grid-template-columns: 1fr; }
   .fitos-stats .stats-table thead { display: none; }
