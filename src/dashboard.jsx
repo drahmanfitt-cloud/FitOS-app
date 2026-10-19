@@ -66,7 +66,7 @@ function DashboardContent({clients,sessions,classes,programs,formats,tasks=[],on
         {dueNow.length>6&&<div onClick={()=>setView("tasks")} style={{color:C.green,fontSize:12,cursor:"pointer",textAlign:"center",paddingTop:10}}>+{dueNow.length-6} more →</div>}
       </Card>),
     classes:(
-        <Card onClick={()=>setView("classes")} style={{cursor:"pointer",transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=C.green} onMouseLeave={e=>e.currentTarget.style.borderColor=""}>
+        <Card className="dashboard-hover-card" onClick={()=>setView("classes")} style={{cursor:"pointer"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Upcoming Classes</SL><span style={{color:C.green,fontSize:12}}>View all →</span></div>
           {upcoming.length===0?<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"16px 0"}}>No classes. Add one →</div>:upcoming.map((c,i)=>(
             <div key={c.id} style={{display:"flex",gap:12,padding:"10px 0",borderBottom:i<upcoming.length-1?`1px solid ${C.border}`:"none"}}>
@@ -76,7 +76,7 @@ function DashboardContent({clients,sessions,classes,programs,formats,tasks=[],on
           ))}
         </Card>),
     sessions:(
-        <Card>
+        <Card className="dashboard-hover-card">
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Recent Sessions</SL><span onClick={()=>setView("sessions")} style={{color:C.green,fontSize:12,cursor:"pointer"}}>Log session →</span></div>
           {recent.length===0?<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"16px 0"}}>No sessions. <span onClick={()=>setView("sessions")} style={{color:C.green,cursor:"pointer"}}>Log first →</span></div>:recent.map((s,i)=>{
             const cl=clients.find(c=>c.id===s.clientId);
@@ -89,7 +89,7 @@ function DashboardContent({clients,sessions,classes,programs,formats,tasks=[],on
           })}
         </Card>),
     clients:(
-        <Card onClick={()=>setView("clients")} style={{cursor:"pointer",transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=C.green} onMouseLeave={e=>e.currentTarget.style.borderColor=""}>
+        <Card className="dashboard-hover-card" onClick={()=>setView("clients")} style={{cursor:"pointer"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Active Clients</SL><span style={{color:C.green,fontSize:12}}>All →</span></div>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             {active.slice(0,10).map(c=>(

@@ -12,6 +12,8 @@
 .dashboard-order li { display:flex; align-items:center; gap:6px; padding:4px 8px; border:1px solid var(--dash-border); border-radius:8px; background:#1A1E28; min-width:0; }
 .dashboard-order .dashboard-button { width:32px; min-height:32px; padding:4px; flex-shrink:0; }
 .fitos-app .dashboard-metric-card { border-color:var(--dash-border)!important; }
+.fitos-app .dashboard-shell .dashboard-hover-card { border-color:var(--dash-border)!important; }
+.fitos-app .dashboard-shell .dashboard-hover-card:hover { border-color:var(--dash-accent)!important; }
 .fitos-app .dashboard-shell .dashboard-metric-card:hover { border-color:var(--metric-accent)!important; }
 .dashboard-toolbar .dashboard-customize-toggle { width:32px; min-height:32px; height:32px; padding:6px; display:grid; place-items:center; border-radius:8px; background:transparent; color:var(--dash-sub); border-color:var(--dash-border); flex-shrink:0; }
 .dashboard-toolbar .dashboard-customize-toggle[aria-expanded="true"] { color:var(--dash-accent); border-color:var(--dash-accent); }

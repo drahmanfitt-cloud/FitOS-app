@@ -18,3 +18,7 @@ Condensing Customize dashboard includes its top-right trigger, not only the expa
 The profile default weight preference must use a kg/lbs toggle like Session Settings, not a dropdown.
 **Why:** The user explicitly corrected the initial dropdown design.
 **How to apply:** Preserve the matching toggle when revising My Profile.
+
+Upcoming Classes, Recent Sessions, and Active Clients dashboard containers should highlight only while the cursor is on the card, returning to neutral on leave.
+**Why:** The user reported borders remaining highlighted after the cursor left.
+**How to apply:** Use hover-only CSS for these containers rather than persistent inline border changes or focus-within highlights.
