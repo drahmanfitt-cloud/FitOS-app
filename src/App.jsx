@@ -711,6 +711,19 @@ export default function App(){
         .fitos-nav-item:hover{border-color:var(--nav-col)!important;}
         .fitos-btn:not(:disabled):hover{border-color:var(--btn-col)!important;}
         .fitos-pill:hover{border-color:var(--pill-col)!important;}
+        @media (hover:hover){
+          .fitos-app :is(button:not(:disabled),a,input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary):hover{
+            outline:1px solid var(--btn-col,${C.green});outline-offset:1px;
+          }
+          .fitos-app :is(.fitos-card,.stats-panel,[role="button"],[style*="cursor: pointer"],[style*="cursor:pointer"]):hover{
+            border-color:var(--btn-col,var(--session-accent,${C.green}))!important;
+          }
+          .fitos-app .stats-table tbody tr:hover{background:${C.green}0a;}
+        }
+        .fitos-app :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible{
+          outline:2px solid var(--btn-col,${C.green});outline-offset:2px;
+        }
+        @media(prefers-reduced-motion:reduce){.fitos-app *{transition:none!important;}}
         input[type=number]::-webkit-inner-spin-button{opacity:0.3}
         input[type=date]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;}
         input[type=date]::-webkit-date-and-time-value{text-align:left;}
@@ -749,11 +762,11 @@ export default function App(){
         {sessionStatus&&view!=="sessions"&&<ActiveSessionBar status={sessionStatus} onOpen={()=>setView("sessions")} onDiscard={discardSession} mobile={mobile}/>}
 
         <main style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"none",touchAction:"auto",padding:mobile?12:20,paddingBottom:mobile?80:20}}>
-          {view==="dashboard"&&<Dashboard clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} tasks={tasks} onToggleTask={id=>updateTask(id,{done:true})} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
+          {view==="dashboard"&&<Dashboard userId={authUser.id} clients={clients} sessions={sessions} classes={classes} programs={programs} formats={formats} tasks={tasks} onToggleTask={id=>updateTask(id,{done:true})} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="clients"&&<ClientsScreen clients={clients} onAdd={addClient} onEdit={editClient} onDelete={deleteClient} programs={programs} sessions={sessions} tasks={tasks} onAddTask={addTask} setView={setView} setActiveClient={setActiveClient} mobile={mobile}/>}
           {view==="client"&&activeClient&&<ClientProfile client={clients.find(c=>c.id===activeClient.id)||activeClient} sessions={sessions} programs={programs} onEdit={editClient} setView={setView} setActiveClient={setActiveClient} onLogDay={day=>{setEditSession(null);setPreloadDay(day);setSessionKey(k=>k+1);setView("sessions");}} onUpdateGoals={updateClientGoals} onUpdateBodyweight={updateClientBodyweight}/>}
           {loggerMounted&&<div style={{display:view==="sessions"?"block":"none"}}><ErrorBoundary><SessionLogger key={editSession?`edit-${editSession.id}`:`new-${sessionKey}`} defaultWeightUnit={authUser?.user_metadata?.weight_unit} clients={clients} sessions={sessions} onSave={addSession} onUpdate={updateSession} editSession={editSession} onDone={()=>{setEditSession(null);setView("session-history");}} activeClient={activeClient} programs={programs} workouts={workouts} initialDay={preloadDay} catalog={catalogExercises} onAddToCatalog={quickAddCatalog} onStatus={setSessionStatus} onSessionsView={view==="sessions"} onDiscard={discardSession}/></ErrorBoundary></div>}
-          {view==="session-history"&&<SessionHistory sessions={sessions} clients={clients} mobile={mobile} onNew={startNewSession} onEdit={s=>{setEditSession(s);setPreloadDay(null);setView("sessions");}} onDelete={deleteSession}/>}
+          {view==="session-history"&&<SessionHistory sessions={sessions} clients={clients} mobile={mobile} hasActiveSession={!!sessionStatus} onRepeat={s=>{setEditSession(null);setPreloadDay({repeatSession:s});setSessionKey(k=>k+1);setView("sessions");}} onNew={startNewSession} onEdit={s=>{setEditSession(s);setPreloadDay(null);setView("sessions");}} onDelete={deleteSession}/>}
           {view==="classes"&&<ClassesScreen clients={clients} classes={classes} tasks={tasks} onAdd={addClass} onAddSeries={addClassSeries} onEdit={editClass} onDelete={deleteClass} onDeleteSeries={deleteClassSeries} onAddTask={addTask} onUpdateTask={updateTask} onDeleteTask={deleteTask} formats={formats} mobile={mobile}/>}
           {view==="programs"&&<ProgramsHub programs={programs} onSaveProgram={addProgram} onUpdateProgram={updateProgram} onDeleteProgram={deleteProgram} formats={formats} onSaveFormat={addFormat} onUpdateFormat={updateFormat} onDeleteFormat={deleteFormat} workouts={workouts} onSaveWorkout={addWorkout} onUpdateWorkout={updateWorkout} onDeleteWorkout={deleteWorkout} clients={clients} onUpdateClient={updateClientRaw} classes={classes} onUpdateClass={editClass} mobile={mobile} catalog={catalogExercises} onAddToCatalog={quickAddCatalog}/>}
           {view==="tasks"&&<TasksScreen tasks={tasks} clients={clients} onAdd={addTask} onUpdate={updateTask} onDelete={deleteTask} onOpenClient={c=>{setActiveClient(c);setView("client");}} mobile={mobile}/>}

@@ -2,13 +2,17 @@
 import React from "react";
 import { C, fmtDate, TAG_COLORS } from "./config.js";
 import { Avatar, Pill, Card, SL } from "./ui.jsx";
+import { DashboardStatistics } from "./dashboard-statistics.jsx";
+import { DashboardLayout } from "./dashboard-layout.jsx";
+import { DashboardRetention } from "./dashboard-retention.jsx";
+import { dashboardStorageKey } from "./dashboard-layout-data.mjs";
 
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const todayYMD=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;};
 
-function Dashboard({clients,sessions,classes,programs,formats,tasks=[],onToggleTask,setView,setActiveClient,mobile}){
+function DashboardContent({clients,sessions,classes,programs,formats,tasks=[],onToggleTask,setView,setActiveClient,mobile,userId}){
   const active=clients.filter(c=>c.status==="active");
   const today=todayYMD();
   const openTasks=tasks.filter(t=>!t.done);
@@ -17,8 +21,8 @@ function Dashboard({clients,sessions,classes,programs,formats,tasks=[],onToggleT
   const upcoming=[...classes].filter(c=>c.status==="scheduled").sort((a,b)=>new Date(a.date+" "+a.time)-new Date(b.date+" "+b.time)).slice(0,4);
   const recent=[...sessions].sort((a,b)=>new Date(b.startedAt)-new Date(a.startedAt)).slice(0,5);
   const totalPRs=sessions.reduce((a,s)=>a+(s.exercises||[]).reduce((b,e)=>b+(e.sets||[]).filter(st=>st.pr&&st.done).length,0),0);
-  return(
-    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+  const panels={
+    metrics:(
       <div style={{display:"grid",gridTemplateColumns:mobile?"repeat(2,1fr)":"repeat(4,minmax(130px,1fr))",gap:mobile?8:12}}>
         {[{label:"Active Clients",val:active.length,sub:`${clients.length} total`,color:C.green,icon:"👥",nav:"clients"},{label:"Sessions Logged",val:sessions.length,sub:"all time",color:C.blue,icon:"⚡",nav:"session-history"},{label:"Programs Built",val:programs.length,sub:`${formats.length} class formats`,color:C.purple,icon:"📋",nav:"programs"},{label:"PRs Logged",val:totalPRs,sub:"all time",color:C.amber,icon:"🏆",nav:"sessions"}].map(s=>(
           <Card key={s.label} onClick={()=>setView(s.nav)} style={{padding:"14px 16px",cursor:"pointer",transition:"border-color 0.15s",minWidth:0}} onMouseEnter={e=>e.currentTarget.style.borderColor=s.color} onMouseLeave={e=>e.currentTarget.style.borderColor=""}>
@@ -30,7 +34,10 @@ function Dashboard({clients,sessions,classes,programs,formats,tasks=[],onToggleT
             <div style={{fontSize:11,color:s.color,fontWeight:600,marginTop:6,whiteSpace:"nowrap"}}>{s.sub} →</div>
           </Card>
         ))}
-      </div>
+      </div>),
+    statistics:<DashboardStatistics clients={clients} sessions={sessions} programs={programs} setActiveClient={setActiveClient} setView={setView}/>,
+    retention:<DashboardRetention clients={clients} sessions={sessions} setActiveClient={setActiveClient} setView={setView}/>,
+    tasks:(
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:taskPreview.length?12:0}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -57,8 +64,8 @@ function Dashboard({clients,sessions,classes,programs,formats,tasks=[],onToggleT
             );
           })}
         {dueNow.length>6&&<div onClick={()=>setView("tasks")} style={{color:C.green,fontSize:12,cursor:"pointer",textAlign:"center",paddingTop:10}}>+{dueNow.length-6} more →</div>}
-      </Card>
-      <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"1fr 1fr",gap:mobile?10:16}}>
+      </Card>),
+    classes:(
         <Card onClick={()=>setView("classes")} style={{cursor:"pointer",transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=C.green} onMouseLeave={e=>e.currentTarget.style.borderColor=""}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Upcoming Classes</SL><span style={{color:C.green,fontSize:12}}>View all →</span></div>
           {upcoming.length===0?<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"16px 0"}}>No classes. Add one →</div>:upcoming.map((c,i)=>(
@@ -67,7 +74,8 @@ function Dashboard({clients,sessions,classes,programs,formats,tasks=[],onToggleT
               <div style={{flex:1}}><div style={{color:C.text,fontWeight:600,fontSize:13}}>{c.name}</div><div style={{color:C.muted,fontSize:11}}>{c.date} · {c.time} · {c.bookings?.length||0}/{c.capacity}{c.formatId&&` · ${c.formatName}`}</div></div>
             </div>
           ))}
-        </Card>
+        </Card>),
+    sessions:(
         <Card>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Recent Sessions</SL><span onClick={()=>setView("sessions")} style={{color:C.green,fontSize:12,cursor:"pointer"}}>Log session →</span></div>
           {recent.length===0?<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"16px 0"}}>No sessions. <span onClick={()=>setView("sessions")} style={{color:C.green,cursor:"pointer"}}>Log first →</span></div>:recent.map((s,i)=>{
@@ -79,9 +87,8 @@ function Dashboard({clients,sessions,classes,programs,formats,tasks=[],onToggleT
               {hasPR&&<Pill color={C.amber}>🏆</Pill>}
             </div>);
           })}
-        </Card>
-      </div>
-      {active.length>0&&(
+        </Card>),
+    clients:(
         <Card onClick={()=>setView("clients")} style={{cursor:"pointer",transition:"border-color 0.15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=C.green} onMouseLeave={e=>e.currentTarget.style.borderColor=""}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}><SL>Active Clients</SL><span style={{color:C.green,fontSize:12}}>All →</span></div>
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
@@ -94,12 +101,16 @@ function Dashboard({clients,sessions,classes,programs,formats,tasks=[],onToggleT
               </div>
             ))}
           </div>
+          {active.length===0&&<div style={{color:C.sub,fontSize:13,padding:"12px 0"}}>No active clients yet. Open clients to add someone or review their status →</div>}
         </Card>
-      )}
-    </div>
-  );
+      ),
+  };
+  return <DashboardLayout userId={userId}>{panels}</DashboardLayout>;
 }
 
+function Dashboard(props) {
+  return <DashboardContent key={dashboardStorageKey(props.userId)||"unsaved"} {...props}/>;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 

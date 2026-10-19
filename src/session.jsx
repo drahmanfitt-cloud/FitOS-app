@@ -809,8 +809,22 @@ function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,acti
     setWkModal(false);
   };
 
-  // Pre-load a program day when navigated from client profile
-  useEffect(()=>{if(initialDay&&!isEdit)loadFromDay(initialDay);},[]);
+  // Repeating creates a fresh draft; never reuse completion flags or record IDs.
+  useEffect(()=>{
+    if(!initialDay||isEdit)return;
+    const source=initialDay.repeatSession;
+    if(!source){loadFromDay(initialDay);return;}
+    setClientId((clients||[]).some(c=>c.id===source.clientId)?source.clientId:"");
+    setName(source.name||"");
+    setNotes("");
+    setProgramDay(source.programDay||"");
+    setWarmup(adoptWarmup(source.warmup));
+    setExercises((source.exercises||[]).map(ex=>({
+      ...ex,id:uid(),sets:(ex.sets||[]).map(set=>({
+        ...set,id:uid(),done:false,pr:false,setNotes:"",
+      })),
+    })));
+  },[]);
 
   // Previous session's sets for an exercise (same client, excluding the session being edited)
   const prevSetsFor=exName=>{
@@ -1027,9 +1041,10 @@ function SessionLogger({clients,sessions,onSave,onUpdate,onDone,editSession,acti
 // SESSION HISTORY
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function SessionHistory({sessions,clients,onEdit,onDelete,onNew,mobile}){
+function SessionHistory({sessions,clients,onEdit,onDelete,onNew,onRepeat,hasActiveSession,mobile}){
   const [selected,setSelected]=useState(null);
   const [confirm,setConfirm]=useState(null);
+  const [repeatConfirm,setRepeatConfirm]=useState(null);
   const sorted=[...(sessions||[])].sort((a,b)=>new Date(b.startedAt||b.createdAt||0)-new Date(a.startedAt||a.createdAt||0));
   const sel=sorted.find(s=>s.id===selected);
   const clientName=id=>clients.find(c=>c.id===id)?.name||"Unknown client";
@@ -1043,20 +1058,34 @@ function SessionHistory({sessions,clients,onEdit,onDelete,onNew,mobile}){
 
   return(
     <div style={{display:"grid",gridTemplateColumns:mobile?"1fr":"300px 1fr",gap:16,minHeight:mobile?0:500}}>
+      <style>{`
+        .fitos-session-card:hover,.fitos-session-card:focus-within{border-color:var(--session-accent)!important;}
+        .fitos-repeat-button:hover,.fitos-repeat-button:focus-visible{border-color:var(--repeat-accent)!important;}
+        .fitos-repeat-button:focus-visible{outline:2px solid var(--repeat-accent);outline-offset:2px;}
+      `}</style>
       <div style={{display:"flex",flexDirection:"column",gap:10,order:mobile&&sel?2:0}}>
         <Btn style={{justifyContent:"center"}} onClick={()=>onNew&&onNew()}>+ Log Session</Btn>
         {sorted.length===0&&<Card style={{textAlign:"center",padding:32}}><div style={{fontSize:28,marginBottom:8}}>🕘</div><div style={{color:C.muted,fontSize:13}}>No sessions logged yet.</div></Card>}
         {sorted.map(s=>{
           const st=statOf(s);
           return(
-            <div key={s.id} onClick={()=>setSelected(s.id)} style={{background:C.surface,border:`1px solid ${selected===s.id?C.green:C.border}`,borderRadius:12,padding:14,cursor:"pointer",borderLeft:`3px solid ${st.prs>0?C.amber:C.green}`}}>
+            <div key={s.id} className="fitos-session-card" onClick={()=>setSelected(s.id)} style={{"--session-accent":st.prs>0?C.amber:C.green,background:C.surface,borderStyle:"solid",borderWidth:"1px 1px 1px 3px",borderColor:selected===s.id?C.green:C.border,borderLeftColor:st.prs>0?C.amber:C.green,borderRadius:12,padding:14,cursor:"pointer",transition:"border-color 0.15s"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                 <div style={{color:C.text,fontWeight:700,fontSize:14,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name||"Session"}</div>
                 {st.prs>0&&<Pill color={C.amber}>🏆 {st.prs}</Pill>}
               </div>
               <div style={{color:C.sub,fontSize:12,marginTop:4}}>{clientName(s.clientId)}</div>
               <div style={{color:C.muted,fontSize:11,marginTop:2}}>{fmtDate(s.startedAt||s.createdAt)} · {st.exCount} exercises · {st.done}/{st.sets} sets</div>
-              {s.programDay&&<div style={{marginTop:5}}><Pill color={C.purple}>📋 {s.programDay}</Pill></div>}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:5}}>
+                <div>{s.programDay&&<Pill color={C.purple}>📋 {s.programDay}</Pill>}</div>
+                <button type="button" className="fitos-repeat-button" title="Repeat session" aria-label={`Repeat session: ${s.name||"Session"}`}
+                  onClick={e=>{e.stopPropagation();if(hasActiveSession)setRepeatConfirm(s);else onRepeat(s);}}
+                  style={{"--repeat-accent":C.green,width:32,height:32,display:"grid",placeItems:"center",flexShrink:0,border:`1px solid ${C.border}`,borderRadius:8,background:C.s2,color:C.green,cursor:"pointer",transition:"border-color 0.15s"}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="m17 2 4 4-4 4M3 11V8a2 2 0 0 1 2-2h16M7 22l-4-4 4-4m14-1v3a2 2 0 0 1-2 2H3"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           );
         })}
@@ -1123,6 +1152,7 @@ function SessionHistory({sessions,clients,onEdit,onDelete,onNew,mobile}){
         </div>
       )}
 
+      {repeatConfirm&&<Confirm msg="Repeating this session will replace your current unsaved session. Discard it and start the repeated session?" onConfirm={()=>{onRepeat(repeatConfirm);setRepeatConfirm(null);}} onCancel={()=>setRepeatConfirm(null)}/>}
       {confirm&&<Confirm msg="Delete this session? This cannot be undone." onConfirm={async()=>{await onDelete(confirm);if(selected===confirm)setSelected(null);setConfirm(null);}} onCancel={()=>setConfirm(null)}/>}
     </div>
   );

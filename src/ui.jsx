@@ -24,8 +24,8 @@ export const NumInput = ({value,onChange,min,max,width=56}) => (
     style={{width,background:C.s2,border:`1px solid ${C.border2}`,borderRadius:8,padding:"7px 8px",color:C.text,fontSize:13,outline:"none",fontFamily:"inherit",textAlign:"center"}}/>
 );
 
-export const Card = ({children,style:sx={},...rest}) => (
-  <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:18,...sx}} {...rest}>{children}</div>
+export const Card = ({children,style:sx={},className="",...rest}) => (
+  <div className={`fitos-card ${className}`} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:18,transition:"border-color 0.15s",...sx}} {...rest}>{children}</div>
 );
 
 export const SL = ({children,style:sx={}}) => (
